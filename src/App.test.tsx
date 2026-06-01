@@ -199,7 +199,7 @@ async function flushPlatformEffects() {
 }
 
 function openFirstStory() {
-  if (!screen.queryByLabelText("Story list")) {
+  if (!screen.queryByLabelText("Story bento grid")) {
     fireEvent.click(
       screen.getByRole("button", {
         name: /Open phil's stories/
@@ -207,7 +207,7 @@ function openFirstStory() {
     );
   }
   fireEvent.click(
-    within(screen.getByLabelText("Story list")).getByRole("button", {
+    within(screen.getByLabelText("Story bento grid")).getByRole("button", {
       name: /Story 5 scenes/
     })
   );
@@ -246,12 +246,21 @@ describe("App", () => {
     vi.useRealTimers();
   });
 
-  it("starts on a chatsim story landing page", async () => {
+  it("starts in a persistent Pinterest-style browsing shell", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
 
+    expect(screen.getByLabelText("App shell")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Desktop navigation" })).toHaveClass(
+      "hidden",
+      "md:flex"
+    );
+    expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toHaveClass(
+      "md:hidden"
+    );
+    expect(screen.getByRole("searchbox", { name: "Search stories" })).toBeInTheDocument();
     const appShell = screen.getByRole("main").parentElement;
 
     expect(appShell).toHaveClass("app-background", "app-background--landing");
@@ -259,7 +268,7 @@ describe("App", () => {
     expect(screen.queryByText("choose a story")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Account settings" })).toBeInTheDocument();
     expect(screen.getByText("phil's stories")).toBeInTheDocument();
-    expect(screen.getByLabelText("Profile grid")).toHaveClass(
+    expect(screen.getByLabelText("Profile masonry")).toHaveClass(
       "overflow-y-auto"
     );
     expect(
@@ -272,18 +281,16 @@ describe("App", () => {
         "1 story"
       )
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("Story list")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Story bento grid")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Story 5 scenes/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Open story")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Profile grid")).toHaveClass(
-      "auto-rows-[64px]",
-      "grid-cols-2",
-      "lg:grid-cols-4"
+    expect(screen.getByLabelText("Profile masonry")).toHaveClass(
+      "columns-2",
+      "lg:columns-5"
     );
     expect(screen.getByRole("button", { name: /Open phil's stories/ })).toHaveClass(
       "rounded-lg",
-      "row-span-3",
-      "sm:col-span-2"
+      "break-inside-avoid"
     );
     seedProfiles.forEach((profile) => {
       expect(
@@ -295,14 +302,14 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: /Open phil's stories/ }));
 
     expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Back to profiles" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Story list")).toHaveClass(
-      "max-h-[min(58vh,440px)]",
+    expect(screen.getByRole("button", { name: "Back to home" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Story bento grid")).toHaveClass(
+      "columns-1",
+      "sm:columns-2",
       "overflow-y-auto",
       "w-full"
     );
-    const storySelector = within(screen.getByLabelText("Story list")).getByRole(
+    const storySelector = within(screen.getByLabelText("Story bento grid")).getByRole(
       "button",
       {
         name: /Story 5 scenes/
@@ -310,35 +317,26 @@ describe("App", () => {
     );
 
     expect(storySelector).toHaveClass(
-      "min-h-[54px]",
-      "rounded-full",
-      "border-sky-300/70",
-      "bg-sky-50/75",
-      "shadow-none"
+      "break-inside-avoid",
+      "rounded-lg",
+      "overflow-hidden"
     );
-    expect(storySelector).not.toHaveClass(
-      "shadow-[0_12px_34px_rgba(15,23,42,0.14)]",
-      "backdrop-blur-2xl",
-      "ring-1"
-    );
-    expect(screen.getByTestId("story-selector-accent-story-phil-1")).toHaveClass(
-      "bg-sky-400"
-    );
+    expect(screen.getByTestId("story-card-background-story-phil-1")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to profiles" }));
-    expect(screen.getByLabelText("Profile grid")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back to home" }));
+    expect(screen.getByLabelText("Profile masonry")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Account settings" })).toBeInTheDocument();
 
     openFirstStory();
     await flushPlatformEffects();
 
     expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
+    expect(screen.getByLabelText("App shell")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Desktop navigation" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toBeInTheDocument();
     expect(appShell).toHaveClass("app-background--story");
     expect(appShell).not.toHaveClass("app-background--landing");
-    expect(screen.getByRole("button", { name: "Back to stories" })).toHaveClass(
-      "h-11",
-      "w-11"
-    );
+    expect(screen.getByRole("button", { name: "Back to profile" })).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Open script editor" })
     ).not.toBeInTheDocument();
@@ -347,9 +345,9 @@ describe("App", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Back to stories")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to stories" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to profile" }));
 
-    expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
     expect(appShell).toHaveClass("app-background--landing");
     expect(appShell).not.toHaveClass("app-background--story");
   });
@@ -361,7 +359,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Open neon sleepover/ }));
     fireEvent.click(
-      within(screen.getByLabelText("Story list")).getByRole("button", {
+      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
         name: /Last seen typing 1 scene/
       })
     );
