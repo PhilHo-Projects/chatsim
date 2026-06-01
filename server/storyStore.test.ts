@@ -13,7 +13,16 @@ describe("StoryStore", () => {
   it("seeds the admin and mock accounts with password-backed sessions", async () => {
     const store = StoryStore.createMemory(createSeedStoreData());
 
-    for (const username of ["admin", "phil", "neon", "orbit", "motel", "void"]) {
+    for (const username of [
+      "admin",
+      "phil",
+      "neon",
+      "orbit",
+      "motel",
+      "void",
+      "dummy01",
+      "dummy20"
+    ]) {
       const session = await store.login({
         password: "0000",
         username
@@ -39,6 +48,31 @@ describe("StoryStore", () => {
       ownerId: "user-phil",
       storyId: "story-phil-1",
       title: "Story"
+    });
+    expect(profiles).toHaveLength(25);
+    expect(profiles.find((profile) => profile.username === "dummy01")).toMatchObject({
+      displayName: "demo account 01",
+      id: "user-dummy-01",
+      stories: [
+        expect.objectContaining({
+          ownerId: "user-dummy-01",
+          storyId: "story-dummy-01",
+          title: "Placeholder Story 01"
+        })
+      ],
+      username: "dummy01"
+    });
+    expect(profiles.find((profile) => profile.username === "dummy20")).toMatchObject({
+      displayName: "demo account 20",
+      id: "user-dummy-20",
+      stories: [
+        expect.objectContaining({
+          ownerId: "user-dummy-20",
+          storyId: "story-dummy-20",
+          title: "Placeholder Story 20"
+        })
+      ],
+      username: "dummy20"
     });
     expect(JSON.stringify(profiles)).not.toContain("passwordHash");
     expect(JSON.stringify(profiles)).not.toContain("sessions");
@@ -128,11 +162,17 @@ describe("StoryStore", () => {
       const dataFile = join(tempDir, "story-store.json");
       const legacyData = createSeedStoreData() as any;
       legacyData.users = legacyData.users
-        .filter((user: { username: string }) => user.username !== "admin")
+        .filter(
+          (user: { username: string }) =>
+            !["admin", "dummy01"].includes(user.username)
+        )
         .map((user: Record<string, unknown>) => {
           const { role: _role, ...legacyUser } = user;
           return legacyUser;
         });
+      legacyData.stories = legacyData.stories.filter(
+        (story: { id: string }) => story.id !== "story-dummy-01"
+      );
       writeFileSync(dataFile, JSON.stringify(legacyData), "utf8");
 
       const store = StoryStore.open(dataFile);
@@ -148,6 +188,12 @@ describe("StoryStore", () => {
       expect(
         store.snapshot().users.every((user) => ["admin", "member"].includes(user.role))
       ).toBe(true);
+      expect(store.snapshot().users.some((user) => user.username === "dummy01")).toBe(true);
+      expect(store.getStory("story-dummy-01")).toMatchObject({
+        id: "story-dummy-01",
+        ownerId: "user-dummy-01",
+        title: "Placeholder Story 01"
+      });
     } finally {
       rmSync(tempDir, { force: true, recursive: true });
     }

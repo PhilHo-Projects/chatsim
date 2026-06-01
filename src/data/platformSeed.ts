@@ -53,7 +53,7 @@ export const STORY_COVER_COLORS = [
 
 const SEED_TIMESTAMP = "2026-05-28T00:00:00.000Z";
 
-const profileSpecs = [
+const defaultProfileSpecs = [
   {
     displayName: "phil's stories",
     id: "user-phil",
@@ -89,7 +89,21 @@ const profileSpecs = [
     storyTitle: "Read receipts",
     username: "void"
   }
-] as const;
+];
+
+const dummyProfileSpecs = Array.from({ length: 20 }, (_, index) => {
+  const number = String(index + 1).padStart(2, "0");
+
+  return {
+    displayName: `demo account ${number}`,
+    id: `user-dummy-${number}`,
+    storyId: `story-dummy-${number}`,
+    storyTitle: `Placeholder Story ${number}`,
+    username: `dummy${number}`
+  };
+});
+
+const profileSpecs = [...defaultProfileSpecs, ...dummyProfileSpecs];
 
 function createStoryboard(index: number, id: string, title: string): Storyboard {
   const source =

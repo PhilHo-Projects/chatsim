@@ -10,7 +10,6 @@ import {
   LogOut,
   Plus,
   Search,
-  Settings,
   SquarePen,
   Trash2,
   UserCircle,
@@ -196,6 +195,7 @@ export default function App() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [accountError, setAccountError] = useState("");
   const [pendingDeleteStoryId, setPendingDeleteStoryId] = useState<
@@ -706,6 +706,8 @@ export default function App() {
           <input
             aria-label="Search stories"
             type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
             className="h-full min-w-0 flex-1 bg-transparent px-3 text-base font-semibold text-slate-900 outline-none placeholder:text-slate-500"
             placeholder="Search"
           />
@@ -875,7 +877,7 @@ export default function App() {
             }}
             className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
           >
-            <Settings className="h-5 w-5" aria-hidden="true" />
+            <UserCircle className="h-5 w-5" aria-hidden="true" />
           </button>
 
           {isAccountOpen ? (
@@ -1010,6 +1012,7 @@ export default function App() {
             }}
             onSelectStory={selectStory}
             profiles={profiles}
+            searchQuery={searchQuery}
             selectedProfileId={selectedProfileId}
           />
         ) : (

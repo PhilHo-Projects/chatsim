@@ -52,6 +52,30 @@ function toStoryCard(story: PlatformStoryRecord) {
   };
 }
 
+function createMockStory(
+  ownerId: string,
+  id: string,
+  title: string,
+  index: number
+): PlatformStoryRecord {
+  const storyboard = normalizeStoryboard({
+    ...createBlankStoryboard(index),
+    id,
+    title
+  });
+
+  return {
+    coverColor: "#22d3ee",
+    createdAt: "2026-05-28T00:00:00.000Z",
+    id,
+    ownerId,
+    storyboard,
+    title,
+    updatedAt: "2026-05-28T00:00:00.000Z",
+    visibility: "public"
+  };
+}
+
 function getProfilesFromStories() {
   return mockProfiles.map((profile) => ({
     ...profile,
@@ -267,6 +291,10 @@ describe("App", () => {
     expect(appShell).not.toHaveClass("app-background--story");
     expect(screen.queryByText("choose a story")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Account settings" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Account settings" }));
+    expect(screen.getByRole("dialog", { name: "Account panel" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Account settings" }));
+    expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
     expect(screen.getByText("phil's stories")).toBeInTheDocument();
     expect(screen.getByLabelText("Profile masonry")).toHaveClass(
       "overflow-y-auto"
@@ -350,6 +378,111 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
     expect(appShell).toHaveClass("app-background--landing");
     expect(appShell).not.toHaveClass("app-background--story");
+  });
+
+  it("renders dummy account placeholder cards and keeps logged-out browsing open", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+
+    const dummyOne = screen.getByRole("button", {
+      name: /Open demo account 01/
+    });
+    const dummyTwenty = screen.getByRole("button", {
+      name: /Open demo account 20/
+    });
+
+    expect(within(dummyOne).getByText("@dummy01")).toBeInTheDocument();
+    expect(within(dummyTwenty).getByText("@dummy20")).toBeInTheDocument();
+    expect(dummyOne).toHaveClass("h-72", "sm:h-80");
+    expect(dummyTwenty).toHaveClass("h-60", "sm:h-80");
+    expect(
+      screen
+        .getByTestId("profile-card-background-user-dummy-01")
+        .querySelector("img")
+        ?.getAttribute("src")
+    ).toContain("dummy-profile-01");
+    expect(
+      screen
+        .getByTestId("profile-card-background-user-dummy-20")
+        .querySelector("img")
+        ?.getAttribute("src")
+    ).toContain("dummy-profile-20");
+
+    fireEvent.click(dummyTwenty);
+
+    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
+        name: /Placeholder Story 20 1 scene/
+      })
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
+        name: /Placeholder Story 20 1 scene/
+      })
+    );
+    await flushPlatformEffects();
+
+    expect(screen.getByLabelText("App shell")).toBeInTheDocument();
+    expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
+    expect(screen.queryByText("Sign in to browse")).not.toBeInTheDocument();
+  });
+
+  it("reorders the current browse view from search without hiding cards", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+
+    const masonry = screen.getByLabelText("Profile masonry");
+    const originalCards = within(masonry).getAllByRole("button");
+
+    expect(originalCards).toHaveLength(seedProfiles.length);
+    expect(originalCards[0]).toHaveAccessibleName("Open phil's stories, 1 story");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
+      target: { value: "demo account 20" }
+    });
+
+    const reorderedCards = within(masonry).getAllByRole("button");
+
+    expect(reorderedCards).toHaveLength(seedProfiles.length);
+    expect(reorderedCards[0]).toHaveAccessibleName("Open demo account 20, 1 story");
+    expect(screen.getByRole("button", { name: /Open phil's stories/ })).toBeInTheDocument();
+  });
+
+  it("reorders story cards inside the selected profile from search", async () => {
+    mockStories["story-phil-cafe"] = createMockStory(
+      "user-phil",
+      "story-phil-cafe",
+      "Cafe drift",
+      41
+    );
+    mockStories["story-phil-soccer"] = createMockStory(
+      "user-phil",
+      "story-phil-soccer",
+      "Soccer season",
+      42
+    );
+
+    render(<App />);
+    await flushPlatformEffects();
+    fireEvent.click(screen.getByRole("button", { name: /Open phil's stories/ }));
+
+    const storyGrid = screen.getByLabelText("Story bento grid");
+
+    expect(within(storyGrid).getAllByRole("button")).toHaveLength(3);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
+      target: { value: "soccer" }
+    });
+
+    const storyCards = within(storyGrid).getAllByRole("button");
+
+    expect(storyCards).toHaveLength(3);
+    expect(storyCards[0]).toHaveAccessibleName("Open Soccer season 1 scene");
+    expect(within(storyGrid).getByRole("button", { name: /Open Story 5 scenes/ })).toBeInTheDocument();
   });
 
   it("shows editor controls to admins on stories they do not own", async () => {

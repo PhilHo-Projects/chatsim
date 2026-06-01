@@ -93,6 +93,72 @@ const SEED_TIMESTAMP = "2026-05-28T00:00:00.000Z";
 const COVER_COLORS = ["#f472b6", "#22d3ee", "#a3e635", "#f59e0b", "#8b5cf6"];
 const DEFAULT_STORE_FILE = resolve(process.cwd(), "server/data/story-store.json");
 
+type SeedProfileSpec = {
+  displayName: string;
+  id: string;
+  storyId: string;
+  storyTitle: string;
+  username: string;
+};
+
+const DEFAULT_SEED_PROFILE_SPECS: SeedProfileSpec[] = [
+  {
+    displayName: "phil's stories",
+    id: "user-phil",
+    storyId: "story-phil-1",
+    storyTitle: "Story",
+    username: "phil"
+  },
+  {
+    displayName: "neon sleepover",
+    id: "user-neon",
+    storyId: "story-neon-1",
+    storyTitle: "Last seen typing",
+    username: "neon"
+  },
+  {
+    displayName: "orbit threads",
+    id: "user-orbit",
+    storyId: "story-orbit-1",
+    storyTitle: "Soft launch",
+    username: "orbit"
+  },
+  {
+    displayName: "motel lobby",
+    id: "user-motel",
+    storyId: "story-motel-1",
+    storyTitle: "Room 12",
+    username: "motel"
+  },
+  {
+    displayName: "void pop",
+    id: "user-void",
+    storyId: "story-void-1",
+    storyTitle: "Read receipts",
+    username: "void"
+  }
+];
+
+const DUMMY_SEED_PROFILE_SPECS: SeedProfileSpec[] = Array.from(
+  { length: 20 },
+  (_, index) => {
+    const number = String(index + 1).padStart(2, "0");
+
+    return {
+      displayName: `demo account ${number}`,
+      id: `user-dummy-${number}`,
+      storyId: `story-dummy-${number}`,
+      storyTitle: `Placeholder Story ${number}`,
+      username: `dummy${number}`
+    };
+  }
+);
+
+const SEED_PROFILE_SPECS = [
+  ...DEFAULT_SEED_PROFILE_SPECS,
+  ...DUMMY_SEED_PROFILE_SPECS
+];
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -172,11 +238,14 @@ function createSeedUser(
 
 function createSeedUsers() {
   return [
-    createSeedUser("user-phil", "phil", "phil's stories", COVER_COLORS[0]),
-    createSeedUser("user-neon", "neon", "neon sleepover", COVER_COLORS[1]),
-    createSeedUser("user-orbit", "orbit", "orbit threads", COVER_COLORS[2]),
-    createSeedUser("user-motel", "motel", "motel lobby", COVER_COLORS[3]),
-    createSeedUser("user-void", "void", "void pop", COVER_COLORS[4]),
+    ...SEED_PROFILE_SPECS.map((profile, index) =>
+      createSeedUser(
+        profile.id,
+        profile.username,
+        profile.displayName,
+        COVER_COLORS[index % COVER_COLORS.length]
+      )
+    ),
     createSeedUser("user-admin", "admin", "admin", "#0f172a", "admin")
   ];
 }
@@ -246,30 +315,31 @@ function createSeedStory(
   };
 }
 
+function createSeedStories() {
+  return SEED_PROFILE_SPECS.map((profile, index) =>
+    createSeedStory(
+      profile.storyId,
+      profile.id,
+      profile.storyTitle,
+      COVER_COLORS[index % COVER_COLORS.length],
+      profile.storyId === "story-phil-1" ? loadStoryDatabase() : undefined
+    )
+  );
+}
+
 export function createSeedStoreData(): StoryStoreData {
   const users = createSeedUsers();
 
   return {
     sessions: [],
-    stories: [
-      createSeedStory(
-        "story-phil-1",
-        "user-phil",
-        "Story",
-        COVER_COLORS[0],
-        loadStoryDatabase()
-      ),
-      createSeedStory("story-neon-1", "user-neon", "Last seen typing", COVER_COLORS[1]),
-      createSeedStory("story-orbit-1", "user-orbit", "Soft launch", COVER_COLORS[2]),
-      createSeedStory("story-motel-1", "user-motel", "Room 12", COVER_COLORS[3]),
-      createSeedStory("story-void-1", "user-void", "Read receipts", COVER_COLORS[4])
-    ],
+    stories: createSeedStories(),
     users
   };
 }
 
 function normalizeStoreData(data: StoryStoreData) {
   let changed = false;
+  const seedStories = createSeedStories();
   const seedUsers = createSeedUsers();
 
   data.sessions ??= [];
@@ -294,6 +364,13 @@ function normalizeStoreData(data: StoryStoreData) {
   for (const seedUser of seedUsers) {
     if (!data.users.some((user) => user.username === seedUser.username)) {
       data.users.push(seedUser);
+      changed = true;
+    }
+  }
+
+  for (const seedStory of seedStories) {
+    if (!data.stories.some((story) => story.id === seedStory.id)) {
+      data.stories.push(seedStory);
       changed = true;
     }
   }

@@ -796,6 +796,966 @@
       "title": "Read receipts",
       "updatedAt": "2026-05-28T00:00:00.000Z",
       "visibility": "public"
+    },
+    {
+      "coverColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-01",
+      "ownerId": "user-dummy-01",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-01",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 01",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 01",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-02",
+      "ownerId": "user-dummy-02",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-02",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 02",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 02",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-03",
+      "ownerId": "user-dummy-03",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-03",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 03",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 03",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-04",
+      "ownerId": "user-dummy-04",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-04",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 04",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 04",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-05",
+      "ownerId": "user-dummy-05",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-05",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 05",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 05",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-06",
+      "ownerId": "user-dummy-06",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-06",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 06",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 06",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-07",
+      "ownerId": "user-dummy-07",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-07",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 07",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 07",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-08",
+      "ownerId": "user-dummy-08",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-08",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 08",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 08",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-09",
+      "ownerId": "user-dummy-09",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-09",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 09",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 09",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-10",
+      "ownerId": "user-dummy-10",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-10",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 10",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 10",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-11",
+      "ownerId": "user-dummy-11",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-11",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 11",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 11",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-12",
+      "ownerId": "user-dummy-12",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-12",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 12",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 12",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-13",
+      "ownerId": "user-dummy-13",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-13",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 13",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 13",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-14",
+      "ownerId": "user-dummy-14",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-14",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 14",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 14",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-15",
+      "ownerId": "user-dummy-15",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-15",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 15",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 15",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-16",
+      "ownerId": "user-dummy-16",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-16",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 16",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 16",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-17",
+      "ownerId": "user-dummy-17",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-17",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 17",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 17",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-18",
+      "ownerId": "user-dummy-18",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-18",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 18",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 18",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-19",
+      "ownerId": "user-dummy-19",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-19",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 19",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 19",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-dummy-20",
+      "ownerId": "user-dummy-20",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-dummy-20",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Placeholder Story 20",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Placeholder Story 20",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
     }
   ],
   "users": [
@@ -858,6 +1818,206 @@
       "id": "user-admin",
       "role": "admin",
       "username": "admin"
+    },
+    {
+      "passwordHash": "05fc9a3987336463cd152ec0ecf7fd01316792d816c7995ed89fc714decdd5d9cc83f078fb3ad62a31ba05648a94fab105c18e58ab357053f7b4d22fb682c730",
+      "passwordSalt": "c2813651953664e583a10d4d817a1df2",
+      "accentColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 01",
+      "id": "user-dummy-01",
+      "role": "member",
+      "username": "dummy01"
+    },
+    {
+      "passwordHash": "883599c8844c79a50c8d4067f4f069d9adb5f318f2cc0e58a3afd57d2106f075089feb53d57fb7c1453f8d5011044d99506a5784959b0381b89387eb86ab0bf6",
+      "passwordSalt": "30fb0e458071de47e9886b62871acaf9",
+      "accentColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 02",
+      "id": "user-dummy-02",
+      "role": "member",
+      "username": "dummy02"
+    },
+    {
+      "passwordHash": "b653edeba82f9eb19b2444f0fb1571df3b810edd9fd3841c472e045f16e183c7a94f0d0ec68c56b491e3b9159081f436078a0f2ceac6ca4f0d0e1fd1e15ced10",
+      "passwordSalt": "1d498f89ab9d24b9c87621d569466163",
+      "accentColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 03",
+      "id": "user-dummy-03",
+      "role": "member",
+      "username": "dummy03"
+    },
+    {
+      "passwordHash": "34de9fb3c2d4882c3d956e6f20f9f06021894e31c00632172fe0d52eb1700d91b38efe282efbd519e50c4f42f2795d9aba6d27166b9daf19801f04e3390c53ab",
+      "passwordSalt": "9b8521c56a66c8d5837676e733151c1c",
+      "accentColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 04",
+      "id": "user-dummy-04",
+      "role": "member",
+      "username": "dummy04"
+    },
+    {
+      "passwordHash": "a4948f9e2ea933809a32cfd3868a6ffea3d62a5b50f4f1b93db4a2cf34dc48b844282825b1efcc507a336c8d24411bb3ff8adc3f1d9869d9a05eb577628f4451",
+      "passwordSalt": "dc06133459fdc07da23e955dae5bd1ee",
+      "accentColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 05",
+      "id": "user-dummy-05",
+      "role": "member",
+      "username": "dummy05"
+    },
+    {
+      "passwordHash": "daeeb5e338eef749bd5a76074a34e406d7468955438138be1c361b5cc4b65eda2b7b23f8f147a41e281226cf01fb1cb3500c7526906c2238fcb40f65684637f0",
+      "passwordSalt": "a0c59e4222c5ae17eb232695c21c24b8",
+      "accentColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 06",
+      "id": "user-dummy-06",
+      "role": "member",
+      "username": "dummy06"
+    },
+    {
+      "passwordHash": "334f11edbf6ed24bb0a0b7d29812e19236a2398282e9ad43cc147a68e8d817bb6b837015337c96e78daaec915378f127160108d40687bc5889962214b154ec53",
+      "passwordSalt": "3f000ab28291bdd6498e92129c59b5db",
+      "accentColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 07",
+      "id": "user-dummy-07",
+      "role": "member",
+      "username": "dummy07"
+    },
+    {
+      "passwordHash": "932d0fa451ce0cf567d2c01c737059f8c9844a3d99a5aba04af1deffde863ac1420543a6ff22d1c1dce3c5335d5f92ef59a65931c39f22b404f8143865c2d78e",
+      "passwordSalt": "c7c3a8affa18c3e15ac656e63bea488c",
+      "accentColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 08",
+      "id": "user-dummy-08",
+      "role": "member",
+      "username": "dummy08"
+    },
+    {
+      "passwordHash": "ee8fbbac8714a18b8fcd26c1fabf97da3dd5143ccf309600b457179986c9b1d4f734eedd6a912019802ddeae9dbecac16f95d9e3a64a92a635209b7bf8f00160",
+      "passwordSalt": "5e552eb5e3ce223994ad9708040a6a6c",
+      "accentColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 09",
+      "id": "user-dummy-09",
+      "role": "member",
+      "username": "dummy09"
+    },
+    {
+      "passwordHash": "659ff587ccae995d7616735430d75d81e75e5bd0322dc7749d036e222739fc87ba9200bec92a8327c53ec02f6081d5d4795f90ce7e0dea619b0527e95fd06983",
+      "passwordSalt": "1e2b4e8536b7fdd31b49328c0b5964df",
+      "accentColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 10",
+      "id": "user-dummy-10",
+      "role": "member",
+      "username": "dummy10"
+    },
+    {
+      "passwordHash": "99a4fd88f67a886ea78ce462966a593b3ef0cbf901d5789cecbbeb6ba633b4d1a0662c64d46a0e95f6f57a4a7485dafd38ac6b54d6331d4b2fa57cd5801c8ab7",
+      "passwordSalt": "0642c94a121976de880475b3e584884e",
+      "accentColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 11",
+      "id": "user-dummy-11",
+      "role": "member",
+      "username": "dummy11"
+    },
+    {
+      "passwordHash": "5d33a3a2771c7a7dc3691c73353da381e83caf023a30bc1d590e394a55309fef42bc14d898b479f4b49efc0ed9b1ab9fdc853221958ffea0f1a51de83a65cc74",
+      "passwordSalt": "faf5e5566666bb46821b402c7b990637",
+      "accentColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 12",
+      "id": "user-dummy-12",
+      "role": "member",
+      "username": "dummy12"
+    },
+    {
+      "passwordHash": "7acfc9b8ee6f28411f227586be50c74bc1253d85203bc1d41b73e35ee7e58269ac3464f50bb86282e9ad009e34b94b04a0b4a9547a94aebdacdd4e9adfb72ba4",
+      "passwordSalt": "81b318f65643581586d3859eed6ab31c",
+      "accentColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 13",
+      "id": "user-dummy-13",
+      "role": "member",
+      "username": "dummy13"
+    },
+    {
+      "passwordHash": "83ab40353d89167c17826793c9c86b143b9a91c8f3662a247f57bb020259e0dbe12cddf82baff472de3e7e0cfe1076cb323d525bbfe4c4c998e25f4cf4074a6b",
+      "passwordSalt": "e6abaad49e7c4d8c34bc3c35abc13740",
+      "accentColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 14",
+      "id": "user-dummy-14",
+      "role": "member",
+      "username": "dummy14"
+    },
+    {
+      "passwordHash": "443c73f29c6cb73be0f229a76c0f6dcbfb8ba8ad475daf1e1dbd20e7d31ca8365bc7a05bf132dbf7302eed357879382c5d0a3d7ce1a159f8133691b9555fbcab",
+      "passwordSalt": "ae862db234c05a6d9d12b9c9edfde229",
+      "accentColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 15",
+      "id": "user-dummy-15",
+      "role": "member",
+      "username": "dummy15"
+    },
+    {
+      "passwordHash": "94ca5a4e6c4b0bd5c1bf4f0e09671bfab030f4ff0fd5dd9baadf51a41eba076cb6abeeb62386516918cac944bd9829e9941241597494880214c4fe6554659026",
+      "passwordSalt": "e94f914401fccb2efd60666217c8b790",
+      "accentColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 16",
+      "id": "user-dummy-16",
+      "role": "member",
+      "username": "dummy16"
+    },
+    {
+      "passwordHash": "972dd3513266f39cff4784e2893d2b9f3368b52df777e36a0d7edfa6b29af169a67ae78366d1dce6a5b84932b2f995ae10bdf408b06cabe6b82ca242f608e397",
+      "passwordSalt": "a332958ef6e39e3bcfe6a28b36a57a87",
+      "accentColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 17",
+      "id": "user-dummy-17",
+      "role": "member",
+      "username": "dummy17"
+    },
+    {
+      "passwordHash": "5d446a062d75281f09b02fc762ab1e69eaa5a2e5e2c03935734d3d3c4fae764ef134e36ee986bf94beb08568ba3a9f5686ceb69216e95c07d3823c08bfd383f3",
+      "passwordSalt": "ab18904805227b890ff0735787387c7e",
+      "accentColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 18",
+      "id": "user-dummy-18",
+      "role": "member",
+      "username": "dummy18"
+    },
+    {
+      "passwordHash": "cfabedd08ca52df834e8b4dac1eeb8dbbd445865e7552414a4018f6145594f8df0061e7d62b7f5f058bc909072c4f0513738424cfb39ce7e4370f6145dd18c38",
+      "passwordSalt": "d6c8833712f753068d400b13f197b718",
+      "accentColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 19",
+      "id": "user-dummy-19",
+      "role": "member",
+      "username": "dummy19"
+    },
+    {
+      "passwordHash": "15f7e54316bb6f7b732cae6ab62b0947b48b09cf598cb858fff985a23c799423662ea5f07afb082e777a32e97aa34b4c60037c80f7311d4639119754af46cd59",
+      "passwordSalt": "474ec416b1a8799ae0d3007858d6bd4f",
+      "accentColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "demo account 20",
+      "id": "user-dummy-20",
+      "role": "member",
+      "username": "dummy20"
     }
   ]
 }
