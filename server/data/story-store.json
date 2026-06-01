@@ -1,0 +1,863 @@
+{
+  "sessions": [],
+  "stories": [
+    {
+      "coverColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-phil-1",
+      "ownerId": "user-phil",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "scenes": [
+          {
+            "id": "scene-1",
+            "sceneTitle": "Scene 1",
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "defaultPauseAfterMs": 1000,
+            "contact": {
+              "name": "Nor",
+              "initials": "N",
+              "status": "online now",
+              "avatarUrl": "",
+              "typingSpeedLevel": 3
+            },
+            "viewer": {
+              "name": "Phil",
+              "initials": "P",
+              "avatarUrl": ""
+            },
+            "messages": [
+              {
+                "id": "viewer-1",
+                "speaker": "viewer",
+                "text": "Yo I need your breast milk asap",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-1",
+                "speaker": "contact",
+                "text": "who the fuck is this",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-2",
+                "speaker": "viewer",
+                "text": "you don't know me yet but i don't have time to explain where are you",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-2",
+                "speaker": "contact",
+                "text": "????????????????????????????",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-3",
+                "speaker": "viewer",
+                "text": "listen the world is universe is going to fold itself into a pancake if you don't",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-3",
+                "speaker": "contact",
+                "text": "ya ur blocked",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-4",
+                "speaker": "viewer",
+                "text": "NO wait PLS, Ok I actually have some time to explain don't block me you gotta have an open mind",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-4",
+                "speaker": "contact",
+                "text": "who the fuck are you????",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-5",
+                "speaker": "viewer",
+                "text": "it's phil but you don't know me yet",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-5",
+                "speaker": "contact",
+                "text": "wtf you mean YET, second time you say this what kind of sick fuck are you",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-6",
+                "speaker": "viewer",
+                "text": "bitch stfu and lock in you gotta believe me, I am somehow able to text you from the future and we're good friends. We were doing going to taper off with some a small dose of ketamine after a mushroom trip and next thing I know I'm in this room and there's just a phone with your number, but it says its 2019",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-6",
+                "speaker": "contact",
+                "text": "ok first off don't call me a bitch, that's not ok and idk what kind of drugs you are on but I think you got the wrong person, you need therapy.  I can recommend you some self help books, you clearly need it",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-7",
+                "speaker": "viewer",
+                "text": "holy shit ur cringe",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-7",
+                "speaker": "contact",
+                "text": "fuck you crackhead",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-8",
+                "speaker": "viewer",
+                "text": "o ya eh thought you were a woke ass wtf omigod ur verbally assaulting me omyg0d someone save me!!!",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-8",
+                "speaker": "contact",
+                "text": "im blocking you",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-9",
+                "speaker": "viewer",
+                "text": "NO I NEED YOUR BREASTMILK STOP FCKING AROUND IT'S AN EMERGENCY",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-9",
+                "speaker": "contact",
+                "text": "WTF ARE YOU GOING TO DO WITH MY BREAST MILK YOU CREEP?",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-10",
+                "speaker": "viewer",
+                "text": "listen you got your titties done by some rich fuck and they decided to take all of it out, but they didn't know it was holding the world together",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-10",
+                "speaker": "contact",
+                "text": "I would never get my tats done your so blocked",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-11",
+                "speaker": "viewer",
+                "text": "stfu you won't block me this is too interesting for you",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-11",
+                "speaker": "contact",
+                "text": "Ok I'll humor you let's see where this goes",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-12",
+                "speaker": "viewer",
+                "text": "ok so after going around in keta-mushroom world I found out that the surgeon who did your tits was a an agent",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-12",
+                "speaker": "contact",
+                "text": "agent",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-13",
+                "speaker": "viewer",
+                "text": "that fucking grabbed wtv the fck was in there, and is using it to trap me here forever, but I found a way to speak to people in the past. All the other girls who actually have tits have blocked me so your the only one left",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-13",
+                "speaker": "contact",
+                "text": "wow you arrogant fuck, how am I friends with you in the future, your rude and clearly deranged",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-14",
+                "speaker": "viewer",
+                "text": "idk but we beat overcooked 1 and 2 and most of the DLCs and I know some shit about you",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-14",
+                "speaker": "contact",
+                "text": "like what",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-15",
+                "speaker": "viewer",
+                "text": "idk all your crazy stories happen after this, you love eggs how about that",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-15",
+                "speaker": "contact",
+                "text": "I do love eggs, but who doesn't?! Ok wtf is my breast fucking milk gonna do I can't believe im entertaining this",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-16",
+                "speaker": "viewer",
+                "text": "I need it to undo the ketamine spell, its the only way, I asked people I know in this timeline already and they all blocked me please help",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-16",
+                "speaker": "contact",
+                "text": "how am i gonna give u breast milk",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-17",
+                "speaker": "viewer",
+                "text": "idk just do wtv the fck they do with cows google it, squeeze it idk",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-17",
+                "speaker": "contact",
+                "text": "you nasty freak then what how I am supposed to dispel this",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-18",
+                "speaker": "viewer",
+                "text": "u gotta k-hole and bring that shit here and then I drink it and I should wake up in 2027",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-18",
+                "speaker": "contact",
+                "text": "im calling 911",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-19",
+                "speaker": "viewer",
+                "text": "NOOOOO DON'T PLEASE",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-19",
+                "speaker": "contact",
+                "text": "wait if ur from the future, wtf happens next",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-20",
+                "speaker": "viewer",
+                "text": "Easy put ur entire life savings into bitcoin and nvidia become rich but first leche per favor mi amigo",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-20",
+                "speaker": "contact",
+                "text": "So let me get this straight, you're a crypto bro from 8 years into the future who allegedly tripping balls with future me trying to get me to k-hole and deliver you some breast milk",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-21",
+                "speaker": "viewer",
+                "text": "BINGO YES, YOU GOT IT. PLS. It doesn't have to be ur breast milk just any girl's",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-21",
+                "speaker": "contact",
+                "text": "is this a prank who the fuck is this for real",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-22",
+                "speaker": "viewer",
+                "text": "not a prank brooooooooo pls idk how long",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-22",
+                "speaker": "contact",
+                "text": "if this is some kind of weird elaborate patriarchal ploy to hit on me it's the most disturbing and offensive method, fucking men, learn to respect women just say hello how are you or some shit wtf is this",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-23",
+                "speaker": "viewer",
+                "text": "??????? im stuck in a time travel khole retard I don't even have a dick idk wtf I am right now just a blob, a ghost im fking casper I don't even have hands idk how im typing",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-23",
+                "speaker": "contact",
+                "text": "wow the R word, that's going to help your case",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-24",
+                "speaker": "viewer",
+                "text": "halp, the nor I know would do it",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-24",
+                "speaker": "contact",
+                "text": "🙄",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "viewer-25",
+                "speaker": "viewer",
+                "text": "plx",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              },
+              {
+                "id": "contact-25",
+                "speaker": "contact",
+                "text": "die",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              }
+            ]
+          },
+          {
+            "id": "scene-2",
+            "sceneTitle": "Scene 2",
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "defaultPauseAfterMs": 1000,
+            "contact": {
+              "name": "Nor",
+              "initials": "N",
+              "status": "online now",
+              "avatarUrl": "",
+              "typingSpeedLevel": 3
+            },
+            "viewer": {
+              "name": "Phil",
+              "initials": "P",
+              "avatarUrl": ""
+            },
+            "messages": [
+              {
+                "id": "viewer-1",
+                "speaker": "viewer",
+                "text": "",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              }
+            ]
+          },
+          {
+            "id": "scene-3",
+            "sceneTitle": "Scene 3",
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "defaultPauseAfterMs": 1000,
+            "contact": {
+              "name": "Nor",
+              "initials": "N",
+              "status": "online now",
+              "avatarUrl": "",
+              "typingSpeedLevel": 3
+            },
+            "viewer": {
+              "name": "Phil",
+              "initials": "P",
+              "avatarUrl": ""
+            },
+            "messages": [
+              {
+                "id": "viewer-1",
+                "speaker": "viewer",
+                "text": "",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              }
+            ]
+          },
+          {
+            "id": "scene-4",
+            "sceneTitle": "Scene 4",
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "defaultPauseAfterMs": 1000,
+            "contact": {
+              "name": "Nor",
+              "initials": "N",
+              "status": "online now",
+              "avatarUrl": "",
+              "typingSpeedLevel": 3
+            },
+            "viewer": {
+              "name": "Phil",
+              "initials": "P",
+              "avatarUrl": ""
+            },
+            "messages": [
+              {
+                "id": "viewer-1",
+                "speaker": "viewer",
+                "text": "",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              }
+            ]
+          },
+          {
+            "id": "scene-5",
+            "sceneTitle": "Scene 5",
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "defaultPauseAfterMs": 1000,
+            "contact": {
+              "name": "Nor",
+              "initials": "N",
+              "status": "online now",
+              "avatarUrl": "",
+              "typingSpeedLevel": 3
+            },
+            "viewer": {
+              "name": "Phil",
+              "initials": "P",
+              "avatarUrl": ""
+            },
+            "messages": [
+              {
+                "id": "viewer-1",
+                "speaker": "viewer",
+                "text": "",
+                "typingSpeedLevel": 3,
+                "pauseAfterMs": 1000,
+                "useDefaultTypingMs": true,
+                "useDefaultPauseAfterMs": true
+              }
+            ]
+          }
+        ],
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-phil-1",
+        "title": "Story",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Story",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-neon-1",
+      "ownerId": "user-neon",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-neon-1",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Last seen typing",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Last seen typing",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-orbit-1",
+      "ownerId": "user-orbit",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-orbit-1",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Soft launch",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Soft launch",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-motel-1",
+      "ownerId": "user-motel",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-motel-1",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Room 12",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Room 12",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    },
+    {
+      "coverColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "id": "story-void-1",
+      "ownerId": "user-void",
+      "storyboard": {
+        "activeSceneId": "scene-1",
+        "createdAt": "2026-05-28T00:00:00.000Z",
+        "id": "story-void-1",
+        "scenes": [
+          {
+            "contact": {
+              "avatarUrl": "",
+              "initials": "M",
+              "name": "Maya",
+              "status": "online now",
+              "typingSpeedLevel": 3
+            },
+            "defaultPauseAfterMs": 1000,
+            "defaultSpeakerTypingSpeedLevel": 3,
+            "id": "scene-1",
+            "messages": [
+              {
+                "id": "viewer-1",
+                "pauseAfterMs": 1000,
+                "speaker": "viewer",
+                "text": "new story opening soon",
+                "typingSpeedLevel": 3,
+                "useDefaultPauseAfterMs": true,
+                "useDefaultTypingMs": true
+              }
+            ],
+            "sceneTitle": "Scene 1",
+            "viewer": {
+              "avatarUrl": "",
+              "initials": "S",
+              "name": "Studio",
+              "status": "online now"
+            }
+          }
+        ],
+        "title": "Read receipts",
+        "updatedAt": "2026-05-28T00:00:00.000Z"
+      },
+      "title": "Read receipts",
+      "updatedAt": "2026-05-28T00:00:00.000Z",
+      "visibility": "public"
+    }
+  ],
+  "users": [
+    {
+      "passwordHash": "429a81cbe1514a9bacd4c89570ffb4126444e721b68f129cc5cea09e4dd0435f19f4951719e9b0ff72d821f51c1b74dc258df3b5095d4de9307172ee8e5df62e",
+      "passwordSalt": "6f7331195722525a589ea3aa60fd86b9",
+      "accentColor": "#f472b6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "phil's stories",
+      "id": "user-phil",
+      "username": "phil",
+      "role": "member"
+    },
+    {
+      "passwordHash": "35c5d960f4fabd35b37b7254f0b6f70f613ed48a35a4d0f87e85aac83e560b5859169bf930bf7bf00bdcaf027f34be439cd7c6ced242d998ef4e409f4b842c1e",
+      "passwordSalt": "10128f57d61c076eaa1c8f05257fc081",
+      "accentColor": "#22d3ee",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "neon sleepover",
+      "id": "user-neon",
+      "username": "neon",
+      "role": "member"
+    },
+    {
+      "passwordHash": "ccd1f5827eb124574017045bf186e99d0e94fba946237ac7a15831b5e78ac05568f56cb10ec82c93aaff18c10d6c3f40c594c50325a793d314576ff0a1dfc958",
+      "passwordSalt": "8a1a0b7a3bf8deadb9af0af388c4e70c",
+      "accentColor": "#a3e635",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "orbit threads",
+      "id": "user-orbit",
+      "username": "orbit",
+      "role": "member"
+    },
+    {
+      "passwordHash": "d0256b0374fb317f96ade270f4f96d92716faa1bf7213249503211fd946a3a8246388354bbc4a61e4a6a99b1990f6892738add9aa021123e14d512b72f56e565",
+      "passwordSalt": "60dcdbeb6a484588b0ac1bdec10889ca",
+      "accentColor": "#f59e0b",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "motel lobby",
+      "id": "user-motel",
+      "username": "motel",
+      "role": "member"
+    },
+    {
+      "passwordHash": "b7b63e0c8729be56b57d32c5391b6eba33e2e961d250d4d28cefb202257d130e9486a678ed51e893a15343a9b621704658ad72c6f6c31a55fa3a8f6dda061bf5",
+      "passwordSalt": "ffe3e70734f35f6f13a54f05455c0ad8",
+      "accentColor": "#8b5cf6",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "void pop",
+      "id": "user-void",
+      "username": "void",
+      "role": "member"
+    },
+    {
+      "passwordHash": "7b1baed30f130df5dafa2ed054dbca0797f50d4164ef6b6c451e53154d7916ab525b462f829faf1dcefe875c4139741051f94c8c564e054375e4419e0e256cd0",
+      "passwordSalt": "15cb4307eb97d49debfe2c81a02dee79",
+      "accentColor": "#0f172a",
+      "createdAt": "2026-05-28T00:00:00.000Z",
+      "displayName": "admin",
+      "id": "user-admin",
+      "role": "admin",
+      "username": "admin"
+    }
+  ]
+}
