@@ -9,6 +9,7 @@ export type {
   ConversationMessage,
   ConversationProfile,
   ContactProfile,
+  PresentationMode,
   SpeakerId,
   SpeedLevel,
   ViewerProfile

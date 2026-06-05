@@ -7,7 +7,9 @@
     "dev": "vite --host 127.0.0.1",
     "dev:api": "tsx server/index.ts",
     "build": "tsc -b && vite build",
+    "build:chatsim": "tsc -b && vite build --base=/chatsim/",
     "preview": "vite preview --host 127.0.0.1",
+    "start:api": "tsx server/index.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

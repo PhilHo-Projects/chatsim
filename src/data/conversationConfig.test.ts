@@ -8,6 +8,7 @@ import {
   normalizeConversationConfig,
   normalizeStoryLibrary,
   normalizeStoryDatabase,
+  normalizeStoryboard,
   removeStoryboard,
   rememberEditorUnlock,
   updateConversationMessage,
@@ -350,6 +351,17 @@ describe("conversation config", () => {
       activeSceneId: "scene-1"
     });
     expect(library.stories[0].scenes[0].messages[0].text).toBe("first");
+  });
+
+  it("normalizes storyboard presentation modes with phone as the legacy default", () => {
+    expect(normalizeStoryboard({ scenes: [] }).presentationMode).toBe("phone");
+    expect(
+      normalizeStoryboard({ presentationMode: "battle", scenes: [] }).presentationMode
+    ).toBe("battle");
+    expect(
+      normalizeStoryboard({ presentationMode: "unknown", scenes: [] }).presentationMode
+    ).toBe("phone");
+    expect(createBlankStoryboard(0).presentationMode).toBe("phone");
   });
 
   it("names blank stories from a Story baseline", () => {

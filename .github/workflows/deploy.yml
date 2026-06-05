@@ -1,0 +1,62 @@
+name: Deploy Chatsim
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build Chatsim
+        run: npm run build:chatsim
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/chatsim_deploy_key
+          chmod 600 ~/.ssh/chatsim_deploy_key
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy to AWS
+        run: |
+          ssh -i ~/.ssh/chatsim_deploy_key "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" <<'EOF'
+          set -euo pipefail
+
+          if [ ! -d "$HOME/projects/chatsim/.git" ]; then
+            git clone https://github.com/PhilHo-Projects/chatsim.git "$HOME/projects/chatsim"
+          fi
+
+          cd "$HOME/projects/chatsim"
+          git fetch origin main
+          git reset --hard origin/main
+          npm ci
+          npm run build:chatsim
+          mkdir -p server/data
+
+          if pm2 describe chatsim-api >/dev/null 2>&1; then
+            pm2 reload ecosystem.config.cjs --only chatsim-api --update-env
+          else
+            pm2 start ecosystem.config.cjs --only chatsim-api
+          fi
+
+          pm2 save
+          EOF

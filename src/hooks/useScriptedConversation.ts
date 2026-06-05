@@ -20,10 +20,16 @@ type UseScriptedConversationOptions = {
   defaultSpeakerTypingSpeedLevel?: SpeedLevel;
   defaultPauseAfterMs?: number;
   povTypingSpeedLevel?: SpeedLevel;
+  // When true, every speaker reveals their line character-by-character (the
+  // Pokemon-battle textbox style) instead of the phone style where the other
+  // speaker pops in fully while an "is typing" indicator runs.
+  typeAllSpeakers?: boolean;
 };
 
 type ScriptedConversationState = {
   activeContactName: string;
+  activeMessage: ConversationMessage | null;
+  activeMessageText: string;
   draftText: string;
   isContactTyping: boolean;
   isComplete: boolean;
@@ -54,6 +60,8 @@ type Timeline = {
 };
 
 type TimelineFrame = {
+  activeMessage: ConversationMessage | null;
+  activeMessageText: string;
   draftText: string;
   status: ConversationStatus;
   visibleMessages: ConversationMessage[];
@@ -66,13 +74,21 @@ const DEFAULT_SPEED_LEVEL: SpeedLevel = 3;
 function getTypingMs(
   message: ConversationMessage,
   povTypingSpeedLevel: SpeedLevel,
-  defaultSpeakerTypingSpeedLevel: SpeedLevel
+  defaultSpeakerTypingSpeedLevel: SpeedLevel,
+  typeAllSpeakers: boolean
 ): number {
-  if (message.speaker === "contact") {
+  // In battle mode both speakers "type" their line, so the other speaker uses
+  // the same per-character cadence as the POV instead of the fixed-duration
+  // "is typing" model used by the phone shell.
+  if (message.speaker === "contact" || typeAllSpeakers) {
+    const fallbackLevel =
+      message.speaker === "contact"
+        ? povTypingSpeedLevel
+        : defaultSpeakerTypingSpeedLevel;
     const speedLevel =
       message.useDefaultTypingMs === false
-        ? message.typingSpeedLevel ?? povTypingSpeedLevel
-        : povTypingSpeedLevel;
+        ? message.typingSpeedLevel ?? fallbackLevel
+        : fallbackLevel;
 
     return Math.max(
       80,
@@ -110,7 +126,8 @@ function buildTimeline(
   messages: ConversationMessage[],
   povTypingSpeedLevel: SpeedLevel,
   defaultSpeakerTypingSpeedLevel: SpeedLevel,
-  defaultPauseAfterMs: number
+  defaultPauseAfterMs: number,
+  typeAllSpeakers: boolean
 ): Timeline {
   const entries: TimelineEntry[] = [];
   const boundaries = [0];
@@ -120,7 +137,8 @@ function buildTimeline(
     const typingMs = getTypingMs(
       message,
       povTypingSpeedLevel,
-      defaultSpeakerTypingSpeedLevel
+      defaultSpeakerTypingSpeedLevel,
+      typeAllSpeakers
     );
     const startMs = elapsedMs;
     const revealMs = startMs + typingMs;
@@ -135,7 +153,7 @@ function buildTimeline(
 
     boundaries.push(startMs, revealMs);
 
-    if (message.speaker === "contact") {
+    if (message.speaker === "contact" || typeAllSpeakers) {
       const characterDelay = typingMs / Math.max(message.text.length, 1);
 
       for (
@@ -162,9 +180,15 @@ function buildTimeline(
   };
 }
 
-function getTimelineFrame(timeline: Timeline, positionMs: number): TimelineFrame {
+function getTimelineFrame(
+  timeline: Timeline,
+  positionMs: number,
+  typeAllSpeakers: boolean
+): TimelineFrame {
   if (timeline.entries.length === 0) {
     return {
+      activeMessage: null,
+      activeMessageText: "",
       draftText: "",
       status: "complete",
       visibleMessages: []
@@ -180,7 +204,11 @@ function getTimelineFrame(timeline: Timeline, positionMs: number): TimelineFrame
     .map((entry) => entry.message);
 
   if (clampedPosition >= timeline.totalMs) {
+    const activeMessage = visibleMessages[visibleMessages.length - 1] ?? null;
+
     return {
+      activeMessage,
+      activeMessageText: activeMessage?.text ?? "",
       draftText: "",
       status: "complete",
       visibleMessages
@@ -193,15 +221,23 @@ function getTimelineFrame(timeline: Timeline, positionMs: number): TimelineFrame
   );
 
   if (!activeEntry) {
+    const activeMessage = visibleMessages[visibleMessages.length - 1] ?? null;
+
     return {
+      activeMessage,
+      activeMessageText: activeMessage?.text ?? "",
       draftText: "",
       status: "between-messages",
       visibleMessages
     };
   }
 
-  if (activeEntry.message.speaker === "viewer") {
+  // Phone style: the other speaker pops in fully while an "is typing" bar runs.
+  // Battle style (typeAllSpeakers): everyone types their line out instead.
+  if (activeEntry.message.speaker === "viewer" && !typeAllSpeakers) {
     return {
+      activeMessage: activeEntry.message,
+      activeMessageText: activeEntry.message.text,
       draftText: "",
       status: "contact-typing",
       visibleMessages
@@ -218,8 +254,12 @@ function getTimelineFrame(timeline: Timeline, positionMs: number): TimelineFrame
     )
   );
 
+  const draftText = activeEntry.message.text.slice(0, characterCount);
+
   return {
-    draftText: activeEntry.message.text.slice(0, characterCount),
+    activeMessage: activeEntry.message,
+    activeMessageText: draftText,
+    draftText,
     status: "typing-outgoing",
     visibleMessages
   };
@@ -247,6 +287,7 @@ export function useScriptedConversation(
   const defaultSpeakerTypingSpeedLevel =
     options.defaultSpeakerTypingSpeedLevel ?? DEFAULT_SPEED_LEVEL;
   const defaultPauseAfterMs = options.defaultPauseAfterMs ?? DEFAULT_PAUSE_MS;
+  const typeAllSpeakers = options.typeAllSpeakers ?? false;
 
   const timeline = useMemo(
     () =>
@@ -254,18 +295,20 @@ export function useScriptedConversation(
         messages,
         povTypingSpeedLevel,
         defaultSpeakerTypingSpeedLevel,
-        defaultPauseAfterMs
+        defaultPauseAfterMs,
+        typeAllSpeakers
       ),
     [
       defaultPauseAfterMs,
       defaultSpeakerTypingSpeedLevel,
       messages,
-      povTypingSpeedLevel
+      povTypingSpeedLevel,
+      typeAllSpeakers
     ]
   );
   const frame = useMemo(
-    () => getTimelineFrame(timeline, positionMs),
-    [positionMs, timeline]
+    () => getTimelineFrame(timeline, positionMs, typeAllSpeakers),
+    [positionMs, timeline, typeAllSpeakers]
   );
 
   const clearTimer = useCallback(() => {
@@ -438,6 +481,8 @@ export function useScriptedConversation(
 
   return {
     activeContactName,
+    activeMessage: frame.activeMessage,
+    activeMessageText: frame.activeMessageText,
     draftText: frame.draftText,
     isContactTyping: frame.status === "contact-typing",
     isComplete: frame.status === "complete",

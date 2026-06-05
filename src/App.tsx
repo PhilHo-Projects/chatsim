@@ -1,21 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
-import {
-  BookOpen,
-  Check,
-  ChevronLeft,
-  Compass,
-  Edit3,
-  Home,
-  LogIn,
-  LogOut,
-  Plus,
-  Search,
-  SquarePen,
-  Trash2,
-  UserCircle,
-  UserPlus,
-  X
-} from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SquarePen, X } from "lucide-react";
 import {
   createStory as createRemoteStory,
   deleteStory as deleteRemoteStory,
@@ -28,11 +12,16 @@ import {
   updateStory as updateRemoteStory
 } from "./api/storyApi";
 import { AnimatedComposer } from "./components/AnimatedComposer";
+import { AccountPanel, type AuthMode } from "./components/AccountPanel";
+import { AppShell } from "./components/AppShell";
+import { BattleStoryPlayer } from "./components/BattleStoryPlayer";
 import { ChatHeader } from "./components/ChatHeader";
 import { LandingPage } from "./components/LandingPage";
 import { MessageList } from "./components/MessageList";
 import { PhoneShell } from "./components/PhoneShell";
+import { BattleScriptEditor } from "./components/BattleScriptEditor";
 import { ScriptEditor } from "./components/ScriptEditor";
+import { StorybookMenu } from "./components/StorybookMenu";
 import { StoryControls } from "./components/StoryControls";
 import {
   addStoryScene,
@@ -54,10 +43,9 @@ import {
   type PlatformStoryRecord
 } from "./data/platformSeed";
 import { useScriptedConversation } from "./hooks/useScriptedConversation";
+import { useAppRoute, type AppRoute } from "./navigation/appRoute";
 
 const STORY_ENTRANCE_MS = 1500;
-
-type AuthMode = "login" | "register";
 
 function cloneStoryRecord(record: PlatformStoryRecord): PlatformStoryRecord {
   return JSON.parse(JSON.stringify(record)) as PlatformStoryRecord;
@@ -173,18 +161,22 @@ function canManageStory(
   );
 }
 
+function getRequestErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export default function App() {
+  const { navigate, replace, route } = useAppRoute();
+  const latestStorySaveRef = useRef<Promise<boolean> | null>(null);
+  const storySaveVersionRef = useRef(0);
   const [profiles, setProfiles] = useState<PlatformProfile[]>(seedProfiles);
   const [session, setSession] = useState<PlatformSession | null>(null);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(
-    null
-  );
+  const [hasHydratedPlatform, setHasHydratedPlatform] = useState(false);
   const [storyRecordsById, setStoryRecordsById] = useState<
     Record<string, PlatformStoryRecord>
   >(() => toStoryRecordMap(seedStoryRecords));
   const [activeStoryId, setActiveStoryId] = useState("story-phil-1");
   const [undoStack, setUndoStack] = useState<PlatformStoryRecord[]>([]);
-  const [isStoryListOpen, setIsStoryListOpen] = useState(true);
   const [isStoryEntranceVisible, setIsStoryEntranceVisible] = useState(false);
   const [isConversationIntroComplete, setIsConversationIntroComplete] =
     useState(false);
@@ -197,7 +189,10 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isBusy, setIsBusy] = useState(false);
+  const [isStorySaving, setIsStorySaving] = useState(false);
   const [accountError, setAccountError] = useState("");
+  const [storyPersistenceError, setStoryPersistenceError] = useState("");
+  const [storybookError, setStorybookError] = useState("");
   const [pendingDeleteStoryId, setPendingDeleteStoryId] = useState<
     string | null
   >(null);
@@ -213,8 +208,10 @@ export default function App() {
   const activeProfile = profiles.find(
     (profile) => profile.id === activeStoryRecord.ownerId
   );
+  const selectedProfileId = route.name === "profile" ? route.profileId : null;
   const selectedProfile =
     profiles.find((profile) => profile.id === selectedProfileId) ?? null;
+  const isStoryListOpen = route.name !== "story";
   const activeOwnerStories = activeProfile?.stories ?? [toStoryCard(activeStoryRecord)];
   const canEditActiveStory =
     SHOW_SCRIPT_EDITOR && canManageStory(session, activeStoryRecord);
@@ -239,6 +236,8 @@ export default function App() {
       if (sessionResult.status === "fulfilled") {
         setSession(sessionResult.value);
       }
+
+      setHasHydratedPlatform(true);
     }
 
     void hydratePlatform();
@@ -297,13 +296,41 @@ export default function App() {
   };
 
   const persistStoryRecord = (record: PlatformStoryRecord) => {
-    if (!canEditActiveStory) {
-      return;
+    if (!canManageStory(session, record)) {
+      return Promise.resolve(true);
     }
 
-    void updateRemoteStory(record.id, record)
-      .then(upsertStoryRecord)
-      .catch(() => undefined);
+    setStoryPersistenceError("");
+    const saveVersion = storySaveVersionRef.current + 1;
+    storySaveVersionRef.current = saveVersion;
+    setIsStorySaving(true);
+
+    const savePromise = updateRemoteStory(record.id, record)
+      .then((savedRecord) => {
+        if (storySaveVersionRef.current === saveVersion) {
+          upsertStoryRecord(savedRecord);
+          setStoryPersistenceError("");
+        }
+
+        return true;
+      })
+      .catch((error) => {
+        if (storySaveVersionRef.current === saveVersion) {
+          setStoryPersistenceError(
+            getRequestErrorMessage(error, "Could not save story.")
+          );
+        }
+
+        return false;
+      })
+      .finally(() => {
+        if (storySaveVersionRef.current === saveVersion) {
+          setIsStorySaving(false);
+        }
+      });
+
+    latestStorySaveRef.current = savePromise;
+    return savePromise;
   };
 
   const commitActiveStory = (
@@ -322,7 +349,7 @@ export default function App() {
     upsertStoryRecord(nextRecord);
 
     if (persist) {
-      persistStoryRecord(nextRecord);
+      void persistStoryRecord(nextRecord);
     }
   };
 
@@ -362,6 +389,19 @@ export default function App() {
     setIsConversationIntroComplete(false);
   };
 
+  const goToRoute = (
+    nextRoute: AppRoute,
+    options: { history?: "push" | "replace" | "none" } = {}
+  ) => {
+    const { history = "push" } = options;
+
+    if (history === "replace") {
+      replace(nextRoute);
+    } else if (history === "push") {
+      navigate(nextRoute);
+    }
+  };
+
   const selectScene = (sceneId: string) => {
     const updatedStoryboard = normalizeStoryboard({
       ...story,
@@ -377,18 +417,22 @@ export default function App() {
     );
   };
 
-  const selectStory = (storyId: string) => {
+  const selectStory = (
+    storyId: string,
+    options: { history?: "push" | "replace" | "none" } = {}
+  ) => {
     const knownRecord = storyRecordsById[storyId];
     const card = getStoryCard(profiles, storyId);
 
     beginStoryEntrance();
     setActiveStoryId(storyId);
-    setSelectedProfileId(knownRecord?.ownerId ?? card?.ownerId ?? null);
     setPendingDeleteStoryId(null);
     setIsStorybookOpen(false);
     setIsEditorOpen(false);
     setIsAccountOpen(false);
-    setIsStoryListOpen(false);
+    setStoryPersistenceError("");
+    setStorybookError("");
+    goToRoute({ name: "story", storyId }, options);
 
     if (!knownRecord) {
       if (card) {
@@ -401,7 +445,11 @@ export default function App() {
         upsertStoryRecord(record);
         setActiveStoryId(record.id);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!knownRecord && !card) {
+          replace({ name: "home" });
+        }
+      });
   };
 
   const editStory = (storyId: string) => {
@@ -412,8 +460,9 @@ export default function App() {
   const deleteStory = (storyId: string) => {
     const record = storyRecordsById[storyId] ?? activeStoryRecord;
 
+    setStorybookError("");
+
     void deleteRemoteStory(storyId)
-      .catch(() => undefined)
       .then(() => {
         setProfiles((currentProfiles) =>
           removeProfileStory(currentProfiles, record.ownerId, storyId)
@@ -431,13 +480,23 @@ export default function App() {
           );
 
           if (fallbackStory) {
-            selectStory(fallbackStory.storyId);
+            selectStory(fallbackStory.storyId, { history: "replace" });
           } else {
             beginStoryEntrance();
-            setSelectedProfileId(null);
-            setIsStoryListOpen(true);
+            if (profiles.some((profile) => profile.id === record.ownerId)) {
+              replace({ name: "profile", profileId: record.ownerId });
+            } else {
+              replace({ name: "home" });
+            }
           }
         }
+      })
+      .catch((error) => {
+        setPendingDeleteStoryId(storyId);
+        setIsStorybookOpen(true);
+        setStorybookError(
+          getRequestErrorMessage(error, "Could not delete story.")
+        );
       });
   };
 
@@ -447,12 +506,13 @@ export default function App() {
     upsertStoryRecord(nextStory);
     beginStoryEntrance();
     setActiveStoryId(nextStory.id);
-    setSelectedProfileId(nextStory.ownerId);
     setPendingDeleteStoryId(null);
     setIsStorybookOpen(false);
     setIsEditorOpen(false);
     setIsAccountOpen(false);
-    setIsStoryListOpen(false);
+    setStoryPersistenceError("");
+    setStorybookError("");
+    navigate({ name: "story", storyId: nextStory.id });
   };
 
   const addScene = () => {
@@ -482,6 +542,24 @@ export default function App() {
       persistStoryRecord(previousRecord);
       return nextStack;
     });
+  };
+
+  const saveEditorAndClose = async () => {
+    const pendingSave = latestStorySaveRef.current;
+
+    if (pendingSave) {
+      const didSave = await pendingSave;
+
+      if (!didSave) {
+        return;
+      }
+    }
+
+    if (storyPersistenceError) {
+      return;
+    }
+
+    setIsEditorOpen(false);
   };
 
   const handleLogin = async (input: { password: string; username: string }) => {
@@ -574,8 +652,7 @@ export default function App() {
 
   const showHome = () => {
     beginStoryEntrance();
-    setIsStoryListOpen(true);
-    setSelectedProfileId(null);
+    navigate({ name: "home" });
     setIsStorybookOpen(false);
     setIsEditorOpen(false);
     setPendingDeleteStoryId(null);
@@ -584,19 +661,38 @@ export default function App() {
 
   const showActiveProfile = () => {
     beginStoryEntrance();
-    setIsStoryListOpen(true);
-    setSelectedProfileId(activeProfile?.id ?? selectedProfileId);
+    const profileId = activeProfile?.id ?? selectedProfileId;
+
+    if (profileId) {
+      navigate({ name: "profile", profileId });
+    } else {
+      navigate({ name: "home" });
+    }
+
     setIsStorybookOpen(false);
     setIsEditorOpen(false);
     setPendingDeleteStoryId(null);
   };
+
+  useEffect(() => {
+    if (route.name === "story" && route.storyId !== activeStoryId) {
+      selectStory(route.storyId, { history: "none" });
+    }
+  }, [route, activeStoryId]);
+
+  useEffect(() => {
+    if (route.name === "profile" && hasHydratedPlatform && !selectedProfile) {
+      replace({ name: "home" });
+    }
+  }, [hasHydratedPlatform, replace, route, selectedProfile]);
 
   const conversation = useScriptedConversation(config.messages, {
     autoPlay: isConversationIntroComplete,
     contactName: config.viewer.name,
     defaultSpeakerTypingSpeedLevel: config.defaultSpeakerTypingSpeedLevel,
     defaultPauseAfterMs: config.defaultPauseAfterMs,
-    povTypingSpeedLevel: config.contact.typingSpeedLevel
+    povTypingSpeedLevel: config.contact.typingSpeedLevel,
+    typeAllSpeakers: story.presentationMode === "battle"
   });
   const visibleMessages = isConversationIntroComplete
     ? conversation.visibleMessages
@@ -606,6 +702,12 @@ export default function App() {
     isConversationIntroComplete && conversation.isContactTyping;
   const isConversationComplete =
     isConversationIntroComplete && conversation.isComplete;
+  const activeMessage = isConversationIntroComplete
+    ? conversation.activeMessage
+    : null;
+  const activeMessageText = isConversationIntroComplete
+    ? conversation.activeMessageText
+    : "";
   const hasPlaybackStarted =
     visibleMessages.length > 0 ||
     draftText.length > 0 ||
@@ -627,499 +729,189 @@ export default function App() {
     conversation.skipToEnd();
   };
 
-  return (
+  const toggleAccountPanel = () => {
+    setIsAccountOpen((isOpen) => !isOpen);
+    setIsStorybookOpen(false);
+  };
+
+  const toolbarActions =
+    canEditActiveStory && !isStoryListOpen ? (
+      <>
+        <StorybookMenu
+          activeOwnerStories={activeOwnerStories}
+          activeStoryId={activeStoryId}
+          activeStoryRecord={activeStoryRecord}
+          isOpen={isStorybookOpen}
+          pendingDeleteStoryId={pendingDeleteStoryId}
+          storybookError={storybookError}
+          onCreateStory={() => void createStoryFromShell()}
+          onDeleteStory={deleteStory}
+          onEditStory={editStory}
+          onPendingDeleteStoryChange={setPendingDeleteStoryId}
+          onSelectStory={selectStory}
+          onTitleChange={updateStoryTitle}
+          onToggle={() => {
+            setPendingDeleteStoryId(null);
+            setIsStorybookOpen((isCurrentlyOpen) => !isCurrentlyOpen);
+            setIsAccountOpen(false);
+          }}
+        />
+        <button
+          type="button"
+          aria-label="Open script editor"
+          title="Open script editor"
+          onClick={() => setIsEditorOpen(true)}
+          className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
+        >
+          <SquarePen className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </>
+    ) : null;
+
+  const accountPanel = isAccountOpen ? (
+    <AccountPanel
+      accountError={accountError}
+      authMode={authMode}
+      displayName={displayName}
+      isBusy={isBusy}
+      password={password}
+      session={session}
+      username={username}
+      onAuthModeChange={setAuthMode}
+      onCreateStory={() => void createStoryFromShell()}
+      onDisplayNameChange={setDisplayName}
+      onLogout={() => void logoutFromShell()}
+      onPasswordChange={setPassword}
+      onSubmit={submitAuth}
+      onUsernameChange={setUsername}
+    />
+  ) : null;
+
+  const storyPlayer =
+    story.presentationMode === "battle" ? (
+      <BattleStoryPlayer
+        activeMessage={activeMessage}
+        config={config}
+        currentDialogueText={activeMessageText}
+        visibleMessages={visibleMessages}
+      />
+    ) : (
+      <PhoneShell>
+        <ChatHeader
+          avatarUrl={config.viewer.avatarUrl}
+          initials={config.viewer.initials}
+          name={config.viewer.name}
+          onAvatarClick={() =>
+            setAvatarPreview({
+              avatarUrl: config.viewer.avatarUrl,
+              initials: config.viewer.initials,
+              name: config.viewer.name
+            })
+          }
+          status={config.viewer.status}
+        />
+        <MessageList
+          contactAvatarUrl={config.viewer.avatarUrl}
+          contactInitials={config.viewer.initials}
+          contactName={config.viewer.name}
+          contactStatus={config.viewer.status}
+          isContactTyping={isContactTyping}
+          messages={visibleMessages}
+        />
+        <AnimatedComposer
+          draftText={draftText}
+          povAvatarUrl={config.contact.avatarUrl}
+          povInitials={config.contact.initials}
+          povName={config.contact.name}
+        />
+      </PhoneShell>
+    );
+
+  const mainContent = isStoryListOpen ? (
+    <LandingPage
+      onSelectProfile={(profileId) => {
+        navigate({ name: "profile", profileId });
+        setIsAccountOpen(false);
+      }}
+      onSelectStory={selectStory}
+      profiles={profiles}
+      searchQuery={searchQuery}
+      selectedProfileId={selectedProfileId}
+    />
+  ) : (
     <div
-      aria-label="App shell"
-      className={`app-background ${backgroundModeClass} relative min-h-screen overflow-hidden text-slate-950`}
+      data-testid="story-stage"
+      className={`mx-auto flex h-[calc(100dvh-176px)] min-h-[426px] w-full max-w-5xl flex-col items-center justify-center gap-4 transition-all duration-[1500ms] ease-out will-change-transform md:h-[calc(100dvh-104px)] ${
+        isStoryEntranceVisible
+          ? "translate-y-0 opacity-100"
+          : "translate-y-3 opacity-0"
+      } ${isConversationIntroComplete ? "" : "pointer-events-none"}`}
     >
-      <nav
-        aria-label="Desktop navigation"
-        className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-slate-200/80 bg-white/95 py-5 shadow-[8px_0_28px_rgba(15,23,42,0.05)] backdrop-blur-xl md:flex"
+      {storyPlayer}
+      <StoryControls
+        hasStarted={hasPlaybackStarted}
+        isComplete={isConversationComplete}
+        isPlaying={isConversationIntroComplete && conversation.isPlaying}
+        onNext={goToNextScene}
+        onReset={conversation.reset}
+        onTogglePlayback={conversation.togglePlayback}
+        onToggleSpeed={conversation.togglePlaybackSpeed}
+        playbackSpeed={conversation.playbackSpeed}
+      />
+    </div>
+  );
+
+  return (
+    <>
+      <AppShell
+        accountPanel={accountPanel}
+        backgroundModeClass={backgroundModeClass}
+        isStoryListOpen={isStoryListOpen}
+        searchQuery={searchQuery}
+        selectedProfile={selectedProfile}
+        toolbarActions={toolbarActions}
+        onAccountToggle={toggleAccountPanel}
+        onActiveProfile={showActiveProfile}
+        onCreateStory={() => void createStoryFromShell()}
+        onHome={showHome}
+        onSearchQueryChange={setSearchQuery}
       >
-        <button
-          type="button"
-          aria-label="Home"
-          title="Home"
-          onClick={showHome}
-          className="grid h-11 w-11 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50"
-        >
-          <Home className="h-6 w-6" aria-hidden="true" />
-        </button>
-        <div className="mt-8 grid gap-4">
-          <button
-            type="button"
-            aria-label="Explore"
-            title="Explore"
-            onClick={showHome}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
-          >
-            <Compass className="h-6 w-6" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            aria-label="Create story"
-            title="Create story"
-            onClick={() => void createStoryFromShell()}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
-          >
-            <Plus className="h-6 w-6" aria-hidden="true" />
-          </button>
-        </div>
-        <button
-          type="button"
-          aria-label="Account"
-          title="Account"
-          onClick={() => setIsAccountOpen((isOpen) => !isOpen)}
-          className="mt-auto grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
-        >
-          <UserCircle className="h-6 w-6" aria-hidden="true" />
-        </button>
-      </nav>
-
-      <div className="sticky top-0 z-20 flex min-h-[72px] items-center gap-2 border-b border-slate-200/80 bg-white/95 px-3 shadow-[0_8px_28px_rgba(15,23,42,0.05)] backdrop-blur-xl md:pl-24 md:pr-5">
-        {!isStoryListOpen ? (
-          <button
-            type="button"
-            aria-label="Back to profile"
-            title="Back to profile"
-            onClick={showActiveProfile}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
-          >
-            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-          </button>
-        ) : selectedProfile ? (
-          <button
-            type="button"
-            aria-label="Back to home"
-            title="Back to home"
-            onClick={showHome}
-            className="hidden h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-bold text-slate-800 transition hover:bg-slate-100 sm:inline-flex"
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            Home
-          </button>
-        ) : null}
-
-        <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-lg bg-slate-100 text-slate-600 ring-1 ring-slate-200 transition focus-within:bg-white focus-within:ring-slate-300">
-          <span className="sr-only">Search stories</span>
-          <Search className="ml-4 h-5 w-5 shrink-0" aria-hidden="true" />
-          <input
-            aria-label="Search stories"
-            type="search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            className="h-full min-w-0 flex-1 bg-transparent px-3 text-base font-semibold text-slate-900 outline-none placeholder:text-slate-500"
-            placeholder="Search"
-          />
-        </label>
-
-        <div className="relative flex shrink-0 items-center gap-1.5">
-          {canEditActiveStory && !isStoryListOpen ? (
-            <>
-              <div className="relative">
-                <button
-                  type="button"
-                  aria-expanded={isStorybookOpen}
-                  aria-label="Open storybook"
-                  title="Open storybook"
-                  onClick={() => {
-                    setPendingDeleteStoryId(null);
-                    setIsStorybookOpen((isCurrentlyOpen) => !isCurrentlyOpen);
-                    setIsAccountOpen(false);
-                  }}
-                  className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
-                >
-                  <BookOpen className="h-5 w-5" aria-hidden="true" />
-                </button>
-                {isStorybookOpen ? (
-                  <div
-                    role="dialog"
-                    aria-label="Storybook"
-                    className="absolute right-0 top-14 grid w-72 gap-3 rounded-lg border border-slate-200 bg-white/95 p-3 shadow-2xl backdrop-blur-xl"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold uppercase text-slate-600">
-                        Storybook
-                      </p>
-                      <button
-                        type="button"
-                        aria-label="New story"
-                        title="New story"
-                        onClick={() => void createStoryFromShell()}
-                        className="flex h-9 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        <Plus className="h-4 w-4" aria-hidden="true" />
-                        New
-                      </button>
-                    </div>
-                    <label className="text-xs font-bold uppercase text-slate-600">
-                      Storyboard title
-                      <input
-                        aria-label="Storyboard title"
-                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold normal-case text-slate-950 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                        value={activeStoryRecord.title}
-                        onChange={(event) => updateStoryTitle(event.target.value)}
-                      />
-                    </label>
-                    <div className="grid gap-2">
-                      {activeOwnerStories.map((storyItem) => {
-                        const isActive = storyItem.storyId === activeStoryId;
-                        const isPendingDelete =
-                          storyItem.storyId === pendingDeleteStoryId;
-
-                        return (
-                          <div
-                            key={storyItem.storyId}
-                            className={`grid grid-cols-[minmax(0,1fr)_32px_32px] items-center gap-1 rounded-lg p-1 ring-1 transition ${
-                              isActive
-                                ? "bg-slate-950 text-white ring-slate-950"
-                                : "bg-white text-slate-800 ring-slate-200"
-                            }`}
-                          >
-                            <button
-                              type="button"
-                              aria-label={`Select ${storyItem.title}`}
-                              onClick={() => selectStory(storyItem.storyId)}
-                              className={`min-w-0 rounded-lg px-2 py-2 text-left text-sm font-semibold transition ${
-                                isActive ? "hover:bg-white/10" : "hover:bg-slate-50"
-                              }`}
-                            >
-                              <span className="block truncate">
-                                {storyItem.title}
-                              </span>
-                            </button>
-                            {isPendingDelete ? (
-                              <>
-                                <button
-                                  type="button"
-                                  aria-label={`Confirm delete ${storyItem.title}`}
-                                  title={`Confirm delete ${storyItem.title}`}
-                                  onClick={() => deleteStory(storyItem.storyId)}
-                                  className={`grid h-8 w-8 place-items-center rounded-lg transition ${
-                                    isActive
-                                      ? "text-emerald-100 hover:bg-white/10"
-                                      : "text-emerald-700 hover:bg-emerald-50"
-                                  }`}
-                                >
-                                  <Check className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label={`Cancel delete ${storyItem.title}`}
-                                  title={`Cancel delete ${storyItem.title}`}
-                                  onClick={() => setPendingDeleteStoryId(null)}
-                                  className={`grid h-8 w-8 place-items-center rounded-lg transition ${
-                                    isActive
-                                      ? "hover:bg-white/10"
-                                      : "hover:bg-slate-50"
-                                  }`}
-                                >
-                                  <X className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  aria-label={`Edit ${storyItem.title}`}
-                                  title={`Edit ${storyItem.title}`}
-                                  onClick={() => editStory(storyItem.storyId)}
-                                  className={`grid h-8 w-8 place-items-center rounded-lg transition ${
-                                    isActive
-                                      ? "hover:bg-white/10"
-                                      : "hover:bg-slate-50"
-                                  }`}
-                                >
-                                  <Edit3 className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label={`Delete ${storyItem.title}`}
-                                  title={`Delete ${storyItem.title}`}
-                                  onClick={() =>
-                                    setPendingDeleteStoryId(storyItem.storyId)
-                                  }
-                                  className={`grid h-8 w-8 place-items-center rounded-lg transition ${
-                                    isActive
-                                      ? "text-rose-100 hover:bg-white/10"
-                                      : "text-rose-700 hover:bg-rose-50"
-                                  }`}
-                                >
-                                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                aria-label="Open script editor"
-                title="Open script editor"
-                onClick={() => setIsEditorOpen(true)}
-                className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
-              >
-                <SquarePen className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </>
-          ) : null}
-          <button
-            type="button"
-            aria-label="Account settings"
-            title="Account settings"
-            onClick={() => {
-              setIsAccountOpen((isOpen) => !isOpen);
-              setIsStorybookOpen(false);
-            }}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
-          >
-            <UserCircle className="h-5 w-5" aria-hidden="true" />
-          </button>
-
-          {isAccountOpen ? (
-            <div
-              role="dialog"
-              aria-label="Account panel"
-              className="absolute right-0 top-14 z-40 grid w-[min(340px,calc(100vw-24px))] gap-3 rounded-lg border border-slate-200 bg-white/95 p-4 text-left shadow-2xl backdrop-blur-xl"
-            >
-              {session ? (
-                <>
-                  <div>
-                    <p className="text-xs font-bold uppercase text-slate-500">
-                      Signed in
-                    </p>
-                    <p className="mt-1 text-base font-extrabold text-slate-950">
-                      {session.user.displayName}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void createStoryFromShell()}
-                    disabled={isBusy}
-                    className="flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                  >
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                    Create story
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void logoutFromShell()}
-                    disabled={isBusy}
-                    className="flex h-10 items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-bold text-slate-800 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
-                  >
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setAuthMode("login")}
-                      className={`h-9 rounded-lg text-sm font-bold transition ${
-                        authMode === "login"
-                          ? "bg-white text-slate-950 shadow-sm"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Login
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAuthMode("register")}
-                      className={`h-9 rounded-lg text-sm font-bold transition ${
-                        authMode === "register"
-                          ? "bg-white text-slate-950 shadow-sm"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Create
-                    </button>
-                  </div>
-                  <form className="grid gap-3" onSubmit={submitAuth}>
-                    <label className="text-xs font-bold uppercase text-slate-600">
-                      Username
-                      <input
-                        aria-label="Username"
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
-                        className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold normal-case text-slate-950 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                      />
-                    </label>
-                    {authMode === "register" ? (
-                      <label className="text-xs font-bold uppercase text-slate-600">
-                        Display name
-                        <input
-                          aria-label="Display name"
-                          value={displayName}
-                          onChange={(event) => setDisplayName(event.target.value)}
-                          className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold normal-case text-slate-950 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                        />
-                      </label>
-                    ) : null}
-                    <label className="text-xs font-bold uppercase text-slate-600">
-                      Password
-                      <input
-                        aria-label="Password"
-                        type="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold normal-case text-slate-950 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-                      />
-                    </label>
-                    {accountError ? (
-                      <p className="text-sm font-semibold text-rose-700">
-                        {accountError}
-                      </p>
-                    ) : null}
-                    <button
-                      type="submit"
-                      disabled={isBusy}
-                      className="flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-                    >
-                      {authMode === "register" ? (
-                        <UserPlus className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        <LogIn className="h-4 w-4" aria-hidden="true" />
-                      )}
-                      {authMode === "register" ? "Create account" : "Login"}
-                    </button>
-                  </form>
-                </>
-              )}
-              {session && accountError ? (
-                <p className="text-sm font-semibold text-rose-700">
-                  {accountError}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <main className="relative z-10 min-h-[calc(100dvh-72px)] px-3 pb-24 pt-5 md:pl-24 md:pr-6 md:pt-6">
-        {isStoryListOpen ? (
-          <LandingPage
-            onSelectProfile={(profileId) => {
-              setSelectedProfileId(profileId);
-              setIsStoryListOpen(true);
-              setIsAccountOpen(false);
-            }}
-            onSelectStory={selectStory}
-            profiles={profiles}
-            searchQuery={searchQuery}
-            selectedProfileId={selectedProfileId}
+        {mainContent}
+      </AppShell>
+      {canEditActiveStory && isEditorOpen ? (
+        story.presentationMode === "battle" ? (
+          <BattleScriptEditor
+            canUndo={undoStack.length > 0}
+            config={config}
+            isSaving={isStorySaving}
+            onChange={updateConfig}
+            onClose={() => setIsEditorOpen(false)}
+            onSave={() => void saveEditorAndClose()}
+            onStoryTitleChange={updateStoryTitle}
+            onUndo={undoLastEdit}
+            requiresPassword={EDITOR_REQUIRES_PASSWORD}
+            saveError={storyPersistenceError}
+            storyTitle={activeStoryRecord.title}
           />
         ) : (
-          <div
-            data-testid="story-stage"
-            className={`mx-auto flex min-h-[calc(100dvh-132px)] w-full max-w-5xl flex-col items-center justify-center gap-4 transition-all duration-[1500ms] ease-out will-change-transform ${
-              isStoryEntranceVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-3 opacity-0"
-            } ${isConversationIntroComplete ? "" : "pointer-events-none"}`}
-          >
-            <PhoneShell>
-              <ChatHeader
-                avatarUrl={config.viewer.avatarUrl}
-                initials={config.viewer.initials}
-                name={config.viewer.name}
-                onAvatarClick={() =>
-                  setAvatarPreview({
-                    avatarUrl: config.viewer.avatarUrl,
-                    initials: config.viewer.initials,
-                    name: config.viewer.name
-                  })
-                }
-                status={config.viewer.status}
-              />
-              <MessageList
-                contactAvatarUrl={config.viewer.avatarUrl}
-                contactInitials={config.viewer.initials}
-                contactName={config.viewer.name}
-                contactStatus={config.viewer.status}
-                isContactTyping={isContactTyping}
-                messages={visibleMessages}
-              />
-              <AnimatedComposer
-                draftText={draftText}
-                povAvatarUrl={config.contact.avatarUrl}
-                povInitials={config.contact.initials}
-                povName={config.contact.name}
-              />
-            </PhoneShell>
-            <StoryControls
-              hasStarted={hasPlaybackStarted}
-              isComplete={isConversationComplete}
-              isPlaying={isConversationIntroComplete && conversation.isPlaying}
-              onNext={goToNextScene}
-              onReset={conversation.reset}
-              onTogglePlayback={conversation.togglePlayback}
-              onToggleSpeed={conversation.togglePlaybackSpeed}
-              playbackSpeed={conversation.playbackSpeed}
-            />
-          </div>
-        )}
-      </main>
-
-      <nav
-        aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-4 border-t border-slate-200 bg-white/95 px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden"
-      >
-        <button
-          type="button"
-          aria-label="Home"
-          onClick={showHome}
-          className="grid place-items-center rounded-lg text-slate-900 transition hover:bg-slate-100"
-        >
-          <Home className="h-7 w-7" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          aria-label="Explore"
-          onClick={showHome}
-          className="grid place-items-center rounded-lg text-slate-700 transition hover:bg-slate-100"
-        >
-          <Search className="h-7 w-7" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          aria-label="Create"
-          onClick={() => void createStoryFromShell()}
-          className="grid place-items-center rounded-lg text-slate-700 transition hover:bg-slate-100"
-        >
-          <Plus className="h-7 w-7" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          aria-label="Account"
-          onClick={() => setIsAccountOpen((isOpen) => !isOpen)}
-          className="grid place-items-center rounded-lg text-slate-700 transition hover:bg-slate-100"
-        >
-          <UserCircle className="h-7 w-7" aria-hidden="true" />
-        </button>
-      </nav>
-
-      {canEditActiveStory && isEditorOpen ? (
-        <ScriptEditor
-          activeSceneId={story.activeSceneId}
-          canUndo={undoStack.length > 0}
-          config={config}
-          onChange={updateConfig}
-          onClose={() => setIsEditorOpen(false)}
-          onSceneAdd={addScene}
-          onSceneSelect={selectScene}
-          onStoryTitleChange={updateStoryTitle}
-          onUndo={undoLastEdit}
-          requiresPassword={EDITOR_REQUIRES_PASSWORD}
-          scenes={story.scenes}
-          storyTitle={activeStoryRecord.title}
-        />
+          <ScriptEditor
+            activeSceneId={story.activeSceneId}
+            canUndo={undoStack.length > 0}
+            config={config}
+            isSaving={isStorySaving}
+            onChange={updateConfig}
+            onClose={() => setIsEditorOpen(false)}
+            onSave={() => void saveEditorAndClose()}
+            onSceneAdd={addScene}
+            onSceneSelect={selectScene}
+            onStoryTitleChange={updateStoryTitle}
+            onUndo={undoLastEdit}
+            requiresPassword={EDITOR_REQUIRES_PASSWORD}
+            saveError={storyPersistenceError}
+            scenes={story.scenes}
+            storyTitle={activeStoryRecord.title}
+          />
+        )
       ) : null}
 
       {avatarPreview ? (
@@ -1164,6 +956,6 @@ export default function App() {
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

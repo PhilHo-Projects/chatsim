@@ -35,6 +35,8 @@ const adminSession: PlatformSession = {
 let mockProfiles: PlatformProfile[];
 let mockSession: PlatformSession | null;
 let mockStories: Record<string, PlatformStoryRecord>;
+let failNextStoryDelete: boolean;
+let failNextStoryUpdate: boolean;
 let storyCounter: number;
 
 function clone<T>(value: T): T {
@@ -98,6 +100,8 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
   mockStories = Object.fromEntries(
     seedStoryRecords.map((story) => [story.id, clone(story)])
   );
+  failNextStoryDelete = false;
+  failNextStoryUpdate = false;
   storyCounter = seedStoryRecords.filter(
     (story) => story.ownerId === "user-phil"
   ).length;
@@ -191,6 +195,11 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
       }
 
       if (storyMatch && method === "PUT") {
+        if (failNextStoryUpdate) {
+          failNextStoryUpdate = false;
+          return jsonResponse({ error: "Could not save story." }, 500);
+        }
+
         const currentStory = mockStories[storyMatch[1]];
         const story = {
           ...currentStory,
@@ -206,6 +215,11 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
       }
 
       if (storyMatch && method === "DELETE") {
+        if (failNextStoryDelete) {
+          failNextStoryDelete = false;
+          return jsonResponse({ error: "Could not delete story." }, 500);
+        }
+
         delete mockStories[storyMatch[1]];
         return jsonResponse({ ok: true });
       }
@@ -220,6 +234,25 @@ async function flushPlatformEffects() {
     await Promise.resolve();
     await Promise.resolve();
   });
+}
+
+function setBrowserPath(pathname: string) {
+  window.history.replaceState(null, "", pathname);
+}
+
+async function renderAppAtPath(pathname: string) {
+  setBrowserPath(pathname);
+  render(<App />);
+  await flushPlatformEffects();
+}
+
+async function popTo(pathname: string) {
+  await act(async () => {
+    window.history.replaceState(null, "", pathname);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await Promise.resolve();
+  });
+  await flushPlatformEffects();
 }
 
 function openFirstStory() {
@@ -261,6 +294,7 @@ describe("App", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
+    setBrowserPath("/");
     setupApiMock();
   });
 
@@ -281,6 +315,11 @@ describe("App", () => {
       "hidden",
       "md:flex"
     );
+    expect(
+      within(screen.getByRole("navigation", { name: "Desktop navigation" }))
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label"))
+    ).toEqual(["Account", "Home", "Explore", "Create story"]);
     expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toHaveClass(
       "md:hidden"
     );
@@ -290,10 +329,23 @@ describe("App", () => {
     expect(appShell).toHaveClass("app-background", "app-background--landing");
     expect(appShell).not.toHaveClass("app-background--story");
     expect(screen.queryByText("choose a story")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Account settings" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Account settings" }));
+    expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "chatsim" }).parentElement
+    ).toHaveClass("text-center");
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Desktop navigation" })).getByRole(
+        "button",
+        { name: "Account" }
+      )
+    );
     expect(screen.getByRole("dialog", { name: "Account panel" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Account settings" }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Desktop navigation" })).getByRole(
+        "button",
+        { name: "Account" }
+      )
+    );
     expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
     expect(screen.getByText("phil's stories")).toBeInTheDocument();
     expect(screen.getByLabelText("Profile masonry")).toHaveClass(
@@ -306,7 +358,7 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(
       within(screen.getByRole("button", { name: /Open phil's stories/ })).getByText(
-        "1 story"
+        "7 stories"
       )
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Story bento grid")).not.toBeInTheDocument();
@@ -320,6 +372,15 @@ describe("App", () => {
       "rounded-lg",
       "break-inside-avoid"
     );
+    expect(screen.getByRole("button", { name: /Open phil's stories/ })).not.toHaveClass(
+      "bg-slate-950"
+    );
+    expect(
+      screen.getByRole("button", { name: /Open phil's stories/ }).getAttribute("style")
+    ).toContain("#e11d48");
+    expect(
+      screen.getByRole("button", { name: /Open phil's stories/ }).querySelector(".top-0.h-1")
+    ).toBeNull();
     seedProfiles.forEach((profile) => {
       expect(
         screen.getByTestId(`profile-card-background-${profile.id}`)
@@ -330,6 +391,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: /Open phil's stories/ }));
 
     expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "phil's stories" }).parentElement
+    ).toHaveClass("text-center");
+    expect(screen.queryByRole("searchbox", { name: "Search stories" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Back to home" })).toBeInTheDocument();
     expect(screen.getByLabelText("Story bento grid")).toHaveClass(
       "columns-1",
@@ -349,11 +414,14 @@ describe("App", () => {
       "rounded-lg",
       "overflow-hidden"
     );
+    expect(storySelector).not.toHaveClass("bg-slate-950");
+    expect(storySelector.getAttribute("style")).toContain("#e11d48");
     expect(screen.getByTestId("story-card-background-story-phil-1")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Back to home" }));
     expect(screen.getByLabelText("Profile masonry")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Account settings" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search stories" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
 
     openFirstStory();
     await flushPlatformEffects();
@@ -365,6 +433,7 @@ describe("App", () => {
     expect(appShell).toHaveClass("app-background--story");
     expect(appShell).not.toHaveClass("app-background--landing");
     expect(screen.getByRole("button", { name: "Back to profile" })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Search stories" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Open script editor" })
     ).not.toBeInTheDocument();
@@ -378,6 +447,117 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
     expect(appShell).toHaveClass("app-background--landing");
     expect(appShell).not.toHaveClass("app-background--story");
+  });
+
+  it("renders a selected profile directly from the URL", async () => {
+    mockSession = null;
+
+    await renderAppAtPath("/profiles/user-dummy-20");
+
+    expect(window.location.pathname).toBe("/profiles/user-dummy-20");
+    expect(screen.getByLabelText("App shell")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
+        name: /Placeholder Story 20 1 scene/
+      })
+    ).toBeInTheDocument();
+  });
+
+  it("renders a selected story directly from the URL", async () => {
+    mockSession = null;
+
+    await renderAppAtPath("/stories/story-neon-1");
+
+    expect(window.location.pathname).toBe("/stories/story-neon-1");
+    expect(screen.getByLabelText("App shell")).toBeInTheDocument();
+    expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to profile" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
+  });
+
+  it("renders Phil's battle story with the battle presentation instead of the phone", async () => {
+    mockSession = null;
+
+    await renderAppAtPath("/stories/story-phil-battle");
+
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(window.location.pathname).toBe("/stories/story-phil-battle");
+    expect(screen.getByTestId("battle-stage")).toBeInTheDocument();
+    expect(screen.queryByTestId("phone-shell")).not.toBeInTheDocument();
+    expect(screen.getByTestId("battle-player-sprite")).toBeInTheDocument();
+    expect(screen.getByTestId("battle-opponent-sprite")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Story controls" })).toBeInTheDocument();
+  });
+
+  it("pushes URLs while browsing from home to profile to story", async () => {
+    mockSession = null;
+
+    render(<App />);
+    await flushPlatformEffects();
+
+    fireEvent.click(screen.getByRole("button", { name: /Open demo account 20/ }));
+
+    expect(window.location.pathname).toBe("/profiles/user-dummy-20");
+    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
+
+    fireEvent.click(
+      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
+        name: /Placeholder Story 20 1 scene/
+      })
+    );
+    await flushPlatformEffects();
+
+    expect(window.location.pathname).toBe("/stories/story-dummy-20");
+    expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
+  });
+
+  it("moves through profile and home with the browser back button", async () => {
+    mockSession = null;
+
+    render(<App />);
+    await flushPlatformEffects();
+
+    fireEvent.click(screen.getByRole("button", { name: /Open demo account 20/ }));
+    fireEvent.click(
+      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
+        name: /Placeholder Story 20 1 scene/
+      })
+    );
+    await flushPlatformEffects();
+
+    await popTo("/profiles/user-dummy-20");
+
+    expect(window.location.pathname).toBe("/profiles/user-dummy-20");
+    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
+
+    await popTo("/");
+
+    expect(window.location.pathname).toBe("/");
+    expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
+  });
+
+  it("uses URL navigation for the built-in back buttons", async () => {
+    render(<App />);
+    await flushPlatformEffects();
+
+    openFirstStory();
+    await flushPlatformEffects();
+
+    expect(window.location.pathname).toBe("/stories/story-phil-1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to profile" }));
+
+    expect(window.location.pathname).toBe("/profiles/user-phil");
+    expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to home" }));
+
+    expect(window.location.pathname).toBe("/");
+    expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
   });
 
   it("renders dummy account placeholder cards and keeps logged-out browsing open", async () => {
@@ -430,7 +610,7 @@ describe("App", () => {
     expect(screen.queryByText("Sign in to browse")).not.toBeInTheDocument();
   });
 
-  it("reorders the current browse view from search without hiding cards", async () => {
+  it("filters profile cards from search by visible title or handle", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
@@ -439,20 +619,30 @@ describe("App", () => {
     const originalCards = within(masonry).getAllByRole("button");
 
     expect(originalCards).toHaveLength(seedProfiles.length);
-    expect(originalCards[0]).toHaveAccessibleName("Open phil's stories, 1 story");
+    expect(originalCards[0]).toHaveAccessibleName("Open phil's stories, 7 stories");
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
-      target: { value: "demo account 20" }
+      target: { value: "phil's" }
     });
 
-    const reorderedCards = within(masonry).getAllByRole("button");
+    const philCards = within(masonry).getAllByRole("button");
 
-    expect(reorderedCards).toHaveLength(seedProfiles.length);
-    expect(reorderedCards[0]).toHaveAccessibleName("Open demo account 20, 1 story");
-    expect(screen.getByRole("button", { name: /Open phil's stories/ })).toBeInTheDocument();
+    expect(philCards).toHaveLength(1);
+    expect(philCards[0]).toHaveAccessibleName("Open phil's stories, 7 stories");
+    expect(screen.queryByRole("button", { name: /Open demo account 20/ })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
+      target: { value: "@dummy20" }
+    });
+
+    const handleCards = within(masonry).getAllByRole("button");
+
+    expect(handleCards).toHaveLength(1);
+    expect(handleCards[0]).toHaveAccessibleName("Open demo account 20, 1 story");
+    expect(screen.queryByRole("button", { name: /Open phil's stories/ })).not.toBeInTheDocument();
   });
 
-  it("reorders story cards inside the selected profile from search", async () => {
+  it("hides the search field inside a selected profile and keeps its stories visible", async () => {
     mockStories["story-phil-cafe"] = createMockStory(
       "user-phil",
       "story-phil-cafe",
@@ -472,16 +662,17 @@ describe("App", () => {
 
     const storyGrid = screen.getByLabelText("Story bento grid");
 
-    expect(within(storyGrid).getAllByRole("button")).toHaveLength(3);
-
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
-      target: { value: "soccer" }
-    });
-
-    const storyCards = within(storyGrid).getAllByRole("button");
-
-    expect(storyCards).toHaveLength(3);
-    expect(storyCards[0]).toHaveAccessibleName("Open Soccer season 1 scene");
+    expect(within(storyGrid).getAllByRole("button")).toHaveLength(9);
+    expect(screen.queryByRole("searchbox", { name: "Search stories" })).not.toBeInTheDocument();
+    expect(
+      within(storyGrid).getByRole("button", { name: /Open wyd 1 scene/ })
+    ).toBeInTheDocument();
+    expect(
+      within(storyGrid).getByRole("button", { name: /Open Battle 1 scene/ })
+    ).toBeInTheDocument();
+    expect(
+      within(storyGrid).getByRole("button", { name: /Open Soccer season 1 scene/ })
+    ).toBeInTheDocument();
     expect(within(storyGrid).getByRole("button", { name: /Open Story 5 scenes/ })).toBeInTheDocument();
   });
 
@@ -564,6 +755,24 @@ describe("App", () => {
     expect(screen.getByLabelText("Scene title")).toHaveValue("Scene 2");
     expect(screen.getByRole("button", { name: "Choose scene 2: Scene 2" })).toHaveClass(
       "bg-slate-950"
+    );
+  });
+
+  it("keeps the story player controls inside the available shell height", async () => {
+    await renderAppOnStory();
+
+    expect(screen.getByTestId("story-stage")).toHaveClass(
+      "h-[calc(100dvh-176px)]",
+      "md:h-[calc(100dvh-104px)]",
+      "min-h-[426px]"
+    );
+    expect(screen.getByTestId("phone-shell")).toHaveClass(
+      "flex-1",
+      "min-h-[360px]",
+      "max-h-[740px]"
+    );
+    expect(screen.getByRole("navigation", { name: "Story controls" })).toHaveClass(
+      "shrink-0"
     );
   });
 
@@ -1029,7 +1238,7 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "Frank" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
-    expect(screen.getByRole("button", { name: "Select Story 2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Story 8" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
     fireEvent.click(screen.getByRole("button", { name: "Open script editor" }));
@@ -1072,28 +1281,28 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
-    fireEvent.click(screen.getByRole("button", { name: "Edit Story 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Story 8" }));
 
     expect(screen.getByRole("dialog", { name: "Script editor" })).toBeInTheDocument();
     expect(screen.getByLabelText("Scene title")).toHaveValue("Scene 2");
 
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete Story 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Story 8" }));
 
-    expect(screen.getByRole("button", { name: "Select Story 2" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Confirm delete Story 2" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel delete Story 2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Story 8" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm delete Story 8" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel delete Story 8" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Cancel delete Story 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel delete Story 8" }));
 
-    expect(screen.getByRole("button", { name: "Select Story 2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Story 8" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete Story 2" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Story 8" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story 8" }));
     await flushPlatformEffects();
 
-    expect(screen.queryByRole("button", { name: "Select Story 2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select Story 8" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
     expect(screen.getByRole("button", { name: "Select Story" })).toBeInTheDocument();
 
@@ -1101,8 +1310,40 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story" }));
     await flushPlatformEffects();
 
-    expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/stories/story-phil-battle");
+    expect(screen.getByTestId("battle-stage")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Select Story" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the editor open and reports remote save failures", async () => {
+    await renderEditorOnStory();
+
+    failNextStoryUpdate = true;
+
+    fireEvent.change(screen.getByLabelText("Story name"), {
+      target: { value: "Story with a busted save" }
+    });
+    await flushPlatformEffects();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await flushPlatformEffects();
+
+    expect(screen.getByRole("dialog", { name: "Script editor" })).toBeInTheDocument();
+    expect(screen.getByText("Could not save story.")).toBeInTheDocument();
+  });
+
+  it("keeps storybook rows visible and reports failed deletes", async () => {
+    await renderAppOnStory();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
+    failNextStoryDelete = true;
+    fireEvent.click(screen.getByRole("button", { name: "Delete Story" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story" }));
+    await flushPlatformEffects();
+
+    expect(screen.getByRole("button", { name: "Select Story" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm delete Story" })).toBeInTheDocument();
+    expect(screen.getByText("Could not delete story.")).toBeInTheDocument();
   });
 
   it("uses a clean phone shell and opens the editor as a full-screen dialog", async () => {

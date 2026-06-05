@@ -32,7 +32,7 @@ export function StoryControls({
   return (
     <nav
       aria-label="Story controls"
-      className="grid w-[min(344px,calc(100vw-40px))] grid-cols-4 gap-1.5 rounded-full border border-white/35 bg-slate-950/15 p-1.5 shadow-[0_18px_48px_rgba(79,70,229,0.22)] backdrop-blur-2xl"
+      className="grid w-[min(344px,calc(100vw-40px))] shrink-0 grid-cols-4 gap-1.5 rounded-full border border-white/35 bg-slate-950/15 p-1.5 shadow-[0_18px_48px_rgba(79,70,229,0.22)] backdrop-blur-2xl"
     >
       <button
         type="button"

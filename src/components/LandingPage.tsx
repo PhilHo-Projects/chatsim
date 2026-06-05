@@ -23,6 +23,7 @@ import dummyProfile19Cover from "../assets/story-card-backgrounds/placeholders/d
 import dummyProfile20Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-20.svg";
 import philStoriesCover from "../assets/story-card-backgrounds/phil-stories.png";
 import voidPopCover from "../assets/story-card-backgrounds/void-pop.png";
+import type { CSSProperties } from "react";
 import type { PlatformProfile } from "../data/platformSeed";
 
 type LandingPageProps = {
@@ -194,29 +195,26 @@ function storyCountLabel(count: number) {
   return `${count} ${count === 1 ? "story" : "stories"}`;
 }
 
+function getCoverFallbackStyle(color: string): CSSProperties {
+  return {
+    background: `linear-gradient(135deg, rgba(248, 250, 252, 0.94) 0%, ${color} 48%, rgba(15, 23, 42, 0.62) 100%)`
+  };
+}
+
 function normalizeSearchQuery(value: string) {
   return value.trim().toLowerCase();
 }
 
-function scoreSearchText(value: string, query: string) {
-  const normalizedValue = value.toLowerCase();
+function matchesProfileSearch(profile: PlatformProfile, query: string) {
+  const handleQuery = query.replace(/^@+/, "");
 
-  if (!query || !normalizedValue.includes(query)) {
-    return 0;
-  }
-
-  if (normalizedValue === query) {
-    return 120;
-  }
-
-  if (normalizedValue.startsWith(query)) {
-    return 80;
-  }
-
-  return 40;
+  return (
+    profile.displayName.toLowerCase().includes(query) ||
+    profile.username.toLowerCase().includes(handleQuery)
+  );
 }
 
-function sortProfilesForSearch(
+function filterProfilesForSearch(
   profiles: PlatformProfile[],
   searchQuery: string
 ) {
@@ -226,41 +224,7 @@ function sortProfilesForSearch(
     return profiles;
   }
 
-  return profiles
-    .map((profile, index) => {
-      const storyTitleScore = Math.max(
-        0,
-        ...profile.stories.map((story) => scoreSearchText(story.title, query))
-      );
-      const score =
-        scoreSearchText(profile.displayName, query) +
-        scoreSearchText(profile.username, query) +
-        storyTitleScore;
-
-      return { index, profile, score };
-    })
-    .sort((first, second) => second.score - first.score || first.index - second.index)
-    .map(({ profile }) => profile);
-}
-
-function sortStoriesForSearch(
-  stories: PlatformProfile["stories"],
-  searchQuery: string
-) {
-  const query = normalizeSearchQuery(searchQuery);
-
-  if (!query) {
-    return stories;
-  }
-
-  return stories
-    .map((story, index) => ({
-      index,
-      score: scoreSearchText(story.title, query),
-      story
-    }))
-    .sort((first, second) => second.score - first.score || first.index - second.index)
-    .map(({ story }) => story);
+  return profiles.filter((profile) => matchesProfileSearch(profile, query));
 }
 
 export function LandingPage({
@@ -272,30 +236,27 @@ export function LandingPage({
 }: LandingPageProps) {
   const selectedProfile =
     profiles.find((profile) => profile.id === selectedProfileId) ?? null;
-  const sortedProfiles = sortProfilesForSearch(profiles, searchQuery);
+  const visibleProfiles = filterProfilesForSearch(profiles, searchQuery);
 
   if (selectedProfile) {
     const selectedCover = getProfileCover(selectedProfile);
-    const sortedStories = sortStoriesForSearch(selectedProfile.stories, searchQuery);
 
     return (
       <section className="mx-auto grid w-full max-w-6xl gap-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-4xl font-black leading-none text-slate-950 sm:text-5xl">
-              {selectedProfile.displayName}
-            </h2>
-            <p className="mt-2 text-sm font-semibold text-slate-500">
-              @{selectedProfile.username} / {storyCountLabel(selectedProfile.stories.length)}
-            </p>
-          </div>
+        <div className="text-center">
+          <h2 className="text-4xl font-black leading-none text-slate-950 sm:text-5xl">
+            {selectedProfile.displayName}
+          </h2>
+          <p className="mt-2 text-sm font-semibold text-slate-500">
+            @{selectedProfile.username} / {storyCountLabel(selectedProfile.stories.length)}
+          </p>
         </div>
 
         <div
           aria-label="Story bento grid"
           className="w-full columns-1 gap-4 overflow-y-auto pb-24 sm:columns-2 lg:columns-3"
         >
-          {sortedStories.map((story, index) => {
+          {selectedProfile.stories.map((story, index) => {
             const label = sceneCountLabel(story.sceneCount);
             const heightClass =
               index % 3 === 0
@@ -310,7 +271,8 @@ export function LandingPage({
                 type="button"
                 aria-label={`Open ${story.title} ${label}`}
                 onClick={() => onSelectStory(story.storyId)}
-                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg bg-slate-950 text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${heightClass}`}
+                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${heightClass}`}
+                style={getCoverFallbackStyle(selectedCover.accentColor)}
               >
                 <span
                   aria-hidden="true"
@@ -320,7 +282,9 @@ export function LandingPage({
                   {selectedCover.image ? (
                     <img
                       alt=""
+                      decoding="async"
                       draggable={false}
+                      loading="eager"
                       src={selectedCover.image}
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                       style={{ objectPosition: selectedCover.objectPosition }}
@@ -328,9 +292,7 @@ export function LandingPage({
                   ) : (
                     <span
                       className="block h-full w-full"
-                      style={{
-                        background: `linear-gradient(135deg, ${story.coverColor}, rgba(15, 23, 42, 0.8))`
-                      }}
+                      style={getCoverFallbackStyle(story.coverColor)}
                     />
                   )}
                 </span>
@@ -356,7 +318,7 @@ export function LandingPage({
 
   return (
     <section className="mx-auto grid w-full max-w-7xl gap-5">
-      <div>
+      <div className="text-center">
         <h2 className="text-4xl font-black leading-none text-slate-950 sm:text-5xl">
           chatsim
         </h2>
@@ -369,7 +331,7 @@ export function LandingPage({
         aria-label="Profile masonry"
         className="w-full columns-2 gap-4 overflow-y-auto pb-24 sm:columns-3 lg:columns-5"
       >
-        {sortedProfiles.map((profile) => {
+        {visibleProfiles.map((profile, index) => {
           const profileCover = getProfileCover(profile);
           const label = storyCountLabel(profile.stories.length);
 
@@ -379,7 +341,8 @@ export function LandingPage({
               type="button"
               aria-label={`Open ${profile.displayName}, ${label}`}
               onClick={() => onSelectProfile(profile.id)}
-              className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg bg-slate-950 text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${profileCover.profileClassName}`}
+              className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${profileCover.profileClassName}`}
+              style={getCoverFallbackStyle(profileCover.accentColor)}
             >
               <span
                 aria-hidden="true"
@@ -389,7 +352,9 @@ export function LandingPage({
                 {profileCover.image ? (
                   <img
                     alt=""
+                    decoding="async"
                     draggable={false}
+                    loading={index < 10 ? "eager" : "lazy"}
                     src={profileCover.image}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                     style={{ objectPosition: profileCover.objectPosition }}
@@ -397,20 +362,13 @@ export function LandingPage({
                 ) : (
                   <span
                     className="block h-full w-full"
-                    style={{
-                      background: `linear-gradient(135deg, ${profileCover.accentColor}, rgba(15, 23, 42, 0.8))`
-                    }}
+                    style={getCoverFallbackStyle(profileCover.accentColor)}
                   />
                 )}
               </span>
               <span
                 aria-hidden="true"
                 className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.16)_0%,rgba(2,6,23,0.06)_42%,rgba(2,6,23,0.52)_100%)]"
-              />
-              <span
-                aria-hidden="true"
-                className="absolute inset-x-0 top-0 z-10 h-1"
-                style={{ backgroundColor: profileCover.accentColor }}
               />
               <span className="relative z-10 grid h-full content-between gap-3 p-3.5">
                 <span className="min-w-0">

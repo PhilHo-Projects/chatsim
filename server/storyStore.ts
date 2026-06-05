@@ -11,9 +11,11 @@ import {
 } from "node:crypto";
 
 export type StoryVisibility = "public" | "private";
+export type StoryPresentationMode = "phone" | "battle";
 
 export type StoryboardPayload = {
   activeSceneId: string;
+  presentationMode?: StoryPresentationMode;
   scenes: unknown[];
   createdAt?: string;
   id?: string;
@@ -91,7 +93,10 @@ const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_HASH_BYTES = 64;
 const SEED_TIMESTAMP = "2026-05-28T00:00:00.000Z";
 const COVER_COLORS = ["#f472b6", "#22d3ee", "#a3e635", "#f59e0b", "#8b5cf6"];
-const DEFAULT_STORE_FILE = resolve(process.cwd(), "server/data/story-store.json");
+const DEFAULT_RUNTIME_STORE_FILE = resolve(
+  process.cwd(),
+  "server/data/story-store.local.json"
+);
 
 type SeedProfileSpec = {
   displayName: string;
@@ -99,6 +104,52 @@ type SeedProfileSpec = {
   storyId: string;
   storyTitle: string;
   username: string;
+};
+
+type ShortStoryMessage = {
+  speaker: "viewer" | "contact";
+  text: string;
+};
+
+type SeedStorySpec = {
+  ownerId: string;
+  presentationMode?: StoryPresentationMode;
+  storyId: string;
+  storyTitle: string;
+  useCraftedSeed?: boolean;
+  messages?: ShortStoryMessage[];
+};
+
+function createProfileStorySpec(profile: SeedProfileSpec): SeedStorySpec {
+  return {
+    ownerId: profile.id,
+    storyId: profile.storyId,
+    storyTitle: profile.storyTitle,
+    useCraftedSeed: profile.storyId === "story-phil-1"
+  };
+}
+
+// Dedicated battle script. Phil = opponent (top), Nor = player (bottom).
+// Both sides are typed out in battle mode, so keep the lines short and punchy.
+const BATTLE_SCRIPT: ShortStoryMessage[] = [
+  { speaker: "viewer", text: "Nor! I challenge you to a battle!" },
+  { speaker: "contact", text: "bro it's 3am... fine. let's go" },
+  { speaker: "viewer", text: "Behold my ace! Go, Gary!" },
+  { speaker: "contact", text: "that's a pigeon. that's just a pigeon" },
+  { speaker: "viewer", text: "He is a TRAINED pigeon." },
+  { speaker: "contact", text: "ok send it then 😤" },
+  { speaker: "viewer", text: "Gary used Splash! Super effective!" },
+  { speaker: "contact", text: "it is NOT super effective lmao" },
+  { speaker: "viewer", text: "CRITICAL HIT! You're finished, Nor!" },
+  { speaker: "contact", text: "ok that was kinda sick ngl. gg" }
+];
+
+const PHIL_BATTLE_STORY_SPEC: SeedStorySpec = {
+  messages: BATTLE_SCRIPT,
+  ownerId: "user-phil",
+  presentationMode: "battle",
+  storyId: "story-phil-battle",
+  storyTitle: "Battle"
 };
 
 const DEFAULT_SEED_PROFILE_SPECS: SeedProfileSpec[] = [
@@ -159,12 +210,78 @@ const SEED_PROFILE_SPECS = [
   ...DUMMY_SEED_PROFILE_SPECS
 ];
 
+const EXTRA_PHIL_STORY_SPECS: SeedStorySpec[] = [
+  {
+    messages: [
+      { speaker: "viewer", text: "hello" },
+      { speaker: "contact", text: "wyd" },
+      { speaker: "viewer", text: "nm you?" }
+    ],
+    ownerId: "user-phil",
+    storyId: "story-phil-wyd",
+    storyTitle: "wyd"
+  },
+  {
+    messages: [
+      { speaker: "viewer", text: "gm" },
+      { speaker: "contact", text: "too early" },
+      { speaker: "viewer", text: "lol fair" }
+    ],
+    ownerId: "user-phil",
+    storyId: "story-phil-gm",
+    storyTitle: "gm"
+  },
+  {
+    messages: [
+      { speaker: "viewer", text: "coffee?" },
+      { speaker: "contact", text: "ya" },
+      { speaker: "viewer", text: "omw" }
+    ],
+    ownerId: "user-phil",
+    storyId: "story-phil-coffee",
+    storyTitle: "coffee"
+  },
+  {
+    messages: [
+      { speaker: "viewer", text: "ping" },
+      { speaker: "contact", text: "pong" },
+      { speaker: "viewer", text: "cool" }
+    ],
+    ownerId: "user-phil",
+    storyId: "story-phil-ping",
+    storyTitle: "ping"
+  },
+  {
+    messages: [
+      { speaker: "viewer", text: "movie later?" },
+      { speaker: "contact", text: "maybe" },
+      { speaker: "viewer", text: "bet" }
+    ],
+    ownerId: "user-phil",
+    storyId: "story-phil-movie",
+    storyTitle: "movie"
+  }
+];
+
+const SEED_STORY_SPECS: SeedStorySpec[] = [
+  ...SEED_PROFILE_SPECS.flatMap((profile) =>
+    profile.storyId === "story-phil-1"
+      ? [createProfileStorySpec(profile), PHIL_BATTLE_STORY_SPEC]
+      : [createProfileStorySpec(profile)]
+  ),
+  ...EXTRA_PHIL_STORY_SPECS
+];
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function normalizePresentationMode(value: unknown): StoryPresentationMode {
+  return value === "battle" ? "battle" : "phone";
 }
 
 function normalizeUsername(value: string) {
@@ -213,6 +330,7 @@ function loadStoryDatabase(): StoryboardPayload {
     ...parsed,
     createdAt: SEED_TIMESTAMP,
     id: "story-phil-1",
+    presentationMode: "phone",
     title: "Story",
     updatedAt: SEED_TIMESTAMP
   };
@@ -255,6 +373,7 @@ function createPlaceholderStoryboard(id: string, title: string): StoryboardPaylo
     activeSceneId: "scene-1",
     createdAt: SEED_TIMESTAMP,
     id,
+    presentationMode: "phone",
     scenes: [
       {
         contact: {
@@ -292,6 +411,51 @@ function createPlaceholderStoryboard(id: string, title: string): StoryboardPaylo
   };
 }
 
+function createShortStoryboard(
+  id: string,
+  title: string,
+  messages: ShortStoryMessage[]
+): StoryboardPayload {
+  return {
+    activeSceneId: "scene-1",
+    createdAt: SEED_TIMESTAMP,
+    id,
+    presentationMode: "phone",
+    scenes: [
+      {
+        contact: {
+          avatarUrl: "",
+          initials: "N",
+          name: "Nor",
+          status: "online now",
+          typingSpeedLevel: 3
+        },
+        defaultPauseAfterMs: 700,
+        defaultSpeakerTypingSpeedLevel: 4,
+        id: "scene-1",
+        messages: messages.map((message, index) => ({
+          id: `${message.speaker}-${index + 1}`,
+          pauseAfterMs: 700,
+          speaker: message.speaker,
+          text: message.text,
+          typingSpeedLevel: 4,
+          useDefaultPauseAfterMs: true,
+          useDefaultTypingMs: true
+        })),
+        sceneTitle: title,
+        viewer: {
+          avatarUrl: "",
+          initials: "P",
+          name: "Phil",
+          status: "online now"
+        }
+      }
+    ],
+    title,
+    updatedAt: SEED_TIMESTAMP
+  };
+}
+
 function createSeedStory(
   id: string,
   ownerId: string,
@@ -307,6 +471,7 @@ function createSeedStory(
     storyboard: {
       ...storyboard,
       id,
+      presentationMode: normalizePresentationMode(storyboard.presentationMode),
       title
     },
     title,
@@ -316,15 +481,26 @@ function createSeedStory(
 }
 
 function createSeedStories() {
-  return SEED_PROFILE_SPECS.map((profile, index) =>
-    createSeedStory(
-      profile.storyId,
-      profile.id,
-      profile.storyTitle,
+  return SEED_STORY_SPECS.map((story, index) => {
+    const storyboard = story.messages
+      ? createShortStoryboard(story.storyId, story.storyTitle, story.messages)
+      : story.useCraftedSeed
+        ? loadStoryDatabase()
+        : undefined;
+
+    return createSeedStory(
+      story.storyId,
+      story.ownerId,
+      story.storyTitle,
       COVER_COLORS[index % COVER_COLORS.length],
-      profile.storyId === "story-phil-1" ? loadStoryDatabase() : undefined
-    )
-  );
+      storyboard
+        ? {
+            ...storyboard,
+            presentationMode: story.presentationMode ?? storyboard.presentationMode
+          }
+        : undefined
+    );
+  });
 }
 
 export function createSeedStoreData(): StoryStoreData {
@@ -337,14 +513,42 @@ export function createSeedStoreData(): StoryStoreData {
   };
 }
 
+function getRuntimeStoreFile() {
+  const configuredStoreFile = process.env.CHATSIM_STORE_FILE?.trim();
+
+  return configuredStoreFile ? resolve(configuredStoreFile) : DEFAULT_RUNTIME_STORE_FILE;
+}
+
 function normalizeStoreData(data: StoryStoreData) {
   let changed = false;
   const seedStories = createSeedStories();
+  const seedStoryById = new Map(
+    seedStories.map((seedStory, index) => [seedStory.id, { index, seedStory }])
+  );
   const seedUsers = createSeedUsers();
 
   data.sessions ??= [];
   data.stories ??= [];
   data.users ??= [];
+
+  data.stories = data.stories.map((story) => {
+    const presentationMode = normalizePresentationMode(
+      story.storyboard?.presentationMode
+    );
+
+    if (story.storyboard?.presentationMode === presentationMode) {
+      return story;
+    }
+
+    changed = true;
+    return {
+      ...story,
+      storyboard: {
+        ...story.storyboard,
+        presentationMode
+      }
+    };
+  });
 
   data.users = data.users.map((user) => {
     const role =
@@ -375,6 +579,51 @@ function normalizeStoreData(data: StoryStoreData) {
     }
   }
 
+  data.stories = data.stories.map((story) => {
+    const seedStory = seedStoryById.get(story.id)?.seedStory;
+    const seedPresentationMode = seedStory?.storyboard.presentationMode;
+
+    if (
+      !seedPresentationMode ||
+      story.storyboard.presentationMode === seedPresentationMode
+    ) {
+      return story;
+    }
+
+    changed = true;
+    return {
+      ...story,
+      storyboard: {
+        ...story.storyboard,
+        presentationMode: seedPresentationMode
+      }
+    };
+  });
+
+  const orderedStories = [...data.stories].sort((firstStory, secondStory) => {
+    const firstSeedIndex = seedStoryById.get(firstStory.id)?.index;
+    const secondSeedIndex = seedStoryById.get(secondStory.id)?.index;
+
+    if (firstSeedIndex !== undefined && secondSeedIndex !== undefined) {
+      return firstSeedIndex - secondSeedIndex;
+    }
+
+    if (firstSeedIndex !== undefined) {
+      return -1;
+    }
+
+    if (secondSeedIndex !== undefined) {
+      return 1;
+    }
+
+    return 0;
+  });
+
+  if (orderedStories.some((story, index) => story.id !== data.stories[index]?.id)) {
+    data.stories = orderedStories;
+    changed = true;
+  }
+
   return { changed, data };
 }
 
@@ -388,7 +637,7 @@ export class StoryStore {
     return new StoryStore(normalizeStoreData(clone(data)).data);
   }
 
-  static open(dataFile = DEFAULT_STORE_FILE) {
+  static open(dataFile = getRuntimeStoreFile()) {
     try {
       const data = JSON.parse(readFileSync(dataFile, "utf8")) as StoryStoreData;
       const normalized = normalizeStoreData(data);

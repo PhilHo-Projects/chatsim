@@ -13,7 +13,10 @@ export default {
           "Helvetica Neue",
           "Arial",
           "sans-serif"
-        ]
+        ],
+        // Retro game-UI pair, used by the Pokemon-style battle editor.
+        pixel: ["Silkscreen", "ui-monospace", "Menlo", "monospace"],
+        round: ["Fredoka", "ui-rounded", "Segoe UI", "system-ui", "sans-serif"]
       },
       boxShadow: {
         phone: "0 28px 80px rgba(15, 23, 42, 0.28)",

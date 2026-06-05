@@ -1,5 +1,6 @@
 // @vitest-environment node
 import {
+  readFileSync,
   mkdtempSync,
   rmSync,
   writeFileSync
@@ -48,6 +49,23 @@ describe("StoryStore", () => {
       ownerId: "user-phil",
       storyId: "story-phil-1",
       title: "Story"
+    });
+    expect(profiles[0].stories.map((story) => story.title)).toEqual([
+      "Story",
+      "Battle",
+      "wyd",
+      "gm",
+      "coffee",
+      "ping",
+      "movie"
+    ]);
+    expect(store.getStory("story-phil-battle")).toMatchObject({
+      id: "story-phil-battle",
+      ownerId: "user-phil",
+      storyboard: expect.objectContaining({
+        presentationMode: "battle"
+      }),
+      title: "Battle"
     });
     expect(profiles).toHaveLength(25);
     expect(profiles.find((profile) => profile.username === "dummy01")).toMatchObject({
@@ -195,6 +213,73 @@ describe("StoryStore", () => {
         title: "Placeholder Story 01"
       });
     } finally {
+      rmSync(tempDir, { force: true, recursive: true });
+    }
+  });
+
+  it("repairs stale seeded battle stories in existing store files", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "story-store-"));
+
+    try {
+      const dataFile = join(tempDir, "story-store.json");
+      const legacyData = createSeedStoreData() as any;
+      const staleBattleStory = legacyData.stories.find(
+        (story: { id: string }) => story.id === "story-phil-battle"
+      );
+
+      staleBattleStory.storyboard.presentationMode = "phone";
+      legacyData.stories = [
+        ...legacyData.stories.filter(
+          (story: { id: string }) => story.id !== "story-phil-battle"
+        ),
+        staleBattleStory
+      ];
+      writeFileSync(dataFile, JSON.stringify(legacyData), "utf8");
+
+      const store = StoryStore.open(dataFile);
+
+      expect(store.getStory("story-phil-battle")).toMatchObject({
+        storyboard: expect.objectContaining({
+          presentationMode: "battle"
+        })
+      });
+      expect(
+        store.getPublicProfiles()[0].stories.map((story) => story.title).slice(0, 2)
+      ).toEqual(["Story", "Battle"]);
+    } finally {
+      rmSync(tempDir, { force: true, recursive: true });
+    }
+  });
+
+  it("uses CHATSIM_STORE_FILE as the default runtime store path", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "story-store-"));
+    const previousStoreFile = process.env.CHATSIM_STORE_FILE;
+
+    try {
+      const dataFile = join(tempDir, "story-store.local.json");
+      process.env.CHATSIM_STORE_FILE = dataFile;
+
+      const store = StoryStore.open();
+
+      expect(store.getStory("story-phil-1")).toMatchObject({
+        id: "story-phil-1",
+        ownerId: "user-phil"
+      });
+
+      await store.register({
+        displayName: "Env Store",
+        password: "cloud-room-7",
+        username: "envstore"
+      });
+
+      expect(readFileSync(dataFile, "utf8")).toContain('"username": "envstore"');
+    } finally {
+      if (previousStoreFile === undefined) {
+        delete process.env.CHATSIM_STORE_FILE;
+      } else {
+        process.env.CHATSIM_STORE_FILE = previousStoreFile;
+      }
+
       rmSync(tempDir, { force: true, recursive: true });
     }
   });

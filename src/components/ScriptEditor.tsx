@@ -42,13 +42,16 @@ type ScriptEditorProps = {
   activeSceneId: string;
   canUndo: boolean;
   config: ConversationConfig;
+  isSaving?: boolean;
   onChange: (config: ConversationConfig) => void;
   onClose: () => void;
+  onSave?: () => void | Promise<void>;
   onSceneAdd: () => void;
   onSceneSelect: (sceneId: string) => void;
   onStoryTitleChange: (title: string) => void;
   onUndo: () => void;
   requiresPassword?: boolean;
+  saveError?: string;
   scenes: StoryScene[];
   storyTitle: string;
 };
@@ -142,13 +145,16 @@ export function ScriptEditor({
   activeSceneId,
   canUndo,
   config,
+  isSaving = false,
   onChange,
   onClose,
+  onSave = onClose,
   onSceneAdd,
   onSceneSelect,
   onStoryTitleChange,
   onUndo,
   requiresPassword = true,
+  saveError = "",
   scenes,
   storyTitle
 }: ScriptEditorProps) {
@@ -404,7 +410,7 @@ export function ScriptEditor({
     }
 
     setSettingsWarning("");
-    onClose();
+    void onSave();
   };
 
   return (
@@ -441,6 +447,7 @@ export function ScriptEditor({
           <button
             type="button"
             aria-label="Save changes"
+            aria-busy={isSaving}
             title="Save changes"
             onClick={saveChanges}
             className="flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 sm:px-5"
@@ -484,6 +491,11 @@ export function ScriptEditor({
           {settingsWarning ? (
             <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800">
               {settingsWarning}
+            </p>
+          ) : null}
+          {saveError ? (
+            <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800">
+              {saveError}
             </p>
           ) : null}
           <section className="grid min-w-0 rounded-2xl border border-indigo-100/80 bg-white/60 p-4 shadow-[0_18px_50px_rgba(79,70,229,0.1)] backdrop-blur-md">

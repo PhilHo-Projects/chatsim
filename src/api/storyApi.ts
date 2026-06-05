@@ -12,11 +12,35 @@ type ApiStoryRecord = Omit<PlatformStoryRecord, "storyboard"> & {
   storyboard: Storyboard;
 };
 
+const DEFAULT_BASE_PATH = import.meta.env.BASE_URL ?? "/";
+
+function normalizeBasePath(basePath: string) {
+  if (!basePath || basePath === "/") {
+    return "/";
+  }
+
+  const withLeadingSlash = basePath.startsWith("/") ? basePath : `/${basePath}`;
+
+  return withLeadingSlash.endsWith("/")
+    ? withLeadingSlash
+    : `${withLeadingSlash}/`;
+}
+
+export function getApiPath(path: string, basePath = DEFAULT_BASE_PATH) {
+  const normalizedBasePath = normalizeBasePath(basePath);
+
+  if (normalizedBasePath === "/") {
+    return path;
+  }
+
+  return `${normalizedBasePath.slice(0, -1)}${path}`;
+}
+
 async function requestJson<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(getApiPath(path), {
     ...options,
     credentials: "include",
     headers: {

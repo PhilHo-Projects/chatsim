@@ -3,6 +3,7 @@ import mayaAnimeAvatar from "../assets/maya-anime-avatar.png";
 import mysterySpeakerAvatar from "../assets/mystery-speaker-avatar.png";
 
 export type SpeakerId = "viewer" | "contact";
+export type PresentationMode = "phone" | "battle";
 export type SpeedLevel = 1 | 2 | 3 | 4 | 5;
 
 export type ConversationMessage = {
@@ -53,6 +54,7 @@ export type StoryDatabase = {
 export type Storyboard = StoryDatabase & {
   createdAt: string;
   id: string;
+  presentationMode: PresentationMode;
   title: string;
   updatedAt: string;
 };
@@ -119,6 +121,7 @@ type StoryDatabaseInput = {
 type StoryboardInput = StoryDatabaseInput & {
   createdAt?: unknown;
   id?: unknown;
+  presentationMode?: unknown;
   title?: unknown;
   updatedAt?: unknown;
 };
@@ -531,6 +534,9 @@ function cleanStoryTitle(value: unknown, index: number): string {
   return oldGeneratedTitles.includes(trimmed) ? fallback : value;
 }
 
+function normalizePresentationMode(value: unknown): PresentationMode {
+  return value === "battle" ? "battle" : "phone";
+}
 
 function createBlankMessage(index: number): ConversationMessageInput {
   return {
@@ -690,6 +696,7 @@ export function normalizeStoryboard(
     ...story,
     createdAt: normalizeTimestamp(source.createdAt),
     id: cleanText(source.id, `story-${index + 1}`),
+    presentationMode: normalizePresentationMode(source.presentationMode),
     title: cleanStoryTitle(source.title, index),
     updatedAt: normalizeTimestamp(source.updatedAt)
   };

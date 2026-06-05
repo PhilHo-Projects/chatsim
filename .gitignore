@@ -1,10 +1,13 @@
 node_modules/
 dist/
+.claude/
+.playwright-cli/
 .worktrees/
 worktrees/
 
 *.tsbuildinfo
 *.log
+server/data/*.local.json
 
 .env
 .env.*
