@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import type { Plugin } from "vite";
 import { createApiHandler } from "./server/api";
 
@@ -23,7 +24,7 @@ function chatsimApiPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), chatsimApiPlugin()],
+  plugins: [react(), tailwindcss(), chatsimApiPlugin()],
   test: {
     environment: "jsdom",
     globals: true,

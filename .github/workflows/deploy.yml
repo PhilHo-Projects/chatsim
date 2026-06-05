@@ -6,17 +6,25 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: chatsim-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -27,8 +35,14 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=moderate
+
       - name: Build Chatsim
         run: npm run build:chatsim
+
+      - name: Package build artifact
+        run: tar -czf chatsim-dist.tgz dist
 
       - name: Configure SSH
         run: |
@@ -37,27 +51,30 @@ jobs:
           chmod 600 ~/.ssh/chatsim_deploy_key
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Upload build artifact
+        run: scp -i ~/.ssh/chatsim_deploy_key chatsim-dist.tgz "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/chatsim-dist.tgz"
+
       - name: Deploy to AWS
         run: |
-          ssh -i ~/.ssh/chatsim_deploy_key "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" <<'EOF'
-          set -euo pipefail
+          ssh -T -i ~/.ssh/chatsim_deploy_key "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" 'bash -seuo pipefail' <<'EOF'
+            if [ ! -d "$HOME/projects/chatsim/.git" ]; then
+              git clone https://github.com/PhilHo-Projects/chatsim.git "$HOME/projects/chatsim"
+            fi
 
-          if [ ! -d "$HOME/projects/chatsim/.git" ]; then
-            git clone https://github.com/PhilHo-Projects/chatsim.git "$HOME/projects/chatsim"
-          fi
+            cd "$HOME/projects/chatsim"
+            git fetch origin main
+            git reset --hard origin/main
+            npm ci --omit=dev
+            mkdir -p server/data
+            rm -rf dist
+            tar -xzf /tmp/chatsim-dist.tgz
+            rm -f /tmp/chatsim-dist.tgz
 
-          cd "$HOME/projects/chatsim"
-          git fetch origin main
-          git reset --hard origin/main
-          npm ci
-          npm run build:chatsim
-          mkdir -p server/data
+            if pm2 describe chatsim-api >/dev/null 2>&1; then
+              pm2 reload ecosystem.config.cjs --only chatsim-api --update-env
+            else
+              pm2 start ecosystem.config.cjs --only chatsim-api
+            fi
 
-          if pm2 describe chatsim-api >/dev/null 2>&1; then
-            pm2 reload ecosystem.config.cjs --only chatsim-api --update-env
-          else
-            pm2 start ecosystem.config.cjs --only chatsim-api
-          fi
-
-          pm2 save
+            pm2 save
           EOF
