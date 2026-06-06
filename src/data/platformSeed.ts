@@ -60,7 +60,7 @@ const defaultProfileSpecs = [
     displayName: "phil's stories",
     id: "user-phil",
     storyId: "story-phil-1",
-    storyTitle: "Story",
+    storyTitle: "Ketamine prison",
     username: "phil"
   },
   {
@@ -153,66 +153,12 @@ const philBattleStorySpec: StorySpec = {
   storyTitle: "Battle"
 };
 
-const extraPhilStorySpecs: StorySpec[] = [
-  {
-    messages: [
-      { speaker: "viewer", text: "hello" },
-      { speaker: "contact", text: "wyd" },
-      { speaker: "viewer", text: "nm you?" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-wyd",
-    storyTitle: "wyd"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "gm" },
-      { speaker: "contact", text: "too early" },
-      { speaker: "viewer", text: "lol fair" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-gm",
-    storyTitle: "gm"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "coffee?" },
-      { speaker: "contact", text: "ya" },
-      { speaker: "viewer", text: "omw" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-coffee",
-    storyTitle: "coffee"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "ping" },
-      { speaker: "contact", text: "pong" },
-      { speaker: "viewer", text: "cool" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-ping",
-    storyTitle: "ping"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "movie later?" },
-      { speaker: "contact", text: "maybe" },
-      { speaker: "viewer", text: "bet" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-movie",
-    storyTitle: "movie"
-  }
-];
-
 const storySpecs: StorySpec[] = [
   ...profileSpecs.flatMap((profile) =>
     profile.storyId === "story-phil-1"
       ? [createProfileStorySpec(profile), philBattleStorySpec]
       : [createProfileStorySpec(profile)]
-  ),
-  ...extraPhilStorySpecs
+  )
 ];
 
 function createStoryboard(

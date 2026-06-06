@@ -265,7 +265,7 @@ function openFirstStory() {
   }
   fireEvent.click(
     within(screen.getByLabelText("Story bento grid")).getByRole("button", {
-      name: /Story 5 scenes/
+      name: /Ketamine prison 5 scenes/
     })
   );
 }
@@ -319,7 +319,7 @@ describe("App", () => {
       within(screen.getByRole("navigation", { name: "Desktop navigation" }))
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label"))
-    ).toEqual(["Account", "Home", "Explore", "Create story"]);
+    ).toEqual(["Account", "Home", "Explore", "Create story", "Toggle theme"]);
     expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toHaveClass(
       "md:hidden"
     );
@@ -358,11 +358,11 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(
       within(screen.getByRole("button", { name: /Open phil's stories/ })).getByText(
-        "7 stories"
+        "2 stories"
       )
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Story bento grid")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Story 5 scenes/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ketamine prison 5 scenes/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Open story")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Profile masonry")).toHaveClass(
       "columns-2",
@@ -395,7 +395,7 @@ describe("App", () => {
       screen.getByRole("heading", { name: "phil's stories" }).parentElement
     ).toHaveClass("text-center");
     expect(screen.queryByRole("searchbox", { name: "Search stories" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Back to home" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Back to home" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Story bento grid")).toHaveClass(
       "columns-1",
       "sm:columns-2",
@@ -405,7 +405,7 @@ describe("App", () => {
     const storySelector = within(screen.getByLabelText("Story bento grid")).getByRole(
       "button",
       {
-        name: /Story 5 scenes/
+        name: /Ketamine prison 5 scenes/
       }
     );
 
@@ -416,9 +416,25 @@ describe("App", () => {
     );
     expect(storySelector).not.toHaveClass("bg-slate-950");
     expect(storySelector.getAttribute("style")).toMatch(/#e11d48|225,\s*29,\s*72/);
-    expect(screen.getByTestId("story-card-background-story-phil-1")).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId("story-card-background-story-phil-1")
+        .querySelector("img")
+        ?.getAttribute("src")
+    ).toContain("phil-ketamine-prison");
+    expect(
+      screen
+        .getByTestId("story-card-background-story-phil-battle")
+        .querySelector("img")
+        ?.getAttribute("src")
+    ).toContain("phil-battle-pixel");
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to home" }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Desktop navigation" })).getByRole(
+        "button",
+        { name: "Home" }
+      )
+    );
     expect(screen.getByLabelText("Profile masonry")).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search stories" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
@@ -554,7 +570,12 @@ describe("App", () => {
     expect(window.location.pathname).toBe("/profiles/user-phil");
     expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to home" }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Desktop navigation" })).getByRole(
+        "button",
+        { name: "Home" }
+      )
+    );
 
     expect(window.location.pathname).toBe("/");
     expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
@@ -588,6 +609,26 @@ describe("App", () => {
     expect(dummyOneImage).toBeTruthy();
     expect(dummyTwentyImage).toBeTruthy();
     expect(dummyOneImage).not.toBe(dummyTwentyImage);
+    [
+      ["04", "demo-04-vegetation"],
+      ["05", "demo-05-brutalist-decor"],
+      ["06", "demo-06-space-stuff"],
+      ["09", "demo-09-hand-drawn-art"],
+      ["10", "demo-10-stencil-art"],
+      ["13", "demo-13-cosplay"],
+      ["14", "demo-14-computer-geek"],
+      ["15", "demo-15-pastel-crafts"],
+      ["18", "demo-18-goofy-cartoon"],
+      ["19", "demo-19-concrete-jungle"],
+      ["20", "demo-20-crafty-space"]
+    ].forEach(([accountNumber, themedCoverName]) => {
+      const themedImage = screen
+        .getByTestId(`profile-card-background-user-dummy-${accountNumber}`)
+        .querySelector("img")
+        ?.getAttribute("src");
+
+      expect(themedImage).toContain(themedCoverName);
+    });
 
     fireEvent.click(dummyTwenty);
 
@@ -619,7 +660,7 @@ describe("App", () => {
     const originalCards = within(masonry).getAllByRole("button");
 
     expect(originalCards).toHaveLength(seedProfiles.length);
-    expect(originalCards[0]).toHaveAccessibleName("Open phil's stories, 7 stories");
+    expect(originalCards[0]).toHaveAccessibleName("Open phil's stories, 2 stories");
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
       target: { value: "phil's" }
@@ -628,7 +669,7 @@ describe("App", () => {
     const philCards = within(masonry).getAllByRole("button");
 
     expect(philCards).toHaveLength(1);
-    expect(philCards[0]).toHaveAccessibleName("Open phil's stories, 7 stories");
+    expect(philCards[0]).toHaveAccessibleName("Open phil's stories, 2 stories");
     expect(screen.queryByRole("button", { name: /Open demo account 20/ })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
@@ -662,18 +703,15 @@ describe("App", () => {
 
     const storyGrid = screen.getByLabelText("Story bento grid");
 
-    expect(within(storyGrid).getAllByRole("button")).toHaveLength(9);
+    expect(within(storyGrid).getAllByRole("button")).toHaveLength(4);
     expect(screen.queryByRole("searchbox", { name: "Search stories" })).not.toBeInTheDocument();
-    expect(
-      within(storyGrid).getByRole("button", { name: /Open wyd 1 scene/ })
-    ).toBeInTheDocument();
     expect(
       within(storyGrid).getByRole("button", { name: /Open Battle 1 scene/ })
     ).toBeInTheDocument();
     expect(
       within(storyGrid).getByRole("button", { name: /Open Soccer season 1 scene/ })
     ).toBeInTheDocument();
-    expect(within(storyGrid).getByRole("button", { name: /Open Story 5 scenes/ })).toBeInTheDocument();
+    expect(within(storyGrid).getByRole("button", { name: /Open Ketamine prison 5 scenes/ })).toBeInTheDocument();
   });
 
   it("shows editor controls to admins on stories they do not own", async () => {
@@ -829,11 +867,10 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Script editor" })).toHaveClass(
       "text-3xl"
     );
-    expect(screen.getByText("edit your story here")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Conversation database" })).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Story scenes" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Collapse general settings" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Story name")).toHaveValue("Story");
+    expect(screen.getByLabelText("Story name")).toHaveValue("Ketamine prison");
     expect(screen.getByText("Choose scene")).toBeInTheDocument();
     expect(
       screen.getAllByRole("button", { name: /Choose scene \d+:/ })
@@ -1229,16 +1266,16 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
 
     expect(screen.getByRole("dialog", { name: "Storybook" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Select Story" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit Story" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete Story" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Ketamine prison" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Ketamine prison" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Ketamine prison" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "New story" }));
     await flushPlatformEffects();
 
     expect(screen.getByRole("heading", { name: "Frank" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
-    expect(screen.getByRole("button", { name: "Select Story 8" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Story 3" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
     fireEvent.click(screen.getByRole("button", { name: "Open script editor" }));
@@ -1281,38 +1318,38 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
-    fireEvent.click(screen.getByRole("button", { name: "Edit Story 8" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Story 3" }));
 
     expect(screen.getByRole("dialog", { name: "Script editor" })).toBeInTheDocument();
     expect(screen.getByLabelText("Scene title")).toHaveValue("Scene 2");
 
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete Story 8" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Story 3" }));
 
-    expect(screen.getByRole("button", { name: "Select Story 8" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Confirm delete Story 8" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel delete Story 8" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Story 3" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm delete Story 3" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel delete Story 3" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Cancel delete Story 8" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel delete Story 3" }));
 
-    expect(screen.getByRole("button", { name: "Select Story 8" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Story 3" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete Story 8" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story 8" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Story 3" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story 3" }));
     await flushPlatformEffects();
 
-    expect(screen.queryByRole("button", { name: "Select Story 8" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select Story 3" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
-    expect(screen.getByRole("button", { name: "Select Story" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Ketamine prison" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete Story" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Ketamine prison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Ketamine prison" }));
     await flushPlatformEffects();
 
     expect(window.location.pathname).toBe("/stories/story-phil-battle");
     expect(screen.getByTestId("battle-stage")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Select Story" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select Ketamine prison" })).not.toBeInTheDocument();
   });
 
   it("keeps the editor open and reports remote save failures", async () => {
@@ -1337,12 +1374,12 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open storybook" }));
     failNextStoryDelete = true;
-    fireEvent.click(screen.getByRole("button", { name: "Delete Story" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Story" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Ketamine prison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete Ketamine prison" }));
     await flushPlatformEffects();
 
-    expect(screen.getByRole("button", { name: "Select Story" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Confirm delete Story" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select Ketamine prison" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm delete Ketamine prison" })).toBeInTheDocument();
     expect(screen.getByText("Could not delete story.")).toBeInTheDocument();
   });
 

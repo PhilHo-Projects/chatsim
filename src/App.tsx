@@ -46,6 +46,30 @@ import { useScriptedConversation } from "./hooks/useScriptedConversation";
 import { useAppRoute, type AppRoute } from "./navigation/appRoute";
 
 const STORY_ENTRANCE_MS = 1500;
+const THEME_STORAGE_KEY = "story.theme.v1";
+
+type Theme = "light" | "dark";
+
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "dark" || stored === "light") {
+      return stored;
+    }
+  } catch {
+    // Ignore storage access failures (e.g. private browsing).
+  }
+
+  if (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches) {
+    return "dark";
+  }
+
+  return "light";
+}
 
 function cloneStoryRecord(record: PlatformStoryRecord): PlatformStoryRecord {
   return JSON.parse(JSON.stringify(record)) as PlatformStoryRecord;
@@ -188,6 +212,7 @@ export default function App() {
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [isBusy, setIsBusy] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [accountError, setAccountError] = useState("");
@@ -284,6 +309,20 @@ export default function App() {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [avatarPreview]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Ignore storage access failures (e.g. private browsing).
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+  };
 
   const upsertStoryRecord = (record: PlatformStoryRecord) => {
     setStoryRecordsById((currentRecords) => ({
@@ -869,12 +908,14 @@ export default function App() {
         isStoryListOpen={isStoryListOpen}
         searchQuery={searchQuery}
         selectedProfile={selectedProfile}
+        theme={theme}
         toolbarActions={toolbarActions}
         onAccountToggle={toggleAccountPanel}
         onActiveProfile={showActiveProfile}
         onCreateStory={() => void createStoryFromShell()}
         onHome={showHome}
         onSearchQueryChange={setSearchQuery}
+        onToggleTheme={toggleTheme}
       >
         {mainContent}
       </AppShell>

@@ -157,7 +157,7 @@ const DEFAULT_SEED_PROFILE_SPECS: SeedProfileSpec[] = [
     displayName: "phil's stories",
     id: "user-phil",
     storyId: "story-phil-1",
-    storyTitle: "Story",
+    storyTitle: "Ketamine prison",
     username: "phil"
   },
   {
@@ -210,67 +210,65 @@ const SEED_PROFILE_SPECS = [
   ...DUMMY_SEED_PROFILE_SPECS
 ];
 
-const EXTRA_PHIL_STORY_SPECS: SeedStorySpec[] = [
-  {
-    messages: [
-      { speaker: "viewer", text: "hello" },
-      { speaker: "contact", text: "wyd" },
-      { speaker: "viewer", text: "nm you?" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-wyd",
-    storyTitle: "wyd"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "gm" },
-      { speaker: "contact", text: "too early" },
-      { speaker: "viewer", text: "lol fair" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-gm",
-    storyTitle: "gm"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "coffee?" },
-      { speaker: "contact", text: "ya" },
-      { speaker: "viewer", text: "omw" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-coffee",
-    storyTitle: "coffee"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "ping" },
-      { speaker: "contact", text: "pong" },
-      { speaker: "viewer", text: "cool" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-ping",
-    storyTitle: "ping"
-  },
-  {
-    messages: [
-      { speaker: "viewer", text: "movie later?" },
-      { speaker: "contact", text: "maybe" },
-      { speaker: "viewer", text: "bet" }
-    ],
-    ownerId: "user-phil",
-    storyId: "story-phil-movie",
-    storyTitle: "movie"
-  }
-];
-
 const SEED_STORY_SPECS: SeedStorySpec[] = [
   ...SEED_PROFILE_SPECS.flatMap((profile) =>
     profile.storyId === "story-phil-1"
       ? [createProfileStorySpec(profile), PHIL_BATTLE_STORY_SPEC]
       : [createProfileStorySpec(profile)]
-  ),
-  ...EXTRA_PHIL_STORY_SPECS
+  )
 ];
+
+const DEPRECATED_SEED_STORY_IDS = new Set([
+  "story-phil-wyd",
+  "story-phil-gm",
+  "story-phil-coffee",
+  "story-phil-ping",
+  "story-phil-movie"
+]);
+
+const ACTIVE_PHIL_STORY_IDS = new Set(["story-phil-1", "story-phil-battle"]);
+const GENERATED_PHIL_STORY_ID = /^story-phil-\d+-[a-f0-9]+$/;
+const GENERATED_PLACEHOLDER_TITLE = /^Story \d+$/;
+
+const RENAMED_SEED_STORY_TITLES = new Map([
+  ["story-phil-1", { from: "Story", to: "Ketamine prison" }]
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isGeneratedPhilPlaceholderStory(story: StoryRecord) {
+  if (
+    story.ownerId !== "user-phil" ||
+    ACTIVE_PHIL_STORY_IDS.has(story.id) ||
+    !GENERATED_PHIL_STORY_ID.test(story.id) ||
+    !GENERATED_PLACEHOLDER_TITLE.test(story.title)
+  ) {
+    return false;
+  }
+
+  const scenes = story.storyboard.scenes;
+
+  if (!Array.isArray(scenes) || scenes.length !== 1 || !isRecord(scenes[0])) {
+    return false;
+  }
+
+  const messages = scenes[0].messages;
+
+  if (!Array.isArray(messages) || messages.length !== 1 || !isRecord(messages[0])) {
+    return false;
+  }
+
+  return messages[0].text === "new story opening soon";
+}
+
+function isRetiredPhilDemoStory(story: StoryRecord) {
+  return (
+    DEPRECATED_SEED_STORY_IDS.has(story.id) ||
+    isGeneratedPhilPlaceholderStory(story)
+  );
+}
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -331,7 +329,7 @@ function loadStoryDatabase(): StoryboardPayload {
     createdAt: SEED_TIMESTAMP,
     id: "story-phil-1",
     presentationMode: "phone",
-    title: "Story",
+    title: "Ketamine prison",
     updatedAt: SEED_TIMESTAMP
   };
 }
@@ -531,6 +529,15 @@ function normalizeStoreData(data: StoryStoreData) {
   data.stories ??= [];
   data.users ??= [];
 
+  const activeStories = data.stories.filter(
+    (story) => !isRetiredPhilDemoStory(story)
+  );
+
+  if (activeStories.length !== data.stories.length) {
+    data.stories = activeStories;
+    changed = true;
+  }
+
   data.stories = data.stories.map((story) => {
     const presentationMode = normalizePresentationMode(
       story.storyboard?.presentationMode
@@ -582,10 +589,16 @@ function normalizeStoreData(data: StoryStoreData) {
   data.stories = data.stories.map((story) => {
     const seedStory = seedStoryById.get(story.id)?.seedStory;
     const seedPresentationMode = seedStory?.storyboard.presentationMode;
+    const renamedTitle = RENAMED_SEED_STORY_TITLES.get(story.id);
+    const shouldRenameTitle =
+      renamedTitle &&
+      (story.title === renamedTitle.from ||
+        story.storyboard.title === renamedTitle.from);
 
     if (
-      !seedPresentationMode ||
-      story.storyboard.presentationMode === seedPresentationMode
+      (!seedPresentationMode ||
+        story.storyboard.presentationMode === seedPresentationMode) &&
+      !shouldRenameTitle
     ) {
       return story;
     }
@@ -593,9 +606,11 @@ function normalizeStoreData(data: StoryStoreData) {
     changed = true;
     return {
       ...story,
+      title: shouldRenameTitle ? renamedTitle.to : story.title,
       storyboard: {
         ...story.storyboard,
-        presentationMode: seedPresentationMode
+        presentationMode: seedPresentationMode ?? story.storyboard.presentationMode,
+        title: shouldRenameTitle ? renamedTitle.to : story.storyboard.title
       }
     };
   });

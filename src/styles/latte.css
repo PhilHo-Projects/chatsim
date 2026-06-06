@@ -1,0 +1,34 @@
+/*
+ * Warm Latte editor theme.
+ *
+ * Tokens are scoped to `.latte-editor` so the rest of the app keeps its own
+ * look. To re-color the whole editor, change the values here in one place.
+ */
+:root {
+  --font-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-body: "Hanken Grotesk", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+}
+
+.latte-editor {
+  --latte-bg-from: #f3e9da;
+  --latte-bg-via: #efe1cd;
+  --latte-bg-to: #e8d7bf;
+  --latte-panel: #fffdf8;
+  --latte-panel-soft: #fbf4e8;
+  --latte-border: #e8d8c0;
+  --latte-field: #fbf4e8;
+  --latte-field-border: #e7d6bd;
+  --latte-espresso: #3a2417;
+  --latte-caramel: #cf8b46;
+  --latte-ink: #3a2c1c;
+  --latte-label: #b07a3c;
+  --latte-heading: #7a4f24;
+  --latte-muted: #a07f56;
+
+  font-family: var(--font-body);
+}
+
+.latte-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}

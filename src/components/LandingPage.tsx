@@ -22,7 +22,29 @@ import dummyProfile18Cover from "../assets/story-card-backgrounds/placeholders/d
 import dummyProfile19Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-19.svg";
 import dummyProfile20Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-20.svg";
 import philStoriesCover from "../assets/story-card-backgrounds/phil-stories.png";
+import dummyProfile01AnimeCover from "../assets/story-card-backgrounds/user-themes/demo-01-anime.webp";
+import dummyProfile02CyberpunkCover from "../assets/story-card-backgrounds/user-themes/demo-02-cyberpunk.webp";
+import dummyProfile03AbstractArtCover from "../assets/story-card-backgrounds/user-themes/demo-03-abstract-art.webp";
+import dummyProfile04VegetationCover from "../assets/story-card-backgrounds/user-themes/demo-04-vegetation.webp";
+import dummyProfile05BrutalistDecorCover from "../assets/story-card-backgrounds/user-themes/demo-05-brutalist-decor.webp";
+import dummyProfile06SpaceStuffCover from "../assets/story-card-backgrounds/user-themes/demo-06-space-stuff.webp";
+import dummyProfile07CuteStuffCover from "../assets/story-card-backgrounds/user-themes/demo-07-cute-stuff.webp";
+import dummyProfile08GamingCover from "../assets/story-card-backgrounds/user-themes/demo-08-gaming.webp";
+import dummyProfile09HandDrawnArtCover from "../assets/story-card-backgrounds/user-themes/demo-09-hand-drawn-art.webp";
+import dummyProfile10StencilArtCover from "../assets/story-card-backgrounds/user-themes/demo-10-stencil-art.webp";
+import dummyProfile11FoodCover from "../assets/story-card-backgrounds/user-themes/demo-11-food.webp";
+import dummyProfile12AnimalsNatureCover from "../assets/story-card-backgrounds/user-themes/demo-12-animals-nature.webp";
+import dummyProfile13CosplayCover from "../assets/story-card-backgrounds/user-themes/demo-13-cosplay.webp";
+import dummyProfile14ComputerGeekCover from "../assets/story-card-backgrounds/user-themes/demo-14-computer-geek.webp";
+import dummyProfile15PastelCraftsCover from "../assets/story-card-backgrounds/user-themes/demo-15-pastel-crafts.webp";
+import dummyProfile16AliensCover from "../assets/story-card-backgrounds/user-themes/demo-16-aliens.webp";
+import dummyProfile17TravelCover from "../assets/story-card-backgrounds/user-themes/demo-17-travel.webp";
+import dummyProfile18GoofyCartoonCover from "../assets/story-card-backgrounds/user-themes/demo-18-goofy-cartoon.webp";
+import dummyProfile19ConcreteJungleCover from "../assets/story-card-backgrounds/user-themes/demo-19-concrete-jungle.webp";
+import dummyProfile20CraftySpaceCover from "../assets/story-card-backgrounds/user-themes/demo-20-crafty-space.webp";
 import voidPopCover from "../assets/story-card-backgrounds/void-pop.png";
+import philBattlePixelCover from "../assets/story-card-backgrounds/story-covers/phil-battle-pixel.png";
+import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-covers/phil-ketamine-prison.png";
 import type { CSSProperties } from "react";
 import type { PlatformProfile } from "../data/platformSeed";
 
@@ -111,6 +133,92 @@ const DUMMY_PROFILE_COVERS = [
   dummyProfile20Cover
 ];
 
+const DUMMY_THEMED_PROFILE_COVERS: Record<
+  string,
+  Pick<ProfileCover, "image" | "objectPosition">
+> = {
+  "user-dummy-01": {
+    image: dummyProfile01AnimeCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-02": {
+    image: dummyProfile02CyberpunkCover,
+    objectPosition: "54% 50%"
+  },
+  "user-dummy-03": {
+    image: dummyProfile03AbstractArtCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-04": {
+    image: dummyProfile04VegetationCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-05": {
+    image: dummyProfile05BrutalistDecorCover,
+    objectPosition: "50% 54%"
+  },
+  "user-dummy-06": {
+    image: dummyProfile06SpaceStuffCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-07": {
+    image: dummyProfile07CuteStuffCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-08": {
+    image: dummyProfile08GamingCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-09": {
+    image: dummyProfile09HandDrawnArtCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-10": {
+    image: dummyProfile10StencilArtCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-11": {
+    image: dummyProfile11FoodCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-12": {
+    image: dummyProfile12AnimalsNatureCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-13": {
+    image: dummyProfile13CosplayCover,
+    objectPosition: "50% 42%"
+  },
+  "user-dummy-14": {
+    image: dummyProfile14ComputerGeekCover,
+    objectPosition: "50% 54%"
+  },
+  "user-dummy-15": {
+    image: dummyProfile15PastelCraftsCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-16": {
+    image: dummyProfile16AliensCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-17": {
+    image: dummyProfile17TravelCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-18": {
+    image: dummyProfile18GoofyCartoonCover,
+    objectPosition: "50% 50%"
+  },
+  "user-dummy-19": {
+    image: dummyProfile19ConcreteJungleCover,
+    objectPosition: "50% 54%"
+  },
+  "user-dummy-20": {
+    image: dummyProfile20CraftySpaceCover,
+    objectPosition: "50% 50%"
+  }
+};
+
 const PROFILE_COVERS: Record<string, ProfileCover> = {
   "user-phil": {
     accentColor: "#e11d48",
@@ -149,6 +257,20 @@ const PROFILE_COVERS: Record<string, ProfileCover> = {
   }
 };
 
+const STORY_COVERS: Record<
+  string,
+  Pick<ProfileCover, "image" | "objectPosition">
+> = {
+  "story-phil-1": {
+    image: philKetaminePrisonCover,
+    objectPosition: "50% 48%"
+  },
+  "story-phil-battle": {
+    image: philBattlePixelCover,
+    objectPosition: "50% 50%"
+  }
+};
+
 function getDummyProfileCover(profile: PlatformProfile): ProfileCover | null {
   const match = /^user-dummy-(\d{2})$/.exec(profile.id);
 
@@ -157,7 +279,8 @@ function getDummyProfileCover(profile: PlatformProfile): ProfileCover | null {
   }
 
   const index = Number(match[1]) - 1;
-  const image = DUMMY_PROFILE_COVERS[index];
+  const themedCover = DUMMY_THEMED_PROFILE_COVERS[profile.id];
+  const image = themedCover?.image ?? DUMMY_PROFILE_COVERS[index];
 
   if (!image) {
     return null;
@@ -166,7 +289,7 @@ function getDummyProfileCover(profile: PlatformProfile): ProfileCover | null {
   return {
     accentColor: profile.accentColor,
     image,
-    objectPosition: "50% 50%",
+    objectPosition: themedCover?.objectPosition ?? "50% 50%",
     profileClassName:
       DUMMY_PROFILE_CARD_CLASSES[index % DUMMY_PROFILE_CARD_CLASSES.length],
     storyClassName:
@@ -244,11 +367,11 @@ export function LandingPage({
     return (
       <section className="mx-auto grid w-full max-w-6xl gap-5">
         <div className="text-center">
-          <h2 className="text-4xl font-black leading-none text-slate-950 sm:text-5xl">
+          <h2 className="font-round text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl dark:text-slate-50">
             {selectedProfile.displayName}
           </h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">
-            @{selectedProfile.username} / {storyCountLabel(selectedProfile.stories.length)}
+          <p className="mt-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+            @{selectedProfile.username} · {storyCountLabel(selectedProfile.stories.length)}
           </p>
         </div>
 
@@ -258,6 +381,7 @@ export function LandingPage({
         >
           {selectedProfile.stories.map((story, index) => {
             const label = sceneCountLabel(story.sceneCount);
+            const storyCover = STORY_COVERS[story.storyId] ?? selectedCover;
             const heightClass =
               index % 3 === 0
                 ? selectedCover.storyClassName
@@ -271,7 +395,7 @@ export function LandingPage({
                 type="button"
                 aria-label={`Open ${story.title} ${label}`}
                 onClick={() => onSelectStory(story.storyId)}
-                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${heightClass}`}
+                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/10 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 dark:ring-white/12 ${heightClass}`}
                 style={getCoverFallbackStyle(selectedCover.accentColor)}
               >
                 <span
@@ -279,15 +403,15 @@ export function LandingPage({
                   data-testid={`story-card-background-${story.storyId}`}
                   className="absolute inset-0"
                 >
-                  {selectedCover.image ? (
+                  {storyCover.image ? (
                     <img
                       alt=""
                       decoding="async"
                       draggable={false}
                       loading="eager"
-                      src={selectedCover.image}
+                      src={storyCover.image}
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                      style={{ objectPosition: selectedCover.objectPosition }}
+                      style={{ objectPosition: storyCover.objectPosition }}
                     />
                   ) : (
                     <span
@@ -301,7 +425,7 @@ export function LandingPage({
                   className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.08)_0%,rgba(2,6,23,0.03)_45%,rgba(2,6,23,0.52)_100%)]"
                 />
                 <span className="relative z-10 grid h-full content-end gap-2 p-4">
-                  <span className="block text-2xl font-black leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
+                  <span className="block font-round text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
                     {story.title}
                   </span>
                   <span className="w-fit rounded-lg bg-white/90 px-2.5 py-1 text-xs font-black uppercase text-slate-950">
@@ -319,12 +443,9 @@ export function LandingPage({
   return (
     <section className="mx-auto grid w-full max-w-7xl gap-5">
       <div className="text-center">
-        <h2 className="text-4xl font-black leading-none text-slate-950 sm:text-5xl">
+        <h2 className="font-round text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl dark:text-slate-50">
           chatsim
         </h2>
-        <p className="mt-2 text-sm font-semibold text-slate-500">
-          Browse public story profiles
-        </p>
       </div>
 
       <div
@@ -341,7 +462,7 @@ export function LandingPage({
               type="button"
               aria-label={`Open ${profile.displayName}, ${label}`}
               onClick={() => onSelectProfile(profile.id)}
-              className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${profileCover.profileClassName}`}
+              className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.16)] ring-1 ring-slate-900/10 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 dark:ring-white/12 ${profileCover.profileClassName}`}
               style={getCoverFallbackStyle(profileCover.accentColor)}
             >
               <span
@@ -372,7 +493,7 @@ export function LandingPage({
               />
               <span className="relative z-10 grid h-full content-between gap-3 p-3.5">
                 <span className="min-w-0">
-                  <span className="block truncate text-lg font-black text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.5)]">
+                  <span className="block truncate font-round text-lg font-bold text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.5)]">
                     {profile.displayName}
                   </span>
                   <span className="mt-1 block text-xs font-bold text-white/75 drop-shadow-[0_1px_6px_rgba(2,6,23,0.45)]">

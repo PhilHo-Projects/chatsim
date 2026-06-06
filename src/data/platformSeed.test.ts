@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { seedProfiles, seedStoryRecords } from "./platformSeed";
 
 describe("platform seed data", () => {
-  it("seeds the battle story after Phil's phone story before simple extras", () => {
+  it("seeds only Phil's renamed phone story and battle story", () => {
     const philProfile = seedProfiles.find((profile) => profile.id === "user-phil");
     const philStories = seedStoryRecords.filter(
       (story) => story.ownerId === "user-phil"
@@ -13,16 +13,12 @@ describe("platform seed data", () => {
     );
 
     expect(philProfile?.stories.map((story) => story.title)).toEqual([
-      "Story",
-      "Battle",
-      "wyd",
-      "gm",
-      "coffee",
-      "ping",
-      "movie"
+      "Ketamine prison",
+      "Battle"
     ]);
-    expect(philStories).toHaveLength(7);
+    expect(philStories).toHaveLength(2);
     expect(phoneStory?.storyboard.presentationMode).toBe("phone");
+    expect(phoneStory?.title).toBe("Ketamine prison");
     expect(battleStory).toMatchObject({
       id: "story-phil-battle",
       ownerId: "user-phil",
@@ -46,19 +42,6 @@ describe("platform seed data", () => {
       speaker: "contact",
       text: "ok that was kinda sick ngl. gg"
     });
-    expect(philStories.find((story) => story.id === "story-phil-wyd")).toMatchObject({
-      ownerId: "user-phil",
-      storyboard: expect.objectContaining({
-        scenes: [
-          expect.objectContaining({
-            messages: [
-              expect.objectContaining({ speaker: "viewer", text: "hello" }),
-              expect.objectContaining({ speaker: "contact", text: "wyd" }),
-              expect.objectContaining({ speaker: "viewer", text: "nm you?" })
-            ]
-          })
-        ]
-      })
-    });
+    expect(philStories.some((story) => story.id === "story-phil-wyd")).toBe(false);
   });
 });

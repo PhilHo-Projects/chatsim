@@ -48,16 +48,11 @@ describe("StoryStore", () => {
     expect(profiles[0].stories[0]).toMatchObject({
       ownerId: "user-phil",
       storyId: "story-phil-1",
-      title: "Story"
+      title: "Ketamine prison"
     });
     expect(profiles[0].stories.map((story) => story.title)).toEqual([
-      "Story",
-      "Battle",
-      "wyd",
-      "gm",
-      "coffee",
-      "ping",
-      "movie"
+      "Ketamine prison",
+      "Battle"
     ]);
     expect(store.getStory("story-phil-battle")).toMatchObject({
       id: "story-phil-battle",
@@ -217,7 +212,7 @@ describe("StoryStore", () => {
     }
   });
 
-  it("repairs stale seeded battle stories in existing store files", () => {
+  it("repairs stale Phil seed stories in existing store files", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "story-store-"));
 
     try {
@@ -226,13 +221,49 @@ describe("StoryStore", () => {
       const staleBattleStory = legacyData.stories.find(
         (story: { id: string }) => story.id === "story-phil-battle"
       );
+      const stalePhoneStory = legacyData.stories.find(
+        (story: { id: string }) => story.id === "story-phil-1"
+      );
 
       staleBattleStory.storyboard.presentationMode = "phone";
+      stalePhoneStory.title = "Story";
+      stalePhoneStory.storyboard.title = "Story";
       legacyData.stories = [
         ...legacyData.stories.filter(
           (story: { id: string }) => story.id !== "story-phil-battle"
         ),
-        staleBattleStory
+        staleBattleStory,
+        {
+          ...stalePhoneStory,
+          id: "story-phil-wyd",
+          title: "wyd",
+          storyboard: {
+            ...stalePhoneStory.storyboard,
+            id: "story-phil-wyd",
+            title: "wyd"
+          }
+        },
+        {
+          ...stalePhoneStory,
+          id: "story-phil-1780686378567-f3d08a",
+          title: "Story 8",
+          storyboard: {
+            ...stalePhoneStory.storyboard,
+            id: "story-phil-1780686378567-f3d08a",
+            scenes: [
+              {
+                id: "scene-1",
+                messages: [
+                  {
+                    speaker: "viewer",
+                    text: "new story opening soon"
+                  }
+                ]
+              }
+            ],
+            title: "Story 8"
+          }
+        }
       ];
       writeFileSync(dataFile, JSON.stringify(legacyData), "utf8");
 
@@ -243,9 +274,17 @@ describe("StoryStore", () => {
           presentationMode: "battle"
         })
       });
+      expect(store.getStory("story-phil-1")).toMatchObject({
+        storyboard: expect.objectContaining({
+          title: "Ketamine prison"
+        }),
+        title: "Ketamine prison"
+      });
+      expect(store.getStory("story-phil-wyd")).toBeNull();
+      expect(store.getStory("story-phil-1780686378567-f3d08a")).toBeNull();
       expect(
-        store.getPublicProfiles()[0].stories.map((story) => story.title).slice(0, 2)
-      ).toEqual(["Story", "Battle"]);
+        store.getPublicProfiles()[0].stories.map((story) => story.title)
+      ).toEqual(["Ketamine prison", "Battle"]);
     } finally {
       rmSync(tempDir, { force: true, recursive: true });
     }
