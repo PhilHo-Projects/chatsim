@@ -1,4 +1,4 @@
-import { ChevronLeft, MoreHorizontal, Phone, Video } from "lucide-react";
+import { MoreHorizontal, Phone, Video } from "lucide-react";
 import { Avatar } from "./Avatar";
 
 type ChatHeaderProps = {
@@ -17,16 +17,7 @@ export function ChatHeader({
   status
 }: ChatHeaderProps) {
   return (
-    <header className="grid h-20 grid-cols-[32px_minmax(0,1fr)_104px] items-center border-b border-white/50 bg-white/60 px-3 backdrop-blur-2xl">
-      <button
-        type="button"
-        aria-label="Back"
-        title="Back"
-        className="grid h-9 w-8 place-items-center rounded-full text-[#1769d2] transition hover:bg-slate-100"
-      >
-        <ChevronLeft className="h-6 w-6" aria-hidden="true" />
-      </button>
-
+    <header className="grid h-20 grid-cols-[minmax(0,1fr)_104px] items-center border-b border-white/50 bg-white/60 px-3 backdrop-blur-2xl">
       <div className="flex min-w-0 items-center justify-start gap-2">
         <button
           type="button"

@@ -756,16 +756,19 @@ export default function App() {
     story.scenes.findIndex((scene) => scene.id === story.activeSceneId)
   );
   const nextStoryScene = story.scenes[activeSceneIndex + 1];
+  const previousStoryScene = story.scenes[activeSceneIndex - 1];
   const backgroundModeClass = isStoryListOpen
     ? "app-background--landing"
     : "app-background--story";
   const goToNextScene = () => {
     if (nextStoryScene) {
       selectScene(nextStoryScene.id);
-      return;
     }
-
-    conversation.skipToEnd();
+  };
+  const goToPreviousScene = () => {
+    if (previousStoryScene) {
+      selectScene(previousStoryScene.id);
+    }
   };
 
   const toggleAccountPanel = () => {
@@ -891,11 +894,14 @@ export default function App() {
         hasStarted={hasPlaybackStarted}
         isComplete={isConversationComplete}
         isPlaying={isConversationIntroComplete && conversation.isPlaying}
-        onNext={goToNextScene}
+        onNextScene={goToNextScene}
+        onPreviousScene={goToPreviousScene}
         onReset={conversation.reset}
         onTogglePlayback={conversation.togglePlayback}
         onToggleSpeed={conversation.togglePlaybackSpeed}
         playbackSpeed={conversation.playbackSpeed}
+        sceneCount={story.scenes.length}
+        sceneIndex={activeSceneIndex + 1}
       />
     </div>
   );

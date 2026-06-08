@@ -768,14 +768,16 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Phil" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pause conversation" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Playback speed 1x" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "NXT" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next scene" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Scene 1 of 5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous scene" })).toBeDisabled();
     const storyControls = screen.getByRole("navigation", { name: "Story controls" });
     expect(storyControls).toHaveClass(
       "grid-cols-4",
       "w-[min(344px,calc(100vw-40px))]"
     );
     const storyControlButtons = storyControls.querySelectorAll("button");
-    expect(storyControlButtons).toHaveLength(4);
+    expect(storyControlButtons).toHaveLength(5);
     storyControlButtons.forEach((button) => {
       expect(button).toHaveClass("active:scale-95", "duration-150");
     });
@@ -787,7 +789,7 @@ describe("App", () => {
     );
     expect(screen.queryByRole("button", { name: "Replay conversation" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "NXT" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next scene" }));
     fireEvent.click(screen.getByRole("button", { name: "Open script editor" }));
 
     expect(screen.getByLabelText("Scene title")).toHaveValue("Scene 2");
@@ -995,7 +997,7 @@ describe("App", () => {
     expect(screen.queryByText("busy")).not.toBeInTheDocument();
     expect(screen.queryByText("online now")).not.toBeInTheDocument();
     expect(screen.getByRole("banner")).toHaveClass(
-      "grid-cols-[32px_minmax(0,1fr)_104px]"
+      "grid-cols-[minmax(0,1fr)_104px]"
     );
     expect(screen.getByRole("heading", { name: longName })).toHaveClass(
       "truncate"

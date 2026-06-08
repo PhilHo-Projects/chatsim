@@ -175,14 +175,16 @@ const fallbackConfig: ConversationConfig = {
     name: "Maya",
     initials: "M",
     status: "online now",
-    avatarUrl: mayaAnimeAvatar,
+    // Empty by default: an unset avatar renders the generic placeholder. The
+    // crafted seed story re-applies its signature portrait in normalizeStoryboard.
+    avatarUrl: "",
     typingSpeedLevel: 3
   },
   viewer: {
     name: "Frank",
     initials: "F",
     status: "online now",
-    avatarUrl: mysterySpeakerAvatar
+    avatarUrl: ""
   },
   messages: [
     {
@@ -685,17 +687,46 @@ function normalizeTimestamp(value: unknown): string {
     : DEFAULT_TIMESTAMP;
 }
 
+// The crafted showcase story keeps its hand-picked portraits. Every other
+// story stores empty avatars and therefore falls back to the generic
+// placeholder. This is keyed on the story id because that is the only marker
+// shared by both the local seed and the API-hydrated payloads.
+export const CRAFTED_SEED_STORY_ID = "story-phil-1";
+
+function applyCraftedAvatarDefaults(
+  scenes: StoryScene[],
+  storyId: string
+): StoryScene[] {
+  if (storyId !== CRAFTED_SEED_STORY_ID) {
+    return scenes;
+  }
+
+  return scenes.map((scene) => ({
+    ...scene,
+    contact: {
+      ...scene.contact,
+      avatarUrl: scene.contact.avatarUrl || mayaAnimeAvatar
+    },
+    viewer: {
+      ...scene.viewer,
+      avatarUrl: scene.viewer.avatarUrl || mysterySpeakerAvatar
+    }
+  }));
+}
+
 export function normalizeStoryboard(
   input: StoryboardInput | StoryDatabaseInput | ConversationConfigInput,
   index = 0
 ): Storyboard {
   const story = normalizeStoryDatabase(input);
   const source = input as StoryboardInput;
+  const id = cleanText(source.id, `story-${index + 1}`);
 
   return {
     ...story,
+    scenes: applyCraftedAvatarDefaults(story.scenes, id),
     createdAt: normalizeTimestamp(source.createdAt),
-    id: cleanText(source.id, `story-${index + 1}`),
+    id,
     presentationMode: normalizePresentationMode(source.presentationMode),
     title: cleanStoryTitle(source.title, index),
     updatedAt: normalizeTimestamp(source.updatedAt)

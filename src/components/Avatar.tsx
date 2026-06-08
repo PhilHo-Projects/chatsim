@@ -1,5 +1,3 @@
-import { CircleUserRound } from "lucide-react";
-
 type AvatarProps = {
   avatarUrl?: string;
   initials: string;
@@ -21,6 +19,36 @@ function getStatusRingClass(status?: string): string {
   }
 }
 
+// Generic "no avatar yet" mark: a head-and-shoulders silhouette with a "?" on
+// the face. Used whenever a profile has no uploaded image so that empty
+// profiles read as unknown instead of all reusing the same seeded portrait.
+function EmptyAvatarGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-full w-full text-slate-500"
+      aria-hidden="true"
+    >
+      <path
+        d="M3.5 22c0-4.3 3.8-7.2 8.5-7.2s8.5 2.9 8.5 7.2"
+        fill="currentColor"
+      />
+      <circle cx="12" cy="8.5" r="5.2" fill="currentColor" />
+      <text
+        x="12"
+        y="11"
+        textAnchor="middle"
+        fontSize="7"
+        fontWeight={700}
+        fill="#f8fafc"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+      >
+        ?
+      </text>
+    </svg>
+  );
+}
+
 export function Avatar({
   avatarUrl,
   initials,
@@ -30,11 +58,12 @@ export function Avatar({
 }: AvatarProps) {
   const sizeClasses = size === "sm" ? "h-8 w-8" : "h-11 w-11";
   const ringClass = getStatusRingClass(status);
+  const backgroundClass = avatarUrl ? "bg-[#f36d54]/95" : "bg-slate-200";
 
   return (
     <div
       aria-label={label}
-      className={`${sizeClasses} ${ringClass} grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#f36d54]/95 text-white shadow-sm ring-2`}
+      className={`${sizeClasses} ${ringClass} ${backgroundClass} grid shrink-0 place-items-center overflow-hidden rounded-full text-white shadow-sm ring-2`}
     >
       {avatarUrl ? (
         <img
@@ -44,7 +73,7 @@ export function Avatar({
           src={avatarUrl}
         />
       ) : (
-        <CircleUserRound className="h-5 w-5" aria-hidden="true" />
+        <EmptyAvatarGlyph />
       )}
       <span className="sr-only">{initials}</span>
     </div>

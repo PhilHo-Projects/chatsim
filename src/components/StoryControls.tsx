@@ -1,15 +1,18 @@
-import { ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
 import type { PlaybackSpeed } from "../hooks/useScriptedConversation";
 
 type StoryControlsProps = {
   hasStarted: boolean;
   isComplete: boolean;
   isPlaying: boolean;
-  onNext: () => void;
+  onNextScene: () => void;
+  onPreviousScene: () => void;
   onReset: () => void;
   onTogglePlayback: () => void;
   onToggleSpeed: () => void;
   playbackSpeed: PlaybackSpeed;
+  sceneCount: number;
+  sceneIndex: number;
 };
 
 const pressFeedbackClass =
@@ -19,15 +22,20 @@ export function StoryControls({
   hasStarted,
   isComplete,
   isPlaying,
-  onNext,
+  onNextScene,
+  onPreviousScene,
   onReset,
   onTogglePlayback,
   onToggleSpeed,
-  playbackSpeed
+  playbackSpeed,
+  sceneCount,
+  sceneIndex
 }: StoryControlsProps) {
   const primaryLabel = isComplete ? "Replay" : isPlaying ? "Pause" : "Play";
   const primaryAccessibleLabel = `${primaryLabel} conversation`;
   const canReset = hasStarted || isComplete;
+  const canGoPrevious = sceneIndex > 1;
+  const canGoNext = sceneIndex < sceneCount;
 
   return (
     <nav
@@ -69,16 +77,34 @@ export function StoryControls({
       >
         {playbackSpeed}x
       </button>
-      <button
-        type="button"
-        aria-label="NXT"
-        title="NXT"
-        onClick={onNext}
-        className={`flex h-9 min-w-0 items-center justify-center gap-1 rounded-full bg-gradient-to-br from-slate-950 via-indigo-950 to-fuchsia-900 px-2 text-[11px] font-bold uppercase text-white shadow-sm ring-1 ring-fuchsia-200/25 hover:from-slate-800 ${pressFeedbackClass}`}
-      >
-        NXT
-        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
+      <div className="flex h-9 min-w-0 items-center justify-between gap-0.5 rounded-full bg-gradient-to-br from-slate-950 via-indigo-950 to-fuchsia-900 px-1 text-white shadow-sm ring-1 ring-fuchsia-200/25">
+        <button
+          type="button"
+          aria-label="Previous scene"
+          title="Previous scene"
+          disabled={!canGoPrevious}
+          onClick={onPreviousScene}
+          className={`grid h-7 w-6 shrink-0 place-items-center rounded-full hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30 ${pressFeedbackClass}`}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <span
+          className="min-w-0 px-0.5 text-[11px] font-bold tabular-nums"
+          aria-label={`Scene ${sceneIndex} of ${sceneCount}`}
+        >
+          {sceneIndex}/{sceneCount}
+        </span>
+        <button
+          type="button"
+          aria-label="Next scene"
+          title="Next scene"
+          disabled={!canGoNext}
+          onClick={onNextScene}
+          className={`grid h-7 w-6 shrink-0 place-items-center rounded-full hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30 ${pressFeedbackClass}`}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
     </nav>
   );
 }

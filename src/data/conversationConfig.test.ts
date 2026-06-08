@@ -52,7 +52,7 @@ describe("conversation config", () => {
     expect(config.viewer.name).toBe(" Frank ");
     expect(config.viewer.initials).toBe("F");
     expect(config.viewer.status).toBe("online now");
-    expect(config.viewer.avatarUrl).toContain("mystery-speaker-avatar");
+    expect(config.viewer.avatarUrl).toBe("");
     expect(config.contact.typingSpeedLevel).toBe(1);
     expect(config.messages[0]).toMatchObject({
       text: "hello",
@@ -176,7 +176,7 @@ describe("conversation config", () => {
     });
 
     expect(config.contact.avatarUrl).toBe("/avatars/maya.png");
-    expect(config.viewer.avatarUrl).toContain("mystery-speaker-avatar");
+    expect(config.viewer.avatarUrl).toBe("");
     expect(config.viewer.status).toBe("online now");
     expect(config.contact.typingSpeedLevel).toBe(4);
     expect(config.defaultSpeakerTypingSpeedLevel).toBe(2);
@@ -184,6 +184,18 @@ describe("conversation config", () => {
     expect(config.messages[0].useDefaultTypingMs).toBe(false);
     expect(config.messages[0].pauseAfterMs).toBe(200);
     expect(config.messages[0].useDefaultPauseAfterMs).toBe(false);
+  });
+
+  it("re-applies the crafted seed portraits only for the showcase story", () => {
+    const craftedScenes = { scenes: [{ id: "scene-1" }] };
+
+    const crafted = normalizeStoryboard({ id: "story-phil-1", ...craftedScenes });
+    expect(crafted.scenes[0].contact.avatarUrl).toContain("maya-anime-avatar");
+    expect(crafted.scenes[0].viewer.avatarUrl).toContain("mystery-speaker-avatar");
+
+    const other = normalizeStoryboard({ id: "story-dummy-01", ...craftedScenes });
+    expect(other.scenes[0].contact.avatarUrl).toBe("");
+    expect(other.scenes[0].viewer.avatarUrl).toBe("");
   });
 
   it("maps speed levels to deterministic millisecond presets", () => {
