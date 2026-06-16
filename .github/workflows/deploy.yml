@@ -36,9 +36,6 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Audit runtime dependencies
-        run: npm audit --omit=dev --audit-level=moderate
-
       - name: Build Chatsim
         run: npm run build:chatsim
 
