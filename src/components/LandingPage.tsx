@@ -367,7 +367,7 @@ export function LandingPage({
     return (
       <section className="mx-auto grid w-full max-w-6xl gap-5">
         <div className="text-center">
-          <h2 className="font-round text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl dark:text-slate-50">
+          <h2 className="font-display text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl dark:text-slate-50">
             {selectedProfile.displayName}
           </h2>
           <p className="mt-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
@@ -425,7 +425,7 @@ export function LandingPage({
                   className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.08)_0%,rgba(2,6,23,0.03)_45%,rgba(2,6,23,0.52)_100%)]"
                 />
                 <span className="relative z-10 grid h-full content-end gap-2 p-4">
-                  <span className="block font-round text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
+                  <span className="block font-display text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
                     {story.title}
                   </span>
                   <span className="w-fit rounded-lg bg-white/90 px-2.5 py-1 text-xs font-black uppercase text-slate-950">
@@ -443,7 +443,7 @@ export function LandingPage({
   return (
     <section className="mx-auto grid w-full max-w-7xl gap-5">
       <div className="text-center">
-        <h2 className="font-round text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl dark:text-slate-50">
+        <h2 className="font-display text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl dark:text-slate-50">
           chatsim
         </h2>
       </div>
@@ -493,7 +493,7 @@ export function LandingPage({
               />
               <span className="relative z-10 grid h-full content-between gap-3 p-3.5">
                 <span className="min-w-0">
-                  <span className="block truncate font-round text-lg font-bold text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.5)]">
+                  <span className="block truncate font-display text-lg font-bold text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.5)]">
                     {profile.displayName}
                   </span>
                   <span className="mt-1 block text-xs font-bold text-white/75 drop-shadow-[0_1px_6px_rgba(2,6,23,0.45)]">

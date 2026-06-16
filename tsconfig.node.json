@@ -9,5 +9,11 @@
     "strict": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "server/**/*.ts"]
+  "include": [
+    "vite.config.ts",
+    "server/**/*.ts",
+    "scripts/**/*.ts",
+    "worker/**/*.ts",
+    "worker-configuration.d.ts"
+  ]
 }

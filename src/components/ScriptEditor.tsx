@@ -63,13 +63,13 @@ type ScriptEditorProps = {
 type EditorPanel = "settings" | "script" | "preview";
 
 const fieldClass =
-  "mt-1 w-full min-w-0 rounded-xl border border-[var(--latte-field-border)] bg-[var(--latte-field)] px-3 py-2 text-sm text-[var(--latte-ink)] shadow-inner outline-none transition placeholder:text-[#b89a78] focus:border-[var(--latte-caramel)] focus:ring-2 focus:ring-[#eaddc6] disabled:cursor-not-allowed disabled:bg-[#f1e8da] disabled:text-[#b3a08a]";
+  "mt-1 w-full min-w-0 rounded-xl border border-[var(--editor-field-border)] bg-[var(--editor-field)] px-3 py-2 text-sm text-[var(--editor-ink)] shadow-inner outline-none transition placeholder:text-[var(--editor-placeholder)] focus:border-[var(--editor-accent)] focus:ring-2 focus:ring-[var(--editor-focus-ring)] disabled:cursor-not-allowed disabled:bg-[var(--editor-disabled-bg)] disabled:text-[var(--editor-disabled-ink)]";
 
 const labelClass =
-  "text-xs font-semibold uppercase tracking-[0.08em] text-[var(--latte-label)]";
+  "text-xs font-semibold uppercase tracking-[0.08em] text-[var(--editor-label)]";
 
 const panelClass =
-  "rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel)] p-4 shadow-[0_16px_40px_rgba(120,80,40,0.12)]";
+  "rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel)] p-4 shadow-[0_16px_40px_rgba(120,80,40,0.12)]";
 
 function toNumber(value: string) {
   return Number.parseInt(value, 10);
@@ -112,7 +112,7 @@ function getProfileInitials(name: string): string {
 function getRequiredFieldClass(value: string): string {
   return `${fieldClass} ${
     value.trim().length === 0
-      ? "bg-rose-50/70 placeholder:text-rose-400/80"
+      ? "bg-[var(--editor-field-missing)] placeholder:text-[var(--editor-placeholder-missing)]"
       : ""
   }`;
 }
@@ -489,7 +489,7 @@ export function ScriptEditor({
               (isCurrentlyCollapsed) => !isCurrentlyCollapsed
             )
           }
-          className="latte-display mb-3 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left text-base font-semibold text-[var(--latte-heading)] transition hover:bg-[#f3e9d6]"
+          className="font-display mb-3 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left text-base font-semibold text-[var(--editor-heading)] transition hover:bg-[var(--editor-hover)]"
         >
           {isGeneralSettingsCollapsed ? (
             <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -497,9 +497,6 @@ export function ScriptEditor({
             <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
           )}
           General Settings
-          <span className="truncate text-sm font-normal text-[var(--latte-muted)]">
-            {storyTitle.trim() || "add a name please"}
-          </span>
         </button>
         {!isGeneralSettingsCollapsed ? (
           <div id="general-settings-content" className="grid min-w-0 gap-4">
@@ -535,8 +532,8 @@ export function ScriptEditor({
                       onClick={() => onSceneSelect(scene.id)}
                       className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold ring-1 transition ${
                         isActive
-                          ? "bg-slate-950 text-white ring-slate-950"
-                          : "bg-[var(--latte-panel-soft)] text-[var(--latte-heading)] ring-[var(--latte-border)] hover:bg-white"
+                          ? "bg-[var(--editor-action)] text-[var(--editor-action-ink)] ring-[var(--editor-action)]"
+                          : "bg-[var(--editor-panel-soft)] text-[var(--editor-heading)] ring-[var(--editor-border)] hover:bg-[var(--editor-button-hover)]"
                       }`}
                     >
                       {index + 1}
@@ -549,7 +546,7 @@ export function ScriptEditor({
                     aria-label="Add scene"
                     title="Add scene"
                     onClick={onSceneAdd}
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[#cbb290] bg-[var(--latte-panel-soft)] text-[var(--latte-heading)] transition hover:bg-white"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-dashed border-[var(--editor-border-strong)] bg-[var(--editor-panel-soft)] text-[var(--editor-heading)] transition hover:bg-[var(--editor-button-hover)]"
                   >
                     <Plus className="h-4 w-4" aria-hidden="true" />
                   </button>
@@ -570,7 +567,7 @@ export function ScriptEditor({
           onClick={() =>
             setIsSettingsCollapsed((isCurrentlyCollapsed) => !isCurrentlyCollapsed)
           }
-          className="latte-display mb-3 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left text-base font-semibold text-[var(--latte-heading)] transition hover:bg-[#f3e9d6]"
+          className="font-display mb-3 flex min-w-0 items-center gap-2 rounded-xl px-1 py-1 text-left text-base font-semibold text-[var(--editor-heading)] transition hover:bg-[var(--editor-hover)]"
         >
           {isSettingsCollapsed ? (
             <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -578,9 +575,6 @@ export function ScriptEditor({
             <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
           )}
           Scene &amp; cast
-          <span className="truncate text-sm font-normal text-[var(--latte-muted)]">
-            {config.sceneTitle}
-          </span>
         </button>
         {!isSettingsCollapsed ? (
           <div className="grid gap-3">
@@ -681,11 +675,11 @@ export function ScriptEditor({
               </select>
             </label>
 
-            <div className="grid gap-3 rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel-soft)] p-3">
+            <div className="grid gap-3 rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel-soft)] p-3">
               <div className="flex items-center gap-3">
                 <img
                   alt=""
-                  className="h-16 w-16 rounded-full object-cover ring-2 ring-white"
+                  className="h-16 w-16 rounded-full object-cover ring-2 ring-[var(--editor-border)]"
                   src={config.contact.avatarUrl}
                 />
                 <div className="min-w-0 flex-1">
@@ -707,7 +701,7 @@ export function ScriptEditor({
                 <input
                   aria-label="Upload POV avatar"
                   accept="image/*"
-                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-slate-950 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white`}
+                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-[var(--editor-action)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--editor-action-ink)]`}
                   type="file"
                   onChange={(event) =>
                     openAvatarCropper(event, "contact", "Crop POV avatar")
@@ -716,11 +710,11 @@ export function ScriptEditor({
               </label>
             </div>
 
-            <div className="grid gap-3 rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel-soft)] p-3">
+            <div className="grid gap-3 rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel-soft)] p-3">
               <div className="flex items-center gap-3">
                 <img
                   alt=""
-                  className="h-16 w-16 rounded-full object-cover ring-2 ring-white"
+                  className="h-16 w-16 rounded-full object-cover ring-2 ring-[var(--editor-border)]"
                   src={config.viewer.avatarUrl}
                 />
                 <div className="min-w-0 flex-1">
@@ -742,7 +736,7 @@ export function ScriptEditor({
                 <input
                   aria-label="Upload speaker avatar"
                   accept="image/*"
-                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-slate-950 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white`}
+                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-[var(--editor-action)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--editor-action-ink)]`}
                   type="file"
                   onChange={(event) =>
                     openAvatarCropper(event, "viewer", "Crop speaker avatar")
@@ -751,8 +745,8 @@ export function ScriptEditor({
               </label>
             </div>
 
-            <div className="border-t border-[var(--latte-border)] pt-3">
-              <p className="latte-display text-sm font-semibold text-[var(--latte-heading)]">
+            <div className="border-t border-[var(--editor-border)] pt-3">
+              <p className="font-display text-sm font-semibold text-[var(--editor-heading)]">
                 Timing defaults
               </p>
             </div>
@@ -776,7 +770,7 @@ export function ScriptEditor({
                   </option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-[var(--latte-muted)]">
+              <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-[var(--editor-muted)]">
                 Higher means {config.contact.name} types faster into the composer.
               </span>
             </label>
@@ -801,7 +795,7 @@ export function ScriptEditor({
                   </option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-[var(--latte-muted)]">
+              <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-[var(--editor-muted)]">
                 Higher means {config.viewer.name}'s typing indicator resolves sooner.
               </span>
             </label>
@@ -833,17 +827,17 @@ export function ScriptEditor({
       <div
         className={`rounded-2xl border p-4 shadow-[0_16px_40px_rgba(120,80,40,0.1)] ${
           isNearSceneLimit
-            ? "border-amber-200 bg-amber-50/80 text-amber-950"
-            : "border-[var(--latte-border)] bg-[var(--latte-panel)] text-[var(--latte-heading)]"
+            ? "border-amber-200 bg-amber-50/80 text-amber-950 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200"
+            : "border-[var(--editor-border)] bg-[var(--editor-panel)] text-[var(--editor-heading)]"
         }`}
       >
         <div className="flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#efe1cd] ring-1 ring-white/70">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--editor-track)] ring-1 ring-[var(--editor-border)]">
             <div
               className={`h-full rounded-full ${
                 isNearSceneLimit
                   ? "bg-gradient-to-r from-amber-300 to-orange-400"
-                  : "bg-gradient-to-r from-[#cf8b46] to-[#e0b066]"
+                  : "bg-gradient-to-r from-[var(--editor-accent)] to-[#79c0ff]"
               }`}
               style={{ width: `${sceneLinePercent}%` }}
             />
@@ -862,14 +856,14 @@ export function ScriptEditor({
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <p className="latte-display text-base font-semibold text-[var(--latte-heading)]">
+        <p className="font-display text-base font-semibold text-[var(--editor-heading)]">
           Script
         </p>
         <button
           type="button"
           aria-label="Paste a script"
           onClick={() => setIsPasteOpen(true)}
-          className="flex items-center gap-1.5 rounded-full bg-[var(--latte-panel-soft)] px-3.5 py-1.5 text-xs font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white"
+          className="flex items-center gap-1.5 rounded-full bg-[var(--editor-panel-soft)] px-3.5 py-1.5 text-xs font-semibold text-[var(--editor-heading)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)]"
         >
           <ClipboardPaste className="h-3.5 w-3.5" aria-hidden="true" />
           Paste script
@@ -890,7 +884,7 @@ export function ScriptEditor({
         return (
           <article
             key={message.id}
-            className="min-w-0 rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel)] p-4 shadow-[0_14px_36px_rgba(120,80,40,0.1)]"
+            className="min-w-0 rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel)] p-4 shadow-[0_14px_36px_rgba(120,80,40,0.1)]"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <button
@@ -900,7 +894,7 @@ export function ScriptEditor({
                   index + 1
                 }`}
                 onClick={() => toggleMessageCollapsed(message.id)}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 text-left text-xs font-bold uppercase tracking-[0.14em] text-[var(--latte-label)] transition hover:bg-[#f3e9d6]"
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-1 text-left text-xs font-bold uppercase tracking-[0.14em] text-[var(--editor-label)] transition hover:bg-[var(--editor-hover)]"
               >
                 {isCollapsed ? (
                   <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -908,7 +902,7 @@ export function ScriptEditor({
                   <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
                 )}
                 <span className="shrink-0">Line {index + 1}</span>
-                <span className="truncate font-normal normal-case tracking-normal text-[var(--latte-muted)]">
+                <span className="truncate font-normal normal-case tracking-normal text-[var(--editor-muted)]">
                   {getMessageSpeakerInitial(message, config)}:{" "}
                   {message.text.trim() || "write something"}
                 </span>
@@ -918,7 +912,7 @@ export function ScriptEditor({
                 aria-label={`Delete line ${index + 1}`}
                 title={`Delete line ${index + 1}`}
                 onClick={() => onChange(removeConversationMessage(config, message.id))}
-                className="grid h-8 w-8 place-items-center rounded-full bg-[var(--latte-panel-soft)] text-[var(--latte-muted)] ring-1 ring-[var(--latte-border)] transition hover:bg-white"
+                className="grid h-8 w-8 place-items-center rounded-full bg-[var(--editor-panel-soft)] text-[var(--editor-muted)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)]"
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -956,7 +950,7 @@ export function ScriptEditor({
                           aria-label={`Message ${index + 1} text`}
                           className={`${fieldClass} min-h-24 resize-y ${
                             message.text.trim().length === 0
-                              ? "bg-rose-50/70 placeholder:text-rose-400/80"
+                              ? "bg-[var(--editor-field-missing)] placeholder:text-[var(--editor-placeholder-missing)]"
                               : ""
                           }`}
                           placeholder="write something"
@@ -998,7 +992,7 @@ export function ScriptEditor({
                         <div
                           role="dialog"
                           aria-label={`Emoji picker for line ${index + 1}`}
-                          className="absolute left-0 top-20 z-20 grid w-[min(280px,calc(100vw-84px))] gap-2 rounded-2xl border border-[var(--latte-border)] bg-white/95 p-3 shadow-2xl backdrop-blur-xl"
+                          className="absolute left-0 top-20 z-20 grid w-[min(280px,calc(100vw-84px))] gap-2 rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-popover)] p-3 shadow-2xl backdrop-blur-xl"
                         >
                           <input
                             aria-label={`Search emoji for line ${index + 1}`}
@@ -1020,7 +1014,7 @@ export function ScriptEditor({
                                 onClick={() =>
                                   insertEmojiIntoMessage(message, entry.emoji)
                                 }
-                                className="grid h-10 place-items-center rounded-xl text-xl transition hover:bg-[#f3e9d6]"
+                                className="grid h-10 place-items-center rounded-xl text-xl transition hover:bg-[var(--editor-hover)]"
                               >
                                 {entry.emoji}
                               </button>
@@ -1031,7 +1025,7 @@ export function ScriptEditor({
 
                       {emojiAutocomplete ? (
                         <div>
-                          <div className="grid w-[min(320px,100%)] gap-1 rounded-2xl border border-[var(--latte-border)] bg-white/95 p-2 shadow-xl">
+                          <div className="grid w-[min(320px,100%)] gap-1 rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-popover)] p-2 shadow-xl">
                             {emojiAutocomplete.matches.map((entry) => (
                               <button
                                 key={entry.shortcode}
@@ -1044,7 +1038,7 @@ export function ScriptEditor({
                                     start: emojiAutocomplete.tokenStart
                                   })
                                 }
-                                className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm font-semibold text-[var(--latte-ink)] transition hover:bg-[#f3e9d6]"
+                                className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm font-semibold text-[var(--editor-ink)] transition hover:bg-[var(--editor-hover)]"
                               >
                                 <span className="text-lg">{entry.emoji}</span>
                                 <span>:{entry.shortcode}:</span>
@@ -1070,7 +1064,7 @@ export function ScriptEditor({
                             currentMessageId === message.id ? null : message.id
                           );
                         }}
-                        className="grid h-7 w-7 place-items-center rounded-full text-[var(--latte-caramel)] transition hover:bg-[#f3e9d6]"
+                        className="grid h-7 w-7 place-items-center rounded-full text-[var(--editor-accent)] transition hover:bg-[var(--editor-hover)]"
                       >
                         <Smile className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -1081,7 +1075,7 @@ export function ScriptEditor({
                         } (coming soon)`}
                         title="Image attachments coming soon"
                         disabled
-                        className="grid h-7 w-7 place-items-center rounded-full text-[#c3ac8e] disabled:cursor-not-allowed"
+                        className="grid h-7 w-7 place-items-center rounded-full text-[var(--editor-disabled-ink)] disabled:cursor-not-allowed"
                       >
                         <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -1092,7 +1086,7 @@ export function ScriptEditor({
                         } (coming soon)`}
                         title="Voice clips coming soon"
                         disabled
-                        className="grid h-7 w-7 place-items-center rounded-full text-[#c3ac8e] disabled:cursor-not-allowed"
+                        className="grid h-7 w-7 place-items-center rounded-full text-[var(--editor-disabled-ink)] disabled:cursor-not-allowed"
                       >
                         <Mic className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -1125,11 +1119,11 @@ export function ScriptEditor({
                         ))}
                       </select>
                     </label>
-                    <label className="flex items-center gap-2 text-sm font-semibold text-[var(--latte-ink)]">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-[var(--editor-ink)]">
                       <input
                         aria-label={`Line ${index + 1} use default typing time`}
                         checked={message.useDefaultTypingMs !== false}
-                        className="h-4 w-4 rounded border-[#cbb290] text-slate-950 focus:ring-[#e7d6bd]"
+                        className="h-4 w-4 rounded border-[var(--editor-border-strong)] accent-[var(--editor-accent)]"
                         type="checkbox"
                         onChange={(event) =>
                           updateMessage(message, {
@@ -1157,11 +1151,11 @@ export function ScriptEditor({
                         }
                       />
                     </label>
-                    <label className="flex items-center gap-2 text-sm font-semibold text-[var(--latte-ink)]">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-[var(--editor-ink)]">
                       <input
                         aria-label={`Line ${index + 1} use default pause time`}
                         checked={message.useDefaultPauseAfterMs !== false}
-                        className="h-4 w-4 rounded border-[#cbb290] text-slate-950 focus:ring-[#e7d6bd]"
+                        className="h-4 w-4 rounded border-[var(--editor-border-strong)] accent-[var(--editor-accent)]"
                         type="checkbox"
                         onChange={(event) =>
                           updateMessage(message, {
@@ -1179,13 +1173,13 @@ export function ScriptEditor({
         );
       })}
 
-      <div className="rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel-soft)] p-4 shadow-[0_14px_36px_rgba(120,80,40,0.1)]">
+      <div className="rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel-soft)] p-4 shadow-[0_14px_36px_rgba(120,80,40,0.1)]">
         <button
           type="button"
           aria-label="Add line"
           disabled={isAtSceneLimit}
           onClick={() => onChange(addConversationMessage(config))}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white/80 px-4 text-sm font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white disabled:cursor-not-allowed disabled:bg-[#f1e8da] disabled:text-[#b3a08a]"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[var(--editor-button)] px-4 text-sm font-semibold text-[var(--editor-heading)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)] disabled:cursor-not-allowed disabled:bg-[var(--editor-disabled-bg)] disabled:text-[var(--editor-disabled-ink)]"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           Add line
@@ -1196,7 +1190,7 @@ export function ScriptEditor({
 
   const previewColumn = (
     <section className="grid min-w-0 content-start gap-3">
-      <p className="latte-display text-base font-semibold text-[var(--latte-heading)]">
+      <p className="font-display text-base font-semibold text-[var(--editor-heading)]">
         Live preview
       </p>
       <ConversationPreview config={config} />
@@ -1207,11 +1201,11 @@ export function ScriptEditor({
     <aside
       role="dialog"
       aria-label="Script editor"
-      className="latte-editor fixed inset-0 z-50 flex flex-col overflow-x-hidden overflow-y-hidden bg-gradient-to-br from-[var(--latte-bg-from)] via-[var(--latte-bg-via)] to-[var(--latte-bg-to)] text-[var(--latte-ink)] shadow-[0_24px_80px_rgba(58,36,23,0.35)]"
+      className="editor-theme fixed inset-0 z-50 flex flex-col overflow-x-hidden overflow-y-hidden bg-gradient-to-br from-[var(--editor-bg-from)] via-[var(--editor-bg-via)] to-[var(--editor-bg-to)] text-[var(--editor-ink)] shadow-[0_24px_80px_rgba(58,36,23,0.35)] md:left-20"
     >
-      <div className="relative flex flex-wrap items-start justify-between gap-3 border-b border-[var(--latte-border)] bg-[#fffdf8]/85 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
+      <div className="relative flex flex-wrap items-start justify-between gap-3 border-b border-[var(--editor-border)] bg-[var(--editor-header)] px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="min-w-0">
-          <h2 className="latte-display truncate text-3xl font-semibold tracking-normal text-[var(--latte-heading)]">
+          <h2 className="font-display truncate text-3xl font-semibold tracking-normal text-[var(--editor-heading)]">
             Script editor
           </h2>
         </div>
@@ -1223,7 +1217,7 @@ export function ScriptEditor({
               title="Undo last edit"
               disabled={!canUndo}
               onClick={onUndo}
-              className="flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-white/80 px-3 text-sm font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white disabled:cursor-not-allowed disabled:bg-[#f1e8da] disabled:text-[#b3a08a] sm:px-4"
+              className="flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[var(--editor-button)] px-3 text-sm font-semibold text-[var(--editor-heading)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)] disabled:cursor-not-allowed disabled:bg-[var(--editor-disabled-bg)] disabled:text-[var(--editor-disabled-ink)] sm:px-4"
             >
               <Undo2 className="h-4 w-4" aria-hidden="true" />
               Undo
@@ -1235,7 +1229,7 @@ export function ScriptEditor({
             aria-busy={isSaving}
             title="Save changes"
             onClick={saveChanges}
-            className="flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 sm:px-5"
+            className="flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-[var(--editor-action)] px-4 text-sm font-semibold text-[var(--editor-action-ink)] transition hover:bg-[var(--editor-action-hover)] sm:px-5"
           >
             <Check className="h-4 w-4" aria-hidden="true" />
             Save changes
@@ -1246,7 +1240,7 @@ export function ScriptEditor({
       {requiresPassword && !isUnlocked ? (
         <form
           onSubmit={unlock}
-          className="mx-auto mt-16 w-[min(440px,calc(100vw-32px))] rounded-2xl border border-[var(--latte-border)] bg-[#fffdf8]/85 p-5 shadow-xl backdrop-blur-md"
+          className="mx-auto mt-16 w-[min(440px,calc(100vw-32px))] rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-header)] p-5 shadow-xl backdrop-blur-md"
         >
           <label className={labelClass} htmlFor="editor-password">
             Editor password
@@ -1261,11 +1255,11 @@ export function ScriptEditor({
             onChange={(event) => setPassword(event.target.value)}
           />
           {passwordError ? (
-            <p className="mt-2 text-sm font-medium text-rose-700">{passwordError}</p>
+            <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">{passwordError}</p>
           ) : null}
           <button
             type="submit"
-            className="mt-4 h-11 w-full rounded-full bg-slate-950 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="mt-4 h-11 w-full rounded-full bg-[var(--editor-action)] text-sm font-semibold text-[var(--editor-action-ink)] transition hover:bg-[var(--editor-action-hover)]"
           >
             Unlock editor
           </button>
@@ -1274,12 +1268,12 @@ export function ScriptEditor({
         <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto grid w-full max-w-7xl min-w-0 gap-4">
             {settingsWarning ? (
-              <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800">
+              <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
                 {settingsWarning}
               </p>
             ) : null}
             {saveError ? (
-              <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800">
+              <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
                 {saveError}
               </p>
             ) : null}
@@ -1288,7 +1282,7 @@ export function ScriptEditor({
               <div
                 role="tablist"
                 aria-label="Editor sections"
-                className="grid grid-cols-3 gap-1 rounded-full bg-[#efe1cd] p-1"
+                className="grid grid-cols-3 gap-1 rounded-full bg-[var(--editor-track)] p-1"
               >
                 {PANEL_TABS.map((tab) => {
                   const isActive = activePanel === tab.id;
@@ -1303,8 +1297,8 @@ export function ScriptEditor({
                       onClick={() => setActivePanel(tab.id)}
                       className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
                         isActive
-                          ? "bg-slate-950 text-white"
-                          : "text-[var(--latte-heading)] hover:bg-white/60"
+                          ? "bg-[var(--editor-action)] text-[var(--editor-action-ink)]"
+                          : "text-[var(--editor-heading)] hover:bg-[var(--editor-hover)]"
                       }`}
                     >
                       {tab.label}
@@ -1333,13 +1327,13 @@ export function ScriptEditor({
         <div
           role="dialog"
           aria-label="Paste a script"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#281810]/35 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--editor-overlay)] p-4 backdrop-blur-sm"
         >
-          <div className="w-[min(460px,100%)] rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel)] p-5 shadow-[0_30px_70px_rgba(40,24,12,0.4)]">
-            <h3 className="latte-display text-lg font-semibold text-[var(--latte-heading)]">
+          <div className="w-[min(460px,100%)] rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel)] p-5 shadow-[0_30px_70px_rgba(40,24,12,0.4)]">
+            <h3 className="font-display text-lg font-semibold text-[var(--editor-heading)]">
               Paste a script
             </h3>
-            <p className="mt-1 text-sm text-[var(--latte-muted)]">
+            <p className="mt-1 text-sm text-[var(--editor-muted)]">
               One line each. Start a line with a name or <code>me:</code> /{" "}
               <code>you:</code> and I'll turn it into messages.
             </p>
@@ -1350,11 +1344,11 @@ export function ScriptEditor({
               value={pasteText}
               onChange={(event) => setPasteText(event.target.value)}
             />
-            <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-[var(--latte-ink)]">
+            <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-[var(--editor-ink)]">
               <input
                 aria-label="Replace existing lines"
                 checked={pasteReplace}
-                className="h-4 w-4 rounded border-[#cbb290] text-slate-950 focus:ring-[#e7d6bd]"
+                className="h-4 w-4 rounded border-[var(--editor-border-strong)] accent-[var(--editor-accent)]"
                 type="checkbox"
                 onChange={(event) => setPasteReplace(event.target.checked)}
               />
@@ -1369,7 +1363,7 @@ export function ScriptEditor({
                   setPasteText("");
                   setPasteReplace(false);
                 }}
-                className="rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white"
+                className="rounded-full bg-[var(--editor-button)] px-4 py-2 text-sm font-semibold text-[var(--editor-heading)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)]"
               >
                 Cancel
               </button>
@@ -1378,7 +1372,7 @@ export function ScriptEditor({
                 aria-label="Add pasted lines"
                 disabled={pendingImportCount === 0}
                 onClick={applyScriptImport}
-                className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-[#cdb79e]"
+                className="rounded-full bg-[var(--editor-action)] px-4 py-2 text-sm font-semibold text-[var(--editor-action-ink)] transition hover:bg-[var(--editor-action-hover)] disabled:cursor-not-allowed disabled:bg-[var(--editor-action-disabled)]"
               >
                 {pendingImportCount > 0
                   ? `${pasteReplace ? "Replace with" : "Add"} ${pendingImportCount} ${

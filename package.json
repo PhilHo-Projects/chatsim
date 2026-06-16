@@ -4,6 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "cf:d1:import": "tsx scripts/importStoryStoreToD1.ts",
+    "cf:d1:migrate": "wrangler d1 migrations apply chatsim --remote",
+    "cf:deploy": "npm run build && wrangler deploy",
+    "cf:deploy:dry-run": "npm run build && wrangler deploy --dry-run",
+    "cf:types": "wrangler types",
     "dev": "vite --host 127.0.0.1",
     "dev:api": "tsx server/index.ts",
     "build": "tsc -b && vite build",
@@ -31,6 +36,7 @@
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "wrangler": "^4.99.0"
   }
 }

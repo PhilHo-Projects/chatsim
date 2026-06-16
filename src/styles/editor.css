@@ -1,0 +1,95 @@
+/*
+ * Editor theme tokens.
+ *
+ * Scoped to `.editor-theme` so both editors (phone + battle) re-color from
+ * one place and follow the shell's light/dark toggle. The palette is
+ * GitHub-style: clean white/gray surfaces with a blue accent in light mode,
+ * blue-black `#0d1117` surfaces in dark mode. Fonts come from the Tailwind
+ * theme in index.css (--font-sans / --font-display), shared app-wide.
+ */
+
+.editor-theme {
+  /* surfaces */
+  --editor-bg-from: #f6f8fa;
+  --editor-bg-via: #f2f5f8;
+  --editor-bg-to: #eaeef2;
+  --editor-header: rgba(255, 255, 255, 0.88);
+  --editor-panel: #ffffff;
+  --editor-panel-soft: #f6f8fa;
+  --editor-popover: rgba(255, 255, 255, 0.97);
+  --editor-overlay: rgba(31, 35, 40, 0.4);
+  --editor-hover: #eaeef2;
+  --editor-track: #e4e9ee;
+
+  /* lines */
+  --editor-border: #d0d7de;
+  --editor-border-strong: #a8b3bd;
+
+  /* fields */
+  --editor-field: #ffffff;
+  --editor-field-border: #d0d7de;
+  --editor-field-missing: rgba(255, 235, 233, 0.85);
+  --editor-placeholder: #6e7781;
+  --editor-placeholder-missing: rgba(207, 34, 46, 0.55);
+  --editor-focus-ring: rgba(9, 105, 218, 0.3);
+  --editor-disabled-bg: #eef1f4;
+  --editor-disabled-ink: #8c959f;
+
+  /* ink */
+  --editor-ink: #1f2328;
+  --editor-heading: #1f2328;
+  --editor-label: #57606a;
+  --editor-muted: #6e7781;
+  --editor-accent: #0969da;
+
+  /* buttons: secondary gray, primary blue */
+  --editor-button: rgba(246, 248, 250, 0.9);
+  --editor-button-hover: #eaeef2;
+  --editor-action: #0969da;
+  --editor-action-hover: #0860ca;
+  --editor-action-ink: #ffffff;
+  --editor-action-disabled: #85b3e8;
+}
+
+.dark .editor-theme {
+  /* surfaces */
+  --editor-bg-from: #11161d;
+  --editor-bg-via: #0d1117;
+  --editor-bg-to: #0a0d12;
+  --editor-header: rgba(13, 17, 23, 0.88);
+  --editor-panel: #161b22;
+  --editor-panel-soft: #21262d;
+  --editor-popover: rgba(22, 27, 34, 0.97);
+  --editor-overlay: rgba(1, 4, 9, 0.7);
+  --editor-hover: #262c36;
+  --editor-track: #21262d;
+
+  /* lines */
+  --editor-border: #30363d;
+  --editor-border-strong: #444c56;
+
+  /* fields */
+  --editor-field: #0d1117;
+  --editor-field-border: #30363d;
+  --editor-field-missing: rgba(248, 81, 73, 0.12);
+  --editor-placeholder: #6e7681;
+  --editor-placeholder-missing: rgba(248, 81, 73, 0.6);
+  --editor-focus-ring: rgba(31, 111, 235, 0.4);
+  --editor-disabled-bg: #161b22;
+  --editor-disabled-ink: #545d68;
+
+  /* ink */
+  --editor-ink: #e6edf3;
+  --editor-heading: #e6edf3;
+  --editor-label: #768390;
+  --editor-muted: #8d96a0;
+  --editor-accent: #58a6ff;
+
+  /* buttons: secondary gray, primary blue */
+  --editor-button: rgba(33, 38, 45, 0.8);
+  --editor-button-hover: #30363d;
+  --editor-action: #1f6feb;
+  --editor-action-hover: #388bfd;
+  --editor-action-ink: #ffffff;
+  --editor-action-disabled: #1b4b91;
+}

@@ -40,35 +40,35 @@ const SPEED_OPTIONS: { value: SpeedLevel; label: string }[] = [
   { value: 5, label: "5 — blazing" }
 ];
 
-// Warm Latte editor conventions, shared with the phone editor (ScriptEditor.tsx)
-// and src/styles/latte.css. Reusing the same field/label/panel tokens keeps both
-// editors reading as one product: cream panels, caramel accents, espresso ink.
+// Editor theme conventions, shared with the phone editor (ScriptEditor.tsx)
+// and src/styles/editor.css. Reusing the same field/label/panel tokens keeps
+// both editors reading as one product in light and dark mode.
 const fieldClass =
-  "w-full min-w-0 rounded-xl border border-[var(--latte-field-border)] bg-[var(--latte-field)] px-3 py-2 text-sm text-[var(--latte-ink)] shadow-inner outline-none transition placeholder:text-[#b89a78] focus:border-[var(--latte-caramel)] focus:ring-2 focus:ring-[#eaddc6] disabled:cursor-not-allowed disabled:bg-[#f1e8da] disabled:text-[#b3a08a]";
+  "w-full min-w-0 rounded-xl border border-[var(--editor-field-border)] bg-[var(--editor-field)] px-3 py-2 text-sm text-[var(--editor-ink)] shadow-inner outline-none transition placeholder:text-[var(--editor-placeholder)] focus:border-[var(--editor-accent)] focus:ring-2 focus:ring-[var(--editor-focus-ring)] disabled:cursor-not-allowed disabled:bg-[var(--editor-disabled-bg)] disabled:text-[var(--editor-disabled-ink)]";
 
 const labelClass =
-  "text-xs font-semibold uppercase tracking-[0.08em] text-[var(--latte-label)]";
+  "text-xs font-semibold uppercase tracking-[0.08em] text-[var(--editor-label)]";
 
 const panelClass =
-  "rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel)] p-4 shadow-[0_16px_40px_rgba(120,80,40,0.12)]";
+  "rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel)] p-4 shadow-[0_16px_40px_rgba(120,80,40,0.12)]";
 
 const primaryButtonClass =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--editor-action)] px-5 text-sm font-semibold text-[var(--editor-action-ink)] transition hover:bg-[var(--editor-action-hover)] disabled:cursor-not-allowed disabled:opacity-50";
 
 const secondaryButtonClass =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-full bg-white/80 px-4 text-sm font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white disabled:cursor-not-allowed disabled:bg-[#f1e8da] disabled:text-[#b3a08a]";
+  "inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[var(--editor-button)] px-4 text-sm font-semibold text-[var(--editor-heading)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)] disabled:cursor-not-allowed disabled:bg-[var(--editor-disabled-bg)] disabled:text-[var(--editor-disabled-ink)]";
 
 function clampSpeedLevel(value: number): SpeedLevel {
   return Math.min(5, Math.max(1, value || 3)) as SpeedLevel;
 }
 
 function HeartGauge({ tone }: { tone: "opponent" | "player" }) {
-  // A warm nod to the in-battle nameplate hearts, tinted to each trainer.
+  // A nod to the in-battle nameplate hearts, tinted to each trainer.
   return (
     <span
       aria-hidden="true"
       className={`shrink-0 text-[10px] tracking-[0.18em] ${
-        tone === "opponent" ? "text-[var(--latte-caramel)]" : "text-[#c98aa0]"
+        tone === "opponent" ? "text-[var(--editor-accent)]" : "text-[#c98aa0]"
       }`}
     >
       ♥ ♥ ♥
@@ -141,16 +141,16 @@ export function BattleScriptEditor({
       role="dialog"
       aria-label="Battle editor"
       data-testid="battle-script-editor"
-      className="latte-editor fixed inset-0 z-50 flex flex-col overflow-hidden bg-gradient-to-br from-[var(--latte-bg-from)] via-[var(--latte-bg-via)] to-[var(--latte-bg-to)] text-[var(--latte-ink)] shadow-[0_24px_80px_rgba(58,36,23,0.35)]"
+      className="editor-theme fixed inset-0 z-50 flex flex-col overflow-hidden bg-gradient-to-br from-[var(--editor-bg-from)] via-[var(--editor-bg-via)] to-[var(--editor-bg-to)] text-[var(--editor-ink)] shadow-[0_24px_80px_rgba(58,36,23,0.35)] md:left-20"
     >
       {/* Header mirrors the phone editor's warm bar; the Swords badge keeps battle identity. */}
-      <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-[var(--latte-border)] bg-[#fffdf8]/85 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
+      <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-[var(--editor-border)] bg-[var(--editor-header)] px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel-soft)] text-[var(--latte-caramel)] shadow-[0_10px_24px_rgba(120,80,40,0.14)]">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel-soft)] text-[var(--editor-accent)] shadow-[0_10px_24px_rgba(120,80,40,0.14)]">
             <Swords className="h-5 w-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 className="latte-display truncate text-3xl font-semibold tracking-normal text-[var(--latte-heading)]">
+            <h2 className="font-display truncate text-3xl font-semibold tracking-normal text-[var(--editor-heading)]">
               Battle editor
             </h2>
           </div>
@@ -186,7 +186,7 @@ export function BattleScriptEditor({
       {requiresPassword && !isUnlocked ? (
         <form
           onSubmit={unlock}
-          className="mx-auto mt-16 w-[min(420px,calc(100vw-32px))] rounded-2xl border border-[var(--latte-border)] bg-[#fffdf8]/85 p-5 shadow-xl backdrop-blur-md"
+          className="mx-auto mt-16 w-[min(420px,calc(100vw-32px))] rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-header)] p-5 shadow-xl backdrop-blur-md"
         >
           <label className={labelClass} htmlFor="battle-editor-password">
             Editor password
@@ -201,7 +201,7 @@ export function BattleScriptEditor({
             onChange={(event) => setPassword(event.target.value)}
           />
           {passwordError ? (
-            <p className="mt-2 text-sm font-medium text-rose-700">{passwordError}</p>
+            <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">{passwordError}</p>
           ) : null}
           <button
             type="submit"
@@ -214,7 +214,7 @@ export function BattleScriptEditor({
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto grid w-full max-w-3xl gap-5">
             {saveError ? (
-              <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800">
+              <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
                 {saveError}
               </p>
             ) : null}
@@ -234,9 +234,9 @@ export function BattleScriptEditor({
               </label>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                {/* Opponent nameplate — soft latte panel with a warm heart gauge. */}
-                <div className="overflow-hidden rounded-2xl border border-[var(--latte-border)] shadow-[0_14px_36px_rgba(120,80,40,0.1)]">
-                  <div className="flex items-center justify-between gap-2 bg-[var(--latte-panel-soft)] px-3 py-2">
+                {/* Opponent nameplate — soft panel with a heart gauge. */}
+                <div className="overflow-hidden rounded-2xl border border-[var(--editor-border)] shadow-[0_14px_36px_rgba(120,80,40,0.1)]">
+                  <div className="flex items-center justify-between gap-2 bg-[var(--editor-panel-soft)] px-3 py-2">
                     <label
                       className={labelClass}
                       htmlFor="battle-opponent-name"
@@ -245,7 +245,7 @@ export function BattleScriptEditor({
                     </label>
                     <HeartGauge tone="opponent" />
                   </div>
-                  <div className="bg-[var(--latte-panel)] p-3">
+                  <div className="bg-[var(--editor-panel)] p-3">
                     <input
                       id="battle-opponent-name"
                       data-testid="battle-editor-opponent-name"
@@ -259,9 +259,9 @@ export function BattleScriptEditor({
                   </div>
                 </div>
 
-                {/* Player nameplate — soft latte panel with a warm heart gauge. */}
-                <div className="overflow-hidden rounded-2xl border border-[var(--latte-border)] shadow-[0_14px_36px_rgba(120,80,40,0.1)]">
-                  <div className="flex items-center justify-between gap-2 bg-[var(--latte-panel-soft)] px-3 py-2">
+                {/* Player nameplate — soft panel with a heart gauge. */}
+                <div className="overflow-hidden rounded-2xl border border-[var(--editor-border)] shadow-[0_14px_36px_rgba(120,80,40,0.1)]">
+                  <div className="flex items-center justify-between gap-2 bg-[var(--editor-panel-soft)] px-3 py-2">
                     <label
                       className={labelClass}
                       htmlFor="battle-player-name"
@@ -270,7 +270,7 @@ export function BattleScriptEditor({
                     </label>
                     <HeartGauge tone="player" />
                   </div>
-                  <div className="bg-[var(--latte-panel)] p-3">
+                  <div className="bg-[var(--editor-panel)] p-3">
                     <input
                       id="battle-player-name"
                       data-testid="battle-editor-player-name"
@@ -308,10 +308,10 @@ export function BattleScriptEditor({
             {/* Dialogue lines */}
             <section className="grid gap-3">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="latte-display text-base font-semibold text-[var(--latte-heading)]">
+                <h3 className="font-display text-base font-semibold text-[var(--editor-heading)]">
                   Dialogue
                 </h3>
-                <span className="inline-flex items-center rounded-full bg-[var(--latte-panel-soft)] px-3 py-1 text-xs font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)]">
+                <span className="inline-flex items-center rounded-full bg-[var(--editor-panel-soft)] px-3 py-1 text-xs font-semibold text-[var(--editor-heading)] ring-1 ring-[var(--editor-border)]">
                   {config.messages.length} lines
                 </span>
               </div>
@@ -323,11 +323,11 @@ export function BattleScriptEditor({
                   return (
                     <li
                       key={message.id}
-                      className="grid gap-2.5 rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel)] p-3 shadow-[0_14px_36px_rgba(120,80,40,0.1)]"
+                      className="grid gap-2.5 rounded-2xl border border-[var(--editor-border)] bg-[var(--editor-panel)] p-3 shadow-[0_14px_36px_rgba(120,80,40,0.1)]"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        {/* Speaker toggle styled as a two-segment latte switch. */}
-                        <div className="inline-flex overflow-hidden rounded-full border border-[var(--latte-border)]">
+                        {/* Speaker toggle styled as a two-segment switch. */}
+                        <div className="inline-flex overflow-hidden rounded-full border border-[var(--editor-border)]">
                           <button
                             type="button"
                             onClick={() =>
@@ -339,8 +339,8 @@ export function BattleScriptEditor({
                             }
                             className={`px-3 py-1 text-xs font-semibold transition ${
                               isOpponent
-                                ? "bg-slate-950 text-white"
-                                : "bg-[var(--latte-panel-soft)] text-[var(--latte-muted)] hover:bg-white"
+                                ? "bg-[var(--editor-action)] text-[var(--editor-action-ink)]"
+                                : "bg-[var(--editor-panel-soft)] text-[var(--editor-muted)] hover:bg-[var(--editor-button-hover)]"
                             }`}
                           >
                             Opponent
@@ -354,10 +354,10 @@ export function BattleScriptEditor({
                                 })
                               )
                             }
-                            className={`border-l border-[var(--latte-border)] px-3 py-1 text-xs font-semibold transition ${
+                            className={`border-l border-[var(--editor-border)] px-3 py-1 text-xs font-semibold transition ${
                               isOpponent
-                                ? "bg-[var(--latte-panel-soft)] text-[var(--latte-muted)] hover:bg-white"
-                                : "bg-slate-950 text-white"
+                                ? "bg-[var(--editor-panel-soft)] text-[var(--editor-muted)] hover:bg-[var(--editor-button-hover)]"
+                                : "bg-[var(--editor-action)] text-[var(--editor-action-ink)]"
                             }`}
                           >
                             Player
@@ -370,7 +370,7 @@ export function BattleScriptEditor({
                           onClick={() =>
                             onChange(removeConversationMessage(config, message.id))
                           }
-                          className="grid h-8 w-8 place-items-center rounded-full bg-[var(--latte-panel-soft)] text-[var(--latte-muted)] ring-1 ring-[var(--latte-border)] transition hover:bg-white"
+                          className="grid h-8 w-8 place-items-center rounded-full bg-[var(--editor-panel-soft)] text-[var(--editor-muted)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)]"
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
@@ -393,7 +393,7 @@ export function BattleScriptEditor({
                         />
                         <span
                           aria-hidden="true"
-                          className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] text-[var(--latte-muted)]"
+                          className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] text-[var(--editor-muted)]"
                         >
                           ▼
                         </span>
@@ -407,7 +407,7 @@ export function BattleScriptEditor({
                 type="button"
                 data-testid="battle-editor-add-line"
                 onClick={() => onChange(addConversationMessage(config))}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-dashed border-[#cbb290] bg-[var(--latte-panel-soft)] text-sm font-semibold text-[var(--latte-heading)] transition hover:bg-white"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-dashed border-[var(--editor-border-strong)] bg-[var(--editor-panel-soft)] text-sm font-semibold text-[var(--editor-heading)] transition hover:bg-[var(--editor-button-hover)]"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 Add line

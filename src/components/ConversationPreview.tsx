@@ -54,13 +54,13 @@ export function ConversationPreview({ config }: ConversationPreviewProps) {
             ) : (
               <span
                 aria-hidden="true"
-                className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-[#cf8b46] to-[#7a4f24] text-xs font-bold text-white"
+                className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-slate-400 to-slate-600 text-xs font-bold text-white"
               >
                 {viewerInitial}
               </span>
             )}
             <div className="min-w-0">
-              <p className="latte-display truncate text-sm font-semibold text-slate-800">
+              <p className="truncate text-sm font-semibold text-slate-800">
                 {config.viewer.name}
               </p>
               <span className="flex items-center gap-1 text-[10px] text-slate-500">
@@ -137,7 +137,7 @@ export function ConversationPreview({ config }: ConversationPreviewProps) {
               type="button"
               aria-label="Restart preview animation"
               onClick={() => conversation.replay()}
-              className="flex items-center gap-1.5 rounded-full bg-[var(--latte-espresso)] px-3.5 py-1.5 text-xs font-semibold text-[#f6ead7] transition hover:opacity-90"
+              className="flex items-center gap-1.5 rounded-full bg-[var(--editor-action)] px-3.5 py-1.5 text-xs font-semibold text-[var(--editor-action-ink)] transition hover:bg-[var(--editor-action-hover)]"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
               Restart
@@ -146,7 +146,7 @@ export function ConversationPreview({ config }: ConversationPreviewProps) {
               type="button"
               aria-label="Stop preview animation"
               onClick={() => setIsPlaying(false)}
-              className="flex items-center gap-1.5 rounded-full bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white"
+              className="flex items-center gap-1.5 rounded-full bg-[var(--editor-button)] px-3.5 py-1.5 text-xs font-semibold text-[var(--editor-heading)] ring-1 ring-[var(--editor-border)] transition hover:bg-[var(--editor-button-hover)]"
             >
               <Square className="h-3 w-3" aria-hidden="true" />
               Stop
@@ -157,7 +157,7 @@ export function ConversationPreview({ config }: ConversationPreviewProps) {
             type="button"
             aria-label="Play preview animation"
             onClick={() => setIsPlaying(true)}
-            className="flex items-center gap-1.5 rounded-full bg-[var(--latte-espresso)] px-4 py-1.5 text-xs font-semibold text-[#f6ead7] transition hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-full bg-[var(--editor-action)] px-4 py-1.5 text-xs font-semibold text-[var(--editor-action-ink)] transition hover:bg-[var(--editor-action-hover)]"
           >
             <Play className="h-3.5 w-3.5" aria-hidden="true" />
             Play animation

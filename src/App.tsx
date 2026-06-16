@@ -52,7 +52,7 @@ type Theme = "light" | "dark";
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") {
-    return "light";
+    return "dark";
   }
 
   try {
@@ -64,11 +64,8 @@ function getInitialTheme(): Theme {
     // Ignore storage access failures (e.g. private browsing).
   }
 
-  if (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches) {
-    return "dark";
-  }
-
-  return "light";
+  // Dark is the house default; light is an explicit choice.
+  return "dark";
 }
 
 function cloneStoryRecord(record: PlatformStoryRecord): PlatformStoryRecord {
@@ -803,7 +800,7 @@ export default function App() {
           aria-label="Open script editor"
           title="Open script editor"
           onClick={() => setIsEditorOpen(true)}
-          className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
+          className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
         >
           <SquarePen className="h-5 w-5" aria-hidden="true" />
         </button>
@@ -969,11 +966,11 @@ export default function App() {
           onClick={() => setAvatarPreview(null)}
         >
           <div
-            className="grid gap-3 rounded-2xl bg-white p-4 shadow-2xl"
+            className="grid gap-3 rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-900"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-semibold text-slate-950">
+              <p className="text-sm font-semibold text-slate-950 dark:text-slate-100">
                 {avatarPreview.name}
               </p>
               <button
@@ -981,12 +978,12 @@ export default function App() {
                 aria-label="Close avatar preview"
                 title="Close avatar preview"
                 onClick={() => setAvatarPreview(null)}
-                className="grid h-9 w-9 place-items-center rounded-full text-slate-600 transition hover:bg-slate-100"
+                className="grid h-9 w-9 place-items-center rounded-full text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            <div className="grid h-[min(640px,calc(100vw-64px))] w-[min(640px,calc(100vw-64px))] place-items-center overflow-hidden rounded-2xl bg-slate-100">
+            <div className="grid h-[min(640px,calc(100vw-64px))] w-[min(640px,calc(100vw-64px))] place-items-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
               {avatarPreview.avatarUrl ? (
                 <img
                   alt=""
@@ -995,7 +992,7 @@ export default function App() {
                   src={avatarPreview.avatarUrl}
                 />
               ) : (
-                <span className="text-5xl font-semibold text-slate-500">
+                <span className="text-5xl font-semibold text-slate-500 dark:text-slate-400">
                   {avatarPreview.initials}
                 </span>
               )}

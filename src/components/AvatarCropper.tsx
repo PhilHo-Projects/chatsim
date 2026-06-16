@@ -120,7 +120,7 @@ export function AvatarCropper({
       onClick={onCancel}
     >
       <div
-        className="grid w-[min(420px,calc(100vw-32px))] gap-4 rounded-2xl bg-white p-5 text-slate-950 shadow-2xl"
+        className="grid w-[min(420px,calc(100vw-32px))] gap-4 rounded-2xl bg-white p-5 text-slate-950 shadow-2xl dark:bg-slate-900 dark:text-slate-100"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-4">
@@ -130,14 +130,14 @@ export function AvatarCropper({
             aria-label="Cancel avatar crop"
             title="Cancel avatar crop"
             onClick={onCancel}
-            className="grid h-9 w-9 place-items-center rounded-full text-slate-600 transition hover:bg-slate-100"
+            className="grid h-9 w-9 place-items-center rounded-full text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         <div
-          className="mx-auto cursor-grab overflow-hidden rounded-full bg-slate-100 ring-4 ring-slate-200 active:cursor-grabbing"
+          className="mx-auto cursor-grab overflow-hidden rounded-full bg-slate-100 ring-4 ring-slate-200 active:cursor-grabbing dark:bg-slate-800 dark:ring-slate-700"
           style={{
             height: AVATAR_PREVIEW_SIZE,
             width: AVATAR_PREVIEW_SIZE
@@ -191,11 +191,11 @@ export function AvatarCropper({
           />
         </div>
 
-        <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-700">
+        <label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-700 dark:text-slate-300">
           Zoom
           <input
             aria-label="Avatar crop zoom"
-            className="mt-2 w-full accent-slate-950"
+            className="mt-2 w-full accent-slate-950 dark:accent-slate-100"
             max={3}
             min={1}
             step={0.01}
@@ -210,7 +210,7 @@ export function AvatarCropper({
           aria-label="Apply avatar crop"
           disabled={!imageSize}
           onClick={confirmCrop}
-          className="flex h-11 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          className="flex h-11 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white dark:disabled:bg-slate-600"
         >
           <Check className="h-4 w-4" aria-hidden="true" />
           Apply crop

@@ -90,9 +90,14 @@ Important naming:
 
 ## Style / UX Notes
 - Keep the glassmorphism coffee-shop background direction.
+- One GitHub-style palette app-wide: clean white/gray light mode, blue-black `#0d1117` dark mode with a blue accent; dark is the default theme. No warm/brown tints — the user explicitly rejected them.
+- Editor surfaces are driven by `--editor-*` tokens in `src/styles/editor.css` (light values + `.dark` overrides, scoped to `.editor-theme`). Re-color editors there, not with hardcoded hexes.
+- Fonts: Hanken Grotesk body (`--font-sans`), Fraunces display headings (`--font-display` / `font-display` utility), Silkscreen only for battle pixel art. No other families.
+- The in-phone chat UI (white glass, blue outgoing bubbles) is "in-world" and stays light in both themes.
 - Phone proportions are intentionally narrow/mobile-like.
 - Replay/NXT controls live outside the phone and must stay visible above the mobile bottom nav.
-- Script editor is full-screen; line cards can fold and show `SpeakerInitial: preview text`.
+- Script editor is full-screen but offset `md:left-20` so the desktop side nav stays visible and usable; same for the battle editor.
+- Script editor line cards can fold and show `SpeakerInitial: preview text`.
 - When touching story/player layout, browser-check both `390x844` mobile and `1280x720` desktop for clipped or covered controls.
 
 ## Testing Expectations

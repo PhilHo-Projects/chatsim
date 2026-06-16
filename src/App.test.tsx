@@ -794,7 +794,7 @@ describe("App", () => {
 
     expect(screen.getByLabelText("Scene title")).toHaveValue("Scene 2");
     expect(screen.getByRole("button", { name: "Choose scene 2: Scene 2" })).toHaveClass(
-      "bg-slate-950"
+      "bg-[var(--editor-action)]"
     );
   });
 
@@ -879,7 +879,7 @@ describe("App", () => {
     ).toHaveLength(5);
     expect(
       screen.getByRole("button", { name: "Choose scene 1: Scene 1" })
-    ).toHaveClass("h-11", "w-11", "rounded-full", "bg-slate-950");
+    ).toHaveClass("h-11", "w-11", "rounded-full", "bg-[var(--editor-action)]");
     expect(screen.getByRole("button", { name: "Add scene" })).toHaveClass(
       "h-11",
       "w-11",
@@ -955,7 +955,9 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog", { name: "Script editor" })).toBeInTheDocument();
     expect(screen.getByText("Fill Story name before saving.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Story name")).toHaveClass("bg-rose-50/70");
+    expect(screen.getByLabelText("Story name")).toHaveClass(
+      "bg-[var(--editor-field-missing)]"
+    );
     expect(screen.getByLabelText("Story name")).toHaveValue("");
   });
 
@@ -1016,7 +1018,9 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog", { name: "Script editor" })).toBeInTheDocument();
     expect(screen.getByText("Fill POV name before saving.")).toBeInTheDocument();
-    expect(screen.getByLabelText("POV name")).toHaveClass("bg-rose-50/70");
+    expect(screen.getByLabelText("POV name")).toHaveClass(
+      "bg-[var(--editor-field-missing)]"
+    );
   });
 
   it("auto-updates initials from speaker names when they still match the name", async () => {
@@ -1094,7 +1098,7 @@ describe("App", () => {
 
     expect(emptyLine).toHaveValue("");
     expect(emptyLine).toHaveAttribute("placeholder", "write something");
-    expect(emptyLine).toHaveClass("bg-rose-50/70");
+    expect(emptyLine).toHaveClass("bg-[var(--editor-field-missing)]");
   });
 
   it("allows spaces at the end of an edited message", async () => {
@@ -1304,7 +1308,7 @@ describe("App", () => {
 
     expect(screen.getAllByRole("button", { name: /Choose scene \d+:/ })).toHaveLength(10);
     expect(screen.getByRole("button", { name: "Choose scene 10: Scene 10" })).toHaveClass(
-      "bg-slate-950"
+      "bg-[var(--editor-action)]"
     );
     expect(screen.queryByRole("button", { name: "Add scene" })).not.toBeInTheDocument();
   });
