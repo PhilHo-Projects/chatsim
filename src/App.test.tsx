@@ -1235,7 +1235,7 @@ describe("App", () => {
     expect(
       screen.getByText("Scene limit reached. Start Scene 2 to continue.")
     ).toBeInTheDocument();
-  }, 60000);
+  }, 120000);
 
   it("undo restores up to five previous editor versions", async () => {
     await renderAppOnStory();

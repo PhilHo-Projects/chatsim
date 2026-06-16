@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.github
+.claude
+.playwright-cli
+.worktrees
+worktrees
+
+*.log
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+server/data/*.local.json

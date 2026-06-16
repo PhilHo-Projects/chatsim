@@ -1,18 +1,16 @@
 import { createServer } from "node:http";
-import { createApiHandler } from "./api";
+import { createRequestHandler } from "./httpServer";
 
-const port = Number.parseInt(process.env.CHATSIM_API_PORT ?? "8787", 10);
-const handleApiRequest = createApiHandler();
+const port = Number.parseInt(
+  process.env.PORT ?? process.env.CHATSIM_API_PORT ?? "3000",
+  10
+);
+const host = process.env.HOST ?? "0.0.0.0";
+const basePath = process.env.CHATSIM_BASE_PATH ?? "/";
+const handleRequest = createRequestHandler({ basePath });
 
-const server = createServer(async (request, response) => {
-  const handled = await handleApiRequest(request, response);
+const server = createServer(handleRequest);
 
-  if (!handled) {
-    response.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
-    response.end(JSON.stringify({ error: "Not found." }));
-  }
-});
-
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Chatsim API listening on http://127.0.0.1:${port}`);
+server.listen(port, host, () => {
+  console.log(`Chatsim listening on http://${host}:${port}${basePath}`);
 });
