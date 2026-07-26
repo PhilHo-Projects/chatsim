@@ -20,6 +20,7 @@ describe("repository hygiene", () => {
 
     expect(dockerfile).toContain("RUN npm run build");
     expect(dockerfile).toContain("HEALTHCHECK");
+    expect(dockerfile).toContain("ca-certificates curl");
     expect(dockerfile).not.toContain("RUN npm test");
     expect(dockerfile).not.toContain("CHATSIM_BASE_PATH");
     expect(dockerfile).not.toContain("CHATSIM_STORE_FILE");
