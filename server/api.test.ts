@@ -574,6 +574,42 @@ describe("story API validation and authorization", () => {
     );
   });
 
+  it("returns a typed service-unavailable response when media is not configured", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.stubEnv("R2_ACCOUNT_ID", "");
+    vi.stubEnv("R2_ORIGINALS_ACCESS_KEY_ID", "");
+    vi.stubEnv("R2_ORIGINALS_SECRET_ACCESS_KEY", "");
+    vi.stubEnv("R2_VARIANTS_ACCESS_KEY_ID", "");
+    vi.stubEnv("R2_VARIANTS_SECRET_ACCESS_KEY", "");
+    vi.stubEnv("R2_PUBLIC_BASE_URL", "");
+    const baseUrl = await startApiServer();
+    const registration = await sendJson(baseUrl, "/api/auth/register", {
+      displayName: "No Media",
+      password: "no-media-password-2026",
+      username: "no-media"
+    });
+    const cookie = registration.headers.get("set-cookie")?.split(";")[0];
+
+    const response = await sendJson(
+      baseUrl,
+      "/api/uploads",
+      {
+        kind: "avatar",
+        mimeType: "image/png",
+        sizeBytes: 100
+      },
+      { cookie }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({
+      code: "SERVICE_UNAVAILABLE",
+      error: "Image uploads are temporarily unavailable."
+    });
+    expect(JSON.stringify(payload)).not.toContain("R2_");
+  });
+
   it("rate-limits upload reservations per signed-in user", async () => {
     const media = {
       createUpload: vi.fn().mockResolvedValue({

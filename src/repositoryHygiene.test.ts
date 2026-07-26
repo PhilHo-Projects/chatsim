@@ -30,4 +30,16 @@ describe("repository hygiene", () => {
     expect(existsSync("server/data/story-store.json")).toBe(false);
     expect(existsSync("src/data/storyDatabase.json")).toBe(false);
   });
+
+  it("keeps manual deployments behind the full verification job", () => {
+    const workflow = readFileSync(".github/workflows/deploy.yml", "utf8");
+
+    expect(workflow).toContain(
+      "github.event_name == 'workflow_dispatch' ||"
+    );
+    expect(workflow).toContain(
+      "(github.event_name == 'push' && github.ref == 'refs/heads/main')"
+    );
+    expect(workflow).toContain("needs: verify");
+  });
 });

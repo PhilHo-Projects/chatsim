@@ -64,11 +64,14 @@ type ApiError = {
     | "UNSUPPORTED_MEDIA_TYPE"
     | "MEDIA_REJECTED"
     | "RATE_LIMITED"
+    | "SERVICE_UNAVAILABLE"
     | "INTERNAL_ERROR";
 };
 ```
 
 Rate-limited responses include `Retry-After`.
+Media routes return `503 SERVICE_UNAVAILABLE` without configuration details
+when the R2 service cannot initialize.
 
 ## Health
 
@@ -254,6 +257,8 @@ The avatar must be a ready, caller-owned `profile` image.
 ## Uploads and Images
 
 Uploads require a valid session.
+The start, completion, and deletion routes may return
+`503 SERVICE_UNAVAILABLE` while media storage is unavailable.
 
 ### `POST /api/uploads`
 

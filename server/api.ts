@@ -255,7 +255,12 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       .then(() => createMediaServiceFromEnvironment())
       .catch((error: unknown) => {
         defaultMedia = undefined;
-        throw error;
+        console.error("Media service unavailable", error);
+        throw new HttpError(
+          "Image uploads are temporarily unavailable.",
+          503,
+          "SERVICE_UNAVAILABLE"
+        );
       });
     return defaultMedia;
   };

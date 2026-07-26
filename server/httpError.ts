@@ -12,6 +12,7 @@ export class HttpError extends Error {
       | "UNSUPPORTED_MEDIA_TYPE"
       | "MEDIA_REJECTED"
       | "RATE_LIMITED"
+      | "SERVICE_UNAVAILABLE"
       | "INTERNAL_ERROR",
     readonly retryAfter?: number
   ) {

@@ -92,6 +92,13 @@ through Coolify/Traefik's private Docker network. The API accepts
 address, preventing a client-supplied leftmost value from bypassing IP limits.
 Do not publish port 3000 directly while this setting is enabled.
 
+Rate limiting is intentionally in-process for the current single application
+replica. Each limiter bounds tracked identities at 10,000 and fails closed at
+capacity. Replace it with a shared limiter before adding replicas or promoting
+the service to sustained high public traffic. Image completion is limited to
+one active Sharp pipeline per application instance for the current shared
+4 GiB host.
+
 ## Database migrations, seed, and backup
 
 API startup applies ordered SQL migrations while holding a Postgres advisory
@@ -136,6 +143,8 @@ Before PR approval:
 2. Keep the PR draft and direct auto-deploy disabled.
 3. Require passing tests, production build, Docker build, and new-stack smoke
    checks.
+4. After repository deployment secrets exist, use `workflow_dispatch` to run
+   the full verify-and-deploy pipeline against the feature branch.
 
 After PR approval:
 

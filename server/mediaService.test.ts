@@ -383,6 +383,63 @@ describe("MediaService", () => {
     expect(storage.originals.has(stagingKey)).toBe(false);
   });
 
+  it("allows only one image completion at a time", async () => {
+    const source = await sharp({
+      create: {
+        background: "navy",
+        channels: 3,
+        height: 30,
+        width: 40
+      }
+    })
+      .png()
+      .toBuffer();
+    const first = await media.createUpload({
+      kind: "avatar",
+      mimeType: "image/png",
+      sizeBytes: source.byteLength,
+      userId: ownerId
+    });
+    const second = await media.createUpload({
+      kind: "avatar",
+      mimeType: "image/png",
+      sizeBytes: source.byteLength,
+      userId: ownerId
+    });
+    storage.upload(await getObjectKey(first.image.id), source, "image/png");
+    storage.upload(await getObjectKey(second.image.id), source, "image/png");
+    let releaseFirst: () => void = () => undefined;
+    let signalFirstVariant: () => void = () => undefined;
+    const firstVariantReached = new Promise<void>((resolve) => {
+      signalFirstVariant = resolve;
+    });
+    const firstVariantReleased = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    storage.onFirstVariantPut = async () => {
+      signalFirstVariant();
+      await firstVariantReleased;
+    };
+
+    const firstCompletion = media.completeUpload(ownerId, first.image.id);
+    await firstVariantReached;
+    let secondError: unknown;
+
+    try {
+      await media.completeUpload(ownerId, second.image.id);
+    } catch (error) {
+      secondError = error;
+    } finally {
+      releaseFirst();
+      await firstCompletion;
+    }
+
+    expect(secondError).toMatchObject({
+      code: "RATE_LIMITED",
+      statusCode: 429
+    });
+  });
+
   it("rejects MIME mismatches and removes failed staging data", async () => {
     const source = await sharp({
       create: {
@@ -679,6 +736,12 @@ describe("MediaService", () => {
     let winner:
       | Awaited<ReturnType<MediaService["completeUpload"]>>
       | undefined;
+    const winningWorker = new MediaService({
+      now: () => new Date("2026-07-25T12:00:00.000Z"),
+      pool,
+      publicBaseUrl: "https://media.chatsim.philippeho.dev",
+      storage
+    });
     storage.onFirstVariantPut = async () => {
       await pool.query(
         `UPDATE images
@@ -686,7 +749,7 @@ describe("MediaService", () => {
          WHERE id = $1`,
         [created.image.id]
       );
-      winner = await media.completeUpload(ownerId, created.image.id);
+      winner = await winningWorker.completeUpload(ownerId, created.image.id);
     };
 
     await expect(
