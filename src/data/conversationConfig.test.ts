@@ -1,16 +1,13 @@
 import {
   createBlankStoryboard,
-  EDITOR_UNLOCK_STORAGE_KEY,
   addStoryScene,
   getPovTypingMsPerCharacter,
   getSpeakerTypingDurationMs,
-  isEditorUnlockValid,
   normalizeConversationConfig,
   normalizeStoryLibrary,
   normalizeStoryDatabase,
   normalizeStoryboard,
   removeStoryboard,
-  rememberEditorUnlock,
   updateConversationMessage,
   type StoryDatabase
 } from "./conversationConfig";
@@ -186,6 +183,42 @@ describe("conversation config", () => {
     expect(config.messages[0].useDefaultPauseAfterMs).toBe(false);
   });
 
+  it("renders hydrated image variants instead of compatibility avatar URLs", () => {
+    const config = normalizeConversationConfig({
+      contact: {
+        avatarImage: {
+          id: "image-contact",
+          variants: {
+            card: "https://media.example/contact-card.webp",
+            full: "https://media.example/contact-full.webp",
+            thumb: "https://media.example/contact-thumb.webp"
+          }
+        },
+        avatarImageId: "image-contact",
+        avatarUrl: "/legacy-contact.png"
+      },
+      viewer: {
+        avatarImage: {
+          id: "image-viewer",
+          variants: {
+            card: "https://media.example/viewer-card.webp",
+            full: "https://media.example/viewer-full.webp",
+            thumb: "https://media.example/viewer-thumb.webp"
+          }
+        },
+        avatarImageId: "image-viewer",
+        avatarUrl: "/legacy-viewer.png"
+      }
+    });
+
+    expect(config.contact.avatarUrl).toBe(
+      "https://media.example/contact-thumb.webp"
+    );
+    expect(config.viewer.avatarUrl).toBe(
+      "https://media.example/viewer-thumb.webp"
+    );
+  });
+
   it("maps speed levels to deterministic millisecond presets", () => {
     expect(getPovTypingMsPerCharacter(5)).toBeLessThan(
       getPovTypingMsPerCharacter(1)
@@ -223,14 +256,6 @@ describe("conversation config", () => {
     expect(config.contact.typingSpeedLevel).toBe(4);
     expect(config.messages[0].typingSpeedLevel).toBe(2);
     expect(config.messages[1].typingSpeedLevel).toBe(5);
-  });
-
-  it("remembers a valid editor unlock for 24 hours", () => {
-    rememberEditorUnlock(1000);
-
-    expect(localStorage.getItem(EDITOR_UNLOCK_STORAGE_KEY)).toBe("1000");
-    expect(isEditorUnlockValid(1000 + 23 * 60 * 60 * 1000)).toBe(true);
-    expect(isEditorUnlockValid(1000 + 25 * 60 * 60 * 1000)).toBe(false);
   });
 
   it("normalizes story data into only created scenes", () => {

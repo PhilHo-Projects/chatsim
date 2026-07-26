@@ -427,10 +427,19 @@ export class StoryStore {
       for (const user of canonicalSeed.users) {
         await client.query(
           `INSERT INTO users (
-             id, username, display_name, role, accent_color, created_at
+             id, username, display_name, role, accent_color, created_at,
+             updated_at
            )
-           VALUES ($1, $2, $3, $4, $5, $6)
-           ON CONFLICT (id) DO NOTHING`,
+           VALUES ($1, $2, $3, $4, $5, $6, $6)
+           ON CONFLICT (id) DO UPDATE
+           SET username = EXCLUDED.username,
+               display_name = EXCLUDED.display_name,
+               role = EXCLUDED.role,
+               accent_color = EXCLUDED.accent_color,
+               created_at = EXCLUDED.created_at,
+               updated_at = EXCLUDED.updated_at
+           WHERE users.password_hash IS NULL
+             AND users.auth_provider IS NULL`,
           [
             user.id,
             user.username,
@@ -449,7 +458,16 @@ export class StoryStore {
              cover_color, storyboard, created_at, updated_at
            )
            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
-           ON CONFLICT (id) DO NOTHING`,
+           ON CONFLICT (id) DO UPDATE
+           SET owner_id = EXCLUDED.owner_id,
+               title = EXCLUDED.title,
+               visibility = EXCLUDED.visibility,
+               presentation_mode = EXCLUDED.presentation_mode,
+               cover_image_id = NULL,
+               cover_color = EXCLUDED.cover_color,
+               storyboard = EXCLUDED.storyboard,
+               created_at = EXCLUDED.created_at,
+               updated_at = EXCLUDED.updated_at`,
           [
             story.id,
             story.ownerId,
@@ -903,103 +921,102 @@ export class StoryStore {
     userId: string,
     patch: { avatarImageId?: string | null; displayName?: string }
   ) {
-    if (patch.avatarImageId) {
-      const imageResult = await this.pool.query<{
-        kind: string;
-        owner_id: string;
-        status: string;
-      }>(
-        "SELECT owner_id, kind, status FROM images WHERE id = $1",
-        [patch.avatarImageId]
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      if (patch.avatarImageId) {
+        await this.assertReadyOwnedImage(
+          client,
+          userId,
+          patch.avatarImageId,
+          ["avatar", "profile"]
+        );
+      }
+
+      const result = await client.query<UserRow>(
+        `UPDATE users
+         SET display_name = COALESCE($1, display_name),
+             avatar_image_id = CASE
+               WHEN $2::boolean THEN $3
+               ELSE avatar_image_id
+             END,
+             updated_at = $4
+         WHERE id = $5
+         RETURNING *`,
+        [
+          patch.displayName,
+          patch.avatarImageId !== undefined,
+          patch.avatarImageId ?? null,
+          this.now(),
+          userId
+        ]
       );
-      const image = imageResult.rows[0];
 
-      if (!image || image.status !== "ready") {
-        throw new HttpError(
-          "Avatar image must be ready.",
-          400,
-          "BAD_REQUEST"
-        );
+      if (!result.rows[0]) {
+        throw new HttpError("User not found.", 404, "NOT_FOUND");
       }
 
-      if (image.owner_id !== userId) {
-        throw new HttpError(
-          "Avatar image belongs to another user.",
-          403,
-          "FORBIDDEN"
-        );
-      }
-
-      if (image.kind !== "avatar" && image.kind !== "profile") {
-        throw new HttpError(
-          "Image kind cannot be used as an avatar.",
-          400,
-          "BAD_REQUEST"
-        );
-      }
+      await client.query("COMMIT");
+      return publicUser(result.rows[0]);
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
-
-    const result = await this.pool.query<UserRow>(
-      `UPDATE users
-       SET display_name = COALESCE($1, display_name),
-           avatar_image_id = CASE
-             WHEN $2::boolean THEN $3
-             ELSE avatar_image_id
-           END
-       WHERE id = $4
-       RETURNING *`,
-      [
-        patch.displayName,
-        patch.avatarImageId !== undefined,
-        patch.avatarImageId ?? null,
-        userId
-      ]
-    );
-
-    if (!result.rows[0]) {
-      throw new HttpError("User not found.", 404, "NOT_FOUND");
-    }
-
-    return publicUser(result.rows[0]);
   }
 
   async createStory(ownerId: string, patch: StoryPatch = {}) {
     await this.assertUser(ownerId);
-    await this.validateStoryImageReferences(ownerId, patch);
-    const countResult = await this.pool.query<{ count: string }>(
-      "SELECT COUNT(*)::text AS count FROM stories WHERE owner_id = $1",
-      [ownerId]
-    );
-    const storyCount = Number(countResult.rows[0]?.count ?? 0);
-    const id = `story-${randomUUID()}`;
-    const title =
-      patch.title?.trim() || (storyCount === 0 ? "Story" : `Story ${storyCount + 1}`);
-    const timestamp = this.now();
-    const storyboard = sanitizeStoryboard(
-      patch.storyboard ?? createPlaceholderStoryboard(id, title)
-    );
-    const presentationMode = normalizePresentationMode(
-      storyboard.presentationMode
-    );
-    await this.pool.query(
-      `INSERT INTO stories (
-         id, owner_id, title, visibility, presentation_mode, cover_image_id,
-         cover_color, storyboard, created_at, updated_at
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $9)
-       RETURNING id`,
-      [
-        id,
-        ownerId,
-        title,
-        patch.visibility ?? "public",
-        presentationMode,
-        patch.coverImageId ?? null,
-        patch.coverColor ?? COVER_COLORS[storyCount % COVER_COLORS.length],
-        JSON.stringify({ ...storyboard, id, presentationMode, title }),
-        timestamp
-      ]
-    );
+    const client = await this.pool.connect();
+    let id = "";
+
+    try {
+      await client.query("BEGIN");
+      await this.validateStoryImageReferences(client, ownerId, patch);
+      const countResult = await client.query<{ count: string }>(
+        "SELECT COUNT(*)::text AS count FROM stories WHERE owner_id = $1",
+        [ownerId]
+      );
+      const storyCount = Number(countResult.rows[0]?.count ?? 0);
+      id = `story-${randomUUID()}`;
+      const title =
+        patch.title?.trim() ||
+        (storyCount === 0 ? "Story" : `Story ${storyCount + 1}`);
+      const timestamp = this.now();
+      const storyboard = sanitizeStoryboard(
+        patch.storyboard ?? createPlaceholderStoryboard(id, title)
+      );
+      const presentationMode = normalizePresentationMode(
+        storyboard.presentationMode
+      );
+      await client.query(
+        `INSERT INTO stories (
+           id, owner_id, title, visibility, presentation_mode, cover_image_id,
+           cover_color, storyboard, created_at, updated_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $9)`,
+        [
+          id,
+          ownerId,
+          title,
+          patch.visibility ?? "public",
+          presentationMode,
+          patch.coverImageId ?? null,
+          patch.coverColor ?? COVER_COLORS[storyCount % COVER_COLORS.length],
+          JSON.stringify({ ...storyboard, id, presentationMode, title }),
+          timestamp
+        ]
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
 
     const created = await this.getStory(id);
 
@@ -1015,49 +1032,67 @@ export class StoryStore {
     storyId: string,
     patch: StoryPatch
   ) {
-    const current = await this.findEditableStory(userId, storyId);
-    await this.validateStoryImageReferences(userId, patch);
-    const title = patch.title !== undefined ? patch.title.trim() : current.title;
+    const initial = await this.findEditableStory(userId, storyId);
+    const client = await this.pool.connect();
+    let title = "";
 
-    if (!title) {
-      throw new HttpError("Story title is required.", 400, "BAD_REQUEST");
-    }
+    try {
+      await client.query("BEGIN");
+      await this.validateStoryImageReferences(client, initial.ownerId, patch);
+      const current = await this.findEditableStory(
+        userId,
+        storyId,
+        client,
+        true
+      );
+      title =
+        patch.title !== undefined ? patch.title.trim() : current.title;
 
-    const storyboard = sanitizeStoryboard(
-      patch.storyboard ?? current.storyboard
-    );
-    const presentationMode = normalizePresentationMode(
-      storyboard.presentationMode ?? current.storyboard.presentationMode
-    );
-    await this.pool.query(
-      `UPDATE stories
-       SET title = $1,
-           visibility = $2,
-           presentation_mode = $3,
-           cover_image_id = $4,
-           cover_color = $5,
-           storyboard = $6::jsonb,
-           updated_at = $7
-       WHERE id = $8
-       RETURNING id`,
-      [
-        title,
-        patch.visibility ?? current.visibility,
-        presentationMode,
-        patch.coverImageId === undefined
-          ? current.coverImageId
-          : patch.coverImageId,
-        patch.coverColor ?? current.coverColor,
-        JSON.stringify({
-          ...storyboard,
-          id: current.id,
+      if (!title) {
+        throw new HttpError("Story title is required.", 400, "BAD_REQUEST");
+      }
+
+      const storyboard = sanitizeStoryboard(
+        patch.storyboard ?? current.storyboard
+      );
+      const presentationMode = normalizePresentationMode(
+        storyboard.presentationMode ?? current.storyboard.presentationMode
+      );
+      await client.query(
+        `UPDATE stories
+         SET title = $1,
+             visibility = $2,
+             presentation_mode = $3,
+             cover_image_id = $4,
+             cover_color = $5,
+             storyboard = $6::jsonb,
+             updated_at = $7
+         WHERE id = $8`,
+        [
+          title,
+          patch.visibility ?? current.visibility,
           presentationMode,
-          title
-        }),
-        this.now(),
-        storyId
-      ]
-    );
+          patch.coverImageId === undefined
+            ? current.coverImageId
+            : patch.coverImageId,
+          patch.coverColor ?? current.coverColor,
+          JSON.stringify({
+            ...storyboard,
+            id: current.id,
+            presentationMode,
+            title
+          }),
+          this.now(),
+          storyId
+        ]
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
 
     const updated = await this.getStory(storyId);
 
@@ -1084,39 +1119,56 @@ export class StoryStore {
   }
 
   private async validateStoryImageReferences(
+    client: Pick<Pool, "query">,
     userId: string,
     patch: StoryPatch
   ) {
+    const references: Array<{ id: string; kinds: string[] }> = [];
+
     if (patch.coverImageId) {
-      await this.assertReadyOwnedImage(userId, patch.coverImageId, [
-        "story_cover",
-        "scene_art"
-      ]);
+      references.push({
+        id: patch.coverImageId,
+        kinds: ["story_cover", "scene_art"]
+      });
     }
 
     if (patch.storyboard) {
       const avatarImageIds = this.storyboardAvatarImageIds(patch.storyboard);
 
       for (const imageId of avatarImageIds) {
-        await this.assertReadyOwnedImage(userId, imageId, [
-          "avatar",
-          "profile",
-          "sprite"
-        ]);
+        references.push({
+          id: imageId,
+          kinds: ["avatar", "profile", "sprite"]
+        });
       }
+    }
+
+    references.sort((left, right) => left.id.localeCompare(right.id));
+
+    for (const reference of references) {
+      await this.assertReadyOwnedImage(
+        client,
+        userId,
+        reference.id,
+        reference.kinds
+      );
     }
   }
 
   private async assertReadyOwnedImage(
+    client: Pick<Pool, "query">,
     userId: string,
     imageId: string,
     allowedKinds: string[]
   ) {
-    const result = await this.pool.query<{
+    const result = await client.query<{
       kind: string;
       owner_id: string;
       status: string;
-    }>("SELECT owner_id, kind, status FROM images WHERE id = $1", [imageId]);
+    }>(
+      "SELECT owner_id, kind, status FROM images WHERE id = $1 FOR UPDATE",
+      [imageId]
+    );
     const image = result.rows[0];
 
     if (!image || image.status !== "ready") {
@@ -1213,8 +1265,13 @@ export class StoryStore {
     return hydrated;
   }
 
-  private async findEditableStory(userId: string, storyId: string) {
-    const result = await this.pool.query<
+  private async findEditableStory(
+    userId: string,
+    storyId: string,
+    queryable: Pick<Pool, "query"> = this.pool,
+    forUpdate = false
+  ) {
+    const result = await queryable.query<
       StoryRow & {
         requester_role: UserRole;
       }
@@ -1226,7 +1283,8 @@ export class StoryStore {
          NULL::jsonb AS image_variants
        FROM stories s
        JOIN users requester ON requester.id = $1
-       WHERE s.id = $2`,
+       WHERE s.id = $2
+       ${forUpdate ? "FOR UPDATE OF s" : ""}`,
       [userId, storyId]
     );
     const row = result.rows[0];

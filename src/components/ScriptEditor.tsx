@@ -1,4 +1,4 @@
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -14,12 +14,9 @@ import {
 } from "lucide-react";
 import {
   addConversationMessage,
-  EDITOR_PASSWORD,
-  isEditorUnlockValid,
   MAX_STORY_SCENE_COUNT,
   normalizeConversationConfig,
   PROFILE_STATUS_OPTIONS,
-  rememberEditorUnlock,
   removeConversationMessage,
   SCENE_MESSAGE_MAX_COUNT,
   SCENE_MESSAGE_WARNING_COUNT,
@@ -39,7 +36,6 @@ import {
 } from "../utils/emojiTools";
 import { parseScriptText } from "../utils/scriptImport";
 import { useMediaQuery } from "../hooks/useMediaQuery";
-import { AvatarCropper } from "./AvatarCropper";
 import { ConversationPreview } from "./ConversationPreview";
 
 type ScriptEditorProps = {
@@ -54,7 +50,6 @@ type ScriptEditorProps = {
   onSceneSelect: (sceneId: string) => void;
   onStoryTitleChange: (title: string) => void;
   onUndo: () => void;
-  requiresPassword?: boolean;
   saveError?: string;
   scenes: StoryScene[];
   storyTitle: string;
@@ -169,16 +164,10 @@ export function ScriptEditor({
   onSceneSelect,
   onStoryTitleChange,
   onUndo,
-  requiresPassword = true,
   saveError = "",
   scenes,
   storyTitle
 }: ScriptEditorProps) {
-  const [password, setPassword] = useState("");
-  const [isUnlocked, setIsUnlocked] = useState(
-    () => !requiresPassword || isEditorUnlockValid()
-  );
-  const [passwordError, setPasswordError] = useState("");
   const [settingsWarning, setSettingsWarning] = useState("");
   const [collapsedMessageIds, setCollapsedMessageIds] = useState<Set<string>>(
     () => new Set()
@@ -195,11 +184,6 @@ export function ScriptEditor({
   const [emojiSearch, setEmojiSearch] = useState("");
   const [activeEmojiAutocomplete, setActiveEmojiAutocomplete] =
     useState<ActiveEmojiAutocomplete | null>(null);
-  const [cropTarget, setCropTarget] = useState<{
-    imageUrl: string;
-    label: string;
-    profile: "contact" | "viewer";
-  } | null>(null);
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const isWide = useMediaQuery("(min-width: 1180px)");
   const activeSceneIndex = Math.max(
@@ -243,19 +227,6 @@ export function ScriptEditor({
     setEmojiSearch("");
   }, [activeSceneId]);
 
-  const unlock = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (password === EDITOR_PASSWORD) {
-      setIsUnlocked(true);
-      rememberEditorUnlock();
-      setPasswordError("");
-      return;
-    }
-
-    setPasswordError("Wrong password");
-  };
-
   const updateConfig = (nextConfig: ConversationConfig) => {
     setSettingsWarning("");
     onChange(normalizeConversationConfig(nextConfig));
@@ -290,31 +261,6 @@ export function ScriptEditor({
         name
       }
     });
-  };
-
-  const openAvatarCropper = (
-    event: ChangeEvent<HTMLInputElement>,
-    profile: "contact" | "viewer",
-    label: string
-  ) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setCropTarget({
-          imageUrl: reader.result,
-          label,
-          profile
-        });
-      }
-    };
-    reader.readAsDataURL(file);
-    event.target.value = "";
   };
 
   const updateViewer = (
@@ -681,74 +627,14 @@ export function ScriptEditor({
               </select>
             </label>
 
-            <div className="grid gap-3 rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel-soft)] p-3">
-              <div className="flex items-center gap-3">
-                <img
-                  alt=""
-                  className="h-16 w-16 rounded-full object-cover ring-2 ring-white"
-                  src={config.contact.avatarUrl}
-                />
-                <div className="min-w-0 flex-1">
-                  <label className={labelClass}>
-                    POV avatar image
-                    <input
-                      aria-label="POV avatar image"
-                      className={fieldClass}
-                      value={config.contact.avatarUrl}
-                      onChange={(event) =>
-                        updateContact("avatarUrl", event.target.value)
-                      }
-                    />
-                  </label>
-                </div>
-              </div>
-              <label className={labelClass}>
-                Upload avatar
-                <input
-                  aria-label="Upload POV avatar"
-                  accept="image/*"
-                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-slate-950 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white`}
-                  type="file"
-                  onChange={(event) =>
-                    openAvatarCropper(event, "contact", "Crop POV avatar")
-                  }
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-3 rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel-soft)] p-3">
-              <div className="flex items-center gap-3">
-                <img
-                  alt=""
-                  className="h-16 w-16 rounded-full object-cover ring-2 ring-white"
-                  src={config.viewer.avatarUrl}
-                />
-                <div className="min-w-0 flex-1">
-                  <label className={labelClass}>
-                    Speaker avatar image
-                    <input
-                      aria-label="Speaker avatar image"
-                      className={fieldClass}
-                      value={config.viewer.avatarUrl}
-                      onChange={(event) =>
-                        updateViewer("avatarUrl", event.target.value)
-                      }
-                    />
-                  </label>
-                </div>
-              </div>
-              <label className={labelClass}>
-                Upload speaker avatar
-                <input
-                  aria-label="Upload speaker avatar"
-                  accept="image/*"
-                  className={`${fieldClass} file:mr-3 file:rounded-full file:border-0 file:bg-slate-950 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white`}
-                  type="file"
-                  onChange={(event) =>
-                    openAvatarCropper(event, "viewer", "Crop speaker avatar")
-                  }
-                />
-              </label>
+            <div
+              aria-label="Avatar upload status"
+              className="rounded-2xl border border-[var(--latte-border)] bg-[var(--latte-panel-soft)] p-3 text-sm text-[var(--latte-muted)]"
+              role="note"
+            >
+              Avatar uploads are temporarily unavailable while the secure media
+              picker is connected. Existing R2-backed avatar references are
+              preserved when you save.
             </div>
 
             <div className="border-t border-[var(--latte-border)] pt-3">
@@ -1216,19 +1102,17 @@ export function ScriptEditor({
           </h2>
         </div>
         <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
-          {isUnlocked ? (
-            <button
-              type="button"
-              aria-label="Undo last edit"
-              title="Undo last edit"
-              disabled={!canUndo}
-              onClick={onUndo}
-              className="flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-white/80 px-3 text-sm font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white disabled:cursor-not-allowed disabled:bg-[#f1e8da] disabled:text-[#b3a08a] sm:px-4"
-            >
-              <Undo2 className="h-4 w-4" aria-hidden="true" />
-              Undo
-            </button>
-          ) : null}
+          <button
+            type="button"
+            aria-label="Undo last edit"
+            title="Undo last edit"
+            disabled={!canUndo}
+            onClick={onUndo}
+            className="flex h-10 min-w-0 items-center justify-center gap-2 rounded-full bg-white/80 px-3 text-sm font-semibold text-[var(--latte-heading)] ring-1 ring-[var(--latte-border)] transition hover:bg-white disabled:cursor-not-allowed disabled:bg-[#f1e8da] disabled:text-[#b3a08a] sm:px-4"
+          >
+            <Undo2 className="h-4 w-4" aria-hidden="true" />
+            Undo
+          </button>
           <button
             type="button"
             aria-label="Save changes"
@@ -1243,35 +1127,7 @@ export function ScriptEditor({
         </div>
       </div>
 
-      {requiresPassword && !isUnlocked ? (
-        <form
-          onSubmit={unlock}
-          className="mx-auto mt-16 w-[min(440px,calc(100vw-32px))] rounded-2xl border border-[var(--latte-border)] bg-[#fffdf8]/85 p-5 shadow-xl backdrop-blur-md"
-        >
-          <label className={labelClass} htmlFor="editor-password">
-            Editor password
-          </label>
-          <input
-            id="editor-password"
-            aria-label="Editor password"
-            className={fieldClass}
-            value={password}
-            inputMode="numeric"
-            type="password"
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          {passwordError ? (
-            <p className="mt-2 text-sm font-medium text-rose-700">{passwordError}</p>
-          ) : null}
-          <button
-            type="submit"
-            className="mt-4 h-11 w-full rounded-full bg-slate-950 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Unlock editor
-          </button>
-        </form>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 lg:px-8">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto grid w-full max-w-7xl min-w-0 gap-4">
             {settingsWarning ? (
               <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800">
@@ -1326,8 +1182,7 @@ export function ScriptEditor({
               {showPreview ? previewColumn : null}
             </div>
           </div>
-        </div>
-      )}
+      </div>
 
       {isPasteOpen ? (
         <div
@@ -1391,22 +1246,6 @@ export function ScriptEditor({
         </div>
       ) : null}
 
-      {cropTarget ? (
-        <AvatarCropper
-          imageUrl={cropTarget.imageUrl}
-          label={cropTarget.label}
-          onCancel={() => setCropTarget(null)}
-          onConfirm={(avatarUrl) => {
-            if (cropTarget.profile === "contact") {
-              updateContact("avatarUrl", avatarUrl);
-            } else {
-              updateViewer("avatarUrl", avatarUrl);
-            }
-
-            setCropTarget(null);
-          }}
-        />
-      ) : null}
     </aside>
   );
 }

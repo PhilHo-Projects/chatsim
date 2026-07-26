@@ -86,6 +86,10 @@ function toStoryCard(story: PlatformStoryRecord): PlatformStoryCard {
   };
 }
 
+function cloneStoryRecord(story: PlatformStoryRecord): PlatformStoryRecord {
+  return JSON.parse(JSON.stringify(story)) as PlatformStoryRecord;
+}
+
 export const seedProfiles: PlatformProfile[] = canonicalSeed.users.map(
   (user) => ({
     accentColor: user.accentColor,
@@ -99,8 +103,13 @@ export const seedProfiles: PlatformProfile[] = canonicalSeed.users.map(
 );
 
 export function getSeedStoryRecord(storyId = "story-phil-1") {
-  return (
+  const story =
     seedStoryRecords.find((story) => story.id === storyId) ??
-    seedStoryRecords[0]
-  );
+    seedStoryRecords[0];
+
+  return cloneStoryRecord(story);
+}
+
+export function getSeedStoryRecords() {
+  return seedStoryRecords.map(cloneStoryRecord);
 }

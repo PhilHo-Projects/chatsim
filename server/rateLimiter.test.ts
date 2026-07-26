@@ -41,4 +41,21 @@ describe("InMemoryRateLimiter", () => {
 
     expect(limiter.check("username:maya")).toEqual({ allowed: true });
   });
+
+  it("bounds tracked identities and fails closed for unseen keys at capacity", () => {
+    const limiter = new InMemoryRateLimiter({
+      limit: 1,
+      maxEntries: 2,
+      now: () => 1_000,
+      windowMs: 10_000
+    });
+
+    limiter.record("ip:first");
+    limiter.record("ip:second");
+    limiter.record("ip:third");
+
+    expect(limiter.check("ip:first")).toMatchObject({ allowed: false });
+    expect(limiter.check("ip:second")).toMatchObject({ allowed: false });
+    expect(limiter.check("ip:third")).toMatchObject({ allowed: false });
+  });
 });

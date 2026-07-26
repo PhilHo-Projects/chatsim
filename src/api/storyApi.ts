@@ -35,7 +35,13 @@ export type UploadedImage = {
   kind: "avatar" | "profile" | "story_cover" | "scene_art" | "sprite";
   mimeType: "image/jpeg" | "image/png" | "image/webp";
   sizeBytes: number;
-  status: "pending" | "processing" | "ready" | "rejected" | "deleted";
+  status:
+    | "pending"
+    | "processing"
+    | "ready"
+    | "rejected"
+    | "deleting"
+    | "deleted";
   variants: ImageReference["variants"] | null;
   width: number | null;
 };
@@ -120,8 +126,16 @@ export async function fetchStory(storyId: string) {
   return normalizePlatformStory(payload.story);
 }
 
-function prepareStoryWrite<T>(input: T): T {
-  const copy = JSON.parse(JSON.stringify(input)) as T;
+function prepareStoryWrite(input: Partial<PlatformStoryRecord>) {
+  const copy = JSON.parse(
+    JSON.stringify({
+      coverColor: input.coverColor,
+      coverImageId: input.coverImageId,
+      storyboard: input.storyboard,
+      title: input.title,
+      visibility: input.visibility
+    })
+  ) as Partial<PlatformStoryRecord>;
 
   const scrub = (value: unknown): void => {
     if (Array.isArray(value)) {

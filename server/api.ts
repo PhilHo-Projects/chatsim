@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { isIP } from "node:net";
 import { HttpError } from "./httpError";
 import {
   createMediaServiceFromEnvironment,
@@ -35,6 +36,7 @@ type ApiHandlerOptions = {
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const REGISTRATION_WINDOW_MS = 60 * 60 * 1000;
+const UPLOAD_WINDOW_MS = 60 * 60 * 1000;
 
 function parseCookies(header: string | undefined) {
   const cookies: Record<string, string> = {};
@@ -160,20 +162,48 @@ function envFlag(value: string | undefined) {
 }
 
 function getClientIp(request: IncomingMessage, trustProxy: boolean) {
-  if (trustProxy) {
-    const forwardedFor = request.headers["x-forwarded-for"];
-    const firstAddress = (
-      Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor
-    )
-      ?.split(",")[0]
-      ?.trim();
+  const remoteAddress = request.socket.remoteAddress ?? "unknown";
 
-    if (firstAddress) {
-      return firstAddress;
+  if (trustProxy && isPrivateProxyAddress(remoteAddress)) {
+    const forwardedFor = request.headers["x-forwarded-for"];
+    const addresses = (
+      Array.isArray(forwardedFor) ? forwardedFor.join(",") : forwardedFor ?? ""
+    )
+      .split(",")
+      .map((address) => address.trim())
+      .filter(Boolean);
+    const nearestAddress = addresses.at(-1);
+
+    if (nearestAddress && isIP(nearestAddress)) {
+      return nearestAddress;
     }
   }
 
-  return request.socket.remoteAddress ?? "unknown";
+  return isIP(remoteAddress) ? remoteAddress : "0.0.0.0";
+}
+
+function isPrivateProxyAddress(address: string) {
+  const normalized = address.startsWith("::ffff:")
+    ? address.slice("::ffff:".length)
+    : address;
+
+  if (normalized === "::1" || normalized === "127.0.0.1") {
+    return true;
+  }
+
+  if (isIP(normalized) === 4) {
+    const [first, second] = normalized
+      .split(".")
+      .map((part) => Number.parseInt(part, 10));
+    return (
+      first === 10 ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168) ||
+      first === 127
+    );
+  }
+
+  return /^(fc|fd|fe8|fe9|fea|feb)/i.test(normalized);
 }
 
 function throwRateLimit(retryAfterSeconds: number) {
@@ -201,12 +231,19 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
     limit: 5,
     windowMs: REGISTRATION_WINDOW_MS
   });
+  const uploadUserLimiter = new InMemoryRateLimiter({
+    limit: 30,
+    windowMs: UPLOAD_WINDOW_MS
+  });
   const getStore = () => {
     if (options.store) {
       return Promise.resolve(options.store);
     }
 
-    defaultStore ??= StoryStore.open();
+    defaultStore ??= StoryStore.open().catch((error: unknown) => {
+      defaultStore = undefined;
+      throw error;
+    });
     return defaultStore;
   };
   const getMedia = () => {
@@ -214,9 +251,12 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       return Promise.resolve(options.media);
     }
 
-    defaultMedia ??= Promise.resolve().then(() =>
-      createMediaServiceFromEnvironment()
-    );
+    defaultMedia ??= Promise.resolve()
+      .then(() => createMediaServiceFromEnvironment())
+      .catch((error: unknown) => {
+        defaultMedia = undefined;
+        throw error;
+      });
     return defaultMedia;
   };
 
@@ -231,16 +271,23 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
     }
 
     try {
-      const store = await getStore();
-
       if (request.method === "GET" && url.pathname === "/api/health") {
-        const healthy = await store.healthCheck();
+        let healthy = false;
+
+        try {
+          healthy = await (await getStore()).healthCheck();
+        } catch {
+          healthy = false;
+        }
+
         sendJson(response, healthy ? 200 : 503, {
           status: healthy ? "ok" : "unavailable",
           database: healthy ? "ok" : "unavailable"
         });
         return true;
       }
+
+      const store = await getStore();
 
       if (request.method === "GET" && url.pathname === "/api/profiles") {
         sendJson(response, 200, {
@@ -379,6 +426,12 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
             401,
             "UNAUTHENTICATED"
           );
+        }
+
+        const uploadLimit = uploadUserLimiter.consume(session.user.id);
+
+        if (!uploadLimit.allowed) {
+          throwRateLimit(uploadLimit.retryAfterSeconds);
         }
 
         const input = parseInput(

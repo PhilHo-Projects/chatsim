@@ -77,12 +77,27 @@ describe("story API paths", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await updateStory("story-test", { storyboard });
+    await updateStory("story-test", {
+      coverColor: "#000",
+      createdAt: "2026-07-25T12:00:00.000Z",
+      id: "story-test",
+      ownerId: "user-test",
+      storyboard,
+      title: "Story",
+      updatedAt: "2026-07-25T12:00:00.000Z",
+      visibility: "public"
+    });
 
     const request = fetchMock.mock.calls[0][1] as RequestInit;
     const body = JSON.parse(String(request.body));
     const contact = body.storyboard.scenes[0].contact;
 
+    expect(Object.keys(body).sort()).toEqual([
+      "coverColor",
+      "storyboard",
+      "title",
+      "visibility"
+    ]);
     expect(contact.avatarImageId).toBe("image-avatar");
     expect(contact.avatarUrl).toBe("");
     expect(contact.avatarImage).toBeUndefined();

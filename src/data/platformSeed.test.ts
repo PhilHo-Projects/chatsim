@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import canonicalSeed from "./platformSeed.json";
-import { seedProfiles, seedStoryRecords } from "./platformSeed";
+import {
+  getSeedStoryRecord,
+  getSeedStoryRecords,
+  seedProfiles,
+  seedStoryRecords
+} from "./platformSeed";
 
 describe("platform seed data", () => {
   it("uses one credential-free canonical fixture", () => {
@@ -57,5 +62,16 @@ describe("platform seed data", () => {
       text: "ok that was kinda sick ngl. gg"
     });
     expect(philStories.some((story) => story.id === "story-phil-wyd")).toBe(false);
+  });
+
+  it("returns isolated story records to runtime consumers", () => {
+    const firstRecord = getSeedStoryRecord("story-phil-1");
+    const firstCollection = getSeedStoryRecords();
+
+    firstRecord.storyboard.scenes.push(firstRecord.storyboard.scenes[0]);
+    firstCollection[0].title = "mutated";
+
+    expect(getSeedStoryRecord("story-phil-1").storyboard.scenes).toHaveLength(5);
+    expect(getSeedStoryRecords()[0].title).toBe("Ketamine prison");
   });
 });

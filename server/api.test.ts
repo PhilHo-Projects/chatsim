@@ -27,8 +27,16 @@ const pool = new Pool({
 const openServers: Server[] = [];
 let store: StoryStore;
 
-async function startApiServer(media?: MediaService) {
-  const handleApi = createApiHandler({ media, store });
+async function startApiServer(
+  media?: MediaService,
+  storeOverride: Promise<StoryStore> | StoryStore = store,
+  trustProxy = false
+) {
+  const handleApi = createApiHandler({
+    media,
+    store: storeOverride,
+    trustProxy
+  });
   const server = createServer(async (request, response) => {
     if (!(await handleApi(request, response))) {
       response.writeHead(404).end();
@@ -108,6 +116,29 @@ afterAll(async () => {
 });
 
 describe("story API auth", () => {
+  it("reports health as unavailable when the store cannot initialize", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const unavailableStore = {
+      then(
+        _resolve: (value: StoryStore) => void,
+        reject: (reason: Error) => void
+      ) {
+        reject(new Error("database unavailable"));
+      }
+    } as unknown as Promise<StoryStore>;
+    const baseUrl = await startApiServer(
+      undefined,
+      unavailableStore
+    );
+    const response = await fetch(`${baseUrl}/api/health`);
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      database: "unavailable",
+      status: "unavailable"
+    });
+  });
+
   it("keeps opaque session tokens out of JSON and uses hardened cookies", async () => {
     vi.stubEnv("NODE_ENV", "production");
     const baseUrl = await startApiServer();
@@ -172,6 +203,38 @@ describe("story API auth", () => {
       password: "not-the-password",
       username: "another-missing-user"
     });
+
+    expect(blocked.status).toBe(429);
+  });
+
+  it("uses the rightmost valid forwarded address from a private proxy", async () => {
+    const baseUrl = await startApiServer(undefined, store, true);
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await sendJson(
+        baseUrl,
+        "/api/auth/login",
+        {
+          password: "not-the-password",
+          username: `proxied-${attempt}`
+        },
+        {
+          forwardedFor: `198.51.100.${attempt}, 203.0.113.9`
+        }
+      );
+
+      expect(response.status).toBe(401);
+    }
+
+    const blocked = await sendJson(
+      baseUrl,
+      "/api/auth/login",
+      {
+        password: "not-the-password",
+        username: "proxied-final"
+      },
+      { forwardedFor: "192.0.2.200, 203.0.113.9" }
+    );
 
     expect(blocked.status).toBe(429);
   });
@@ -364,6 +427,68 @@ describe("story API validation and authorization", () => {
     expect(await response.json()).toMatchObject({ code: "BAD_REQUEST" });
   });
 
+  it("rejects malformed or unbounded storyboard structures", async () => {
+    const baseUrl = await startApiServer();
+    const registration = await sendJson(baseUrl, "/api/auth/register", {
+      displayName: "Owner",
+      password: "bounded-story-password",
+      username: "bounded-story-owner"
+    });
+    const cookie = registration.headers.get("set-cookie")?.split(";")[0];
+    const malformed = await sendJson(
+      baseUrl,
+      "/api/stories",
+      {
+        storyboard: {
+          activeSceneId: "scene-1",
+          scenes: [{ arbitrary: { nested: true } }]
+        },
+        title: "Malformed"
+      },
+      { cookie }
+    );
+    const tooManyMessages = await sendJson(
+      baseUrl,
+      "/api/stories",
+      {
+        storyboard: {
+          activeSceneId: "scene-1",
+          scenes: [
+            {
+              contact: {
+                avatarUrl: "",
+                initials: "M",
+                name: "Maya",
+                status: "online now",
+                typingSpeedLevel: 3
+              },
+              defaultPauseAfterMs: 1000,
+              defaultSpeakerTypingSpeedLevel: 3,
+              id: "scene-1",
+              messages: Array.from({ length: 101 }, (_, index) => ({
+                id: `line-${index}`,
+                speaker: "viewer",
+                text: "line"
+              })),
+              sceneTitle: "Scene 1",
+              viewer: {
+                avatarUrl: "",
+                initials: "S",
+                name: "Studio",
+                status: "online now"
+              }
+            }
+          ]
+        },
+        title: "Too many lines"
+      },
+      { cookie }
+    );
+
+    expect(malformed.status).toBe(400);
+    expect(tooManyMessages.status).toBe(400);
+  });
+
   it("keeps upload routes authenticated and delegates media processing", async () => {
     const fakeImage = {
       height: null,
@@ -447,5 +572,58 @@ describe("story API validation and authorization", () => {
       "image-test",
       expect.any(Object)
     );
+  });
+
+  it("rate-limits upload reservations per signed-in user", async () => {
+    const media = {
+      createUpload: vi.fn().mockResolvedValue({
+        image: {
+          id: "image-test",
+          kind: "avatar",
+          status: "pending"
+        },
+        upload: {
+          expiresAt: "2026-07-25T12:05:00.000Z",
+          headers: { "Content-Type": "image/png" },
+          method: "PUT",
+          url: "https://uploads.example/test"
+        }
+      })
+    } as unknown as MediaService;
+    const baseUrl = await startApiServer(media);
+    const registration = await sendJson(baseUrl, "/api/auth/register", {
+      displayName: "Uploader",
+      password: "upload-rate-password",
+      username: "upload-rate-owner"
+    });
+    const cookie = registration.headers.get("set-cookie")?.split(";")[0];
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await sendJson(
+        baseUrl,
+        "/api/uploads",
+        {
+          kind: "avatar",
+          mimeType: "image/png",
+          sizeBytes: 100
+        },
+        { cookie }
+      );
+      expect(response.status).toBe(201);
+    }
+
+    const blocked = await sendJson(
+      baseUrl,
+      "/api/uploads",
+      {
+        kind: "avatar",
+        mimeType: "image/png",
+        sizeBytes: 100
+      },
+      { cookie }
+    );
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("retry-after")).not.toBeNull();
   });
 });

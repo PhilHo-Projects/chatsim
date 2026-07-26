@@ -24,6 +24,101 @@ const pool = new Pool({
 let now = new Date("2026-07-25T12:00:00.000Z");
 let store: StoryStore;
 
+function createClientQueryGate(
+  basePool: Pool,
+  matches: (query: string) => boolean
+) {
+  let releaseQuery: () => void = () => undefined;
+  let signalQueryReached: () => void = () => undefined;
+  let hasBlocked = false;
+  const queryReached = new Promise<void>((resolve) => {
+    signalQueryReached = resolve;
+  });
+  const queryReleased = new Promise<void>((resolve) => {
+    releaseQuery = resolve;
+  });
+  const gatedPool = new Proxy(basePool, {
+    get(target, property) {
+      if (property === "connect") {
+        return async () => {
+          const client = await target.connect();
+
+          return new Proxy(client, {
+            get(clientTarget, clientProperty) {
+              const value = Reflect.get(
+                clientTarget,
+                clientProperty,
+                clientTarget
+              );
+
+              if (clientProperty !== "query") {
+                return typeof value === "function"
+                  ? value.bind(clientTarget)
+                  : value;
+              }
+
+              return async (...args: unknown[]) => {
+                const query = typeof args[0] === "string" ? args[0] : "";
+
+                if (!hasBlocked && matches(query)) {
+                  hasBlocked = true;
+                  signalQueryReached();
+                  await queryReleased;
+                }
+
+                return (
+                  clientTarget.query.bind(clientTarget) as (
+                    ...queryArgs: unknown[]
+                  ) => Promise<unknown>
+                )(...args);
+              };
+            }
+          });
+        };
+      }
+
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+
+  return {
+    pool: gatedPool as Pool,
+    queryReached,
+    releaseQuery
+  };
+}
+
+async function waitForFinishedOrLock(
+  hasFinished: () => boolean,
+  queryNeedle: string
+) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    if (hasFinished()) {
+      return;
+    }
+
+    const blocked = await pool.query(
+      `SELECT 1
+       FROM pg_stat_activity
+       WHERE pid <> pg_backend_pid()
+         AND datname = current_database()
+         AND wait_event_type = 'Lock'
+         AND POSITION($1 IN query) > 0
+       LIMIT 1`,
+      [queryNeedle]
+    );
+
+    if (blocked.rowCount === 1) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+
+  throw new Error(`Timed out waiting for ${queryNeedle} to finish or block.`);
+}
+
 beforeAll(async () => {
   await adminPool.query("DROP SCHEMA IF EXISTS story_store_test CASCADE");
   await adminPool.query("CREATE SCHEMA story_store_test");
@@ -54,6 +149,12 @@ afterAll(async () => {
 
 describe("Postgres StoryStore", () => {
   it("idempotently seeds credential-free public owners and stories", async () => {
+    await pool.query(
+      "UPDATE users SET display_name = 'drifted' WHERE id = 'user-phil'"
+    );
+    await pool.query(
+      "UPDATE stories SET title = 'drifted' WHERE id = 'story-phil-1'"
+    );
     await store.seed();
 
     const users = await pool.query<{
@@ -73,6 +174,9 @@ describe("Postgres StoryStore", () => {
     ).toBe(true);
     expect(stories.rows).toEqual([{ count: "26" }]);
     expect(profiles).toHaveLength(25);
+    expect(
+      profiles.find((profile) => profile.id === "user-phil")?.displayName
+    ).toBe("phil's stories");
     expect(
       profiles.find((profile) => profile.id === "user-phil")?.stories
     ).toEqual([
@@ -215,6 +319,48 @@ describe("Postgres StoryStore", () => {
     expect(await store.getStory(story.id)).toBeNull();
   });
 
+  it("lets an admin preserve an owner's ready media references", async () => {
+    const owner = await store.register({
+      displayName: "Media Owner",
+      password: "media-owner-password",
+      username: "media-admin-owner"
+    });
+    const admin = await store.bootstrapAdmin({
+      displayName: "Chatsim Admin",
+      password: "admin-password-2026",
+      username: "admin"
+    });
+    const variants = JSON.stringify({
+      card: { key: "variants/admin/card.webp" },
+      full: { key: "variants/admin/full.webp" },
+      thumb: { key: "variants/admin/thumb.webp" }
+    });
+    await pool.query(
+      `INSERT INTO images (
+         id, owner_id, kind, object_key, mime_type, width, height,
+         size_bytes, status, variants
+       )
+       VALUES (
+         'image-admin-cover', $1, 'story_cover', 'originals/admin-cover',
+         'image/png', 100, 100, 100, 'ready', $2::jsonb
+       )`,
+      [owner.user.id, variants]
+    );
+    const story = await store.createStory(owner.user.id, {
+      coverImageId: "image-admin-cover",
+      title: "Owner media"
+    });
+
+    const updated = await store.updateStory(admin.user.id, story.id, {
+      coverImageId: story.coverImageId,
+      storyboard: story.storyboard,
+      title: "Admin kept media"
+    });
+
+    expect(updated.title).toBe("Admin kept media");
+    expect(updated.coverImageId).toBe("image-admin-cover");
+  });
+
   it("bootstraps the admin once without creating a browser session", async () => {
     const first = await store.bootstrapAdmin({
       displayName: "Chatsim Admin",
@@ -343,5 +489,111 @@ describe("Postgres StoryStore", () => {
         contact: { avatarImage: { id: string } };
       }).contact.avatarImage.id
     ).toBe("image-avatar");
+
+    await pool.query(
+      "UPDATE images SET status = 'deleting' WHERE id = 'image-cover'"
+    );
+    await pool.query(
+      "UPDATE stories SET cover_image_id = NULL WHERE id = $1",
+      [story.id]
+    );
+    const titleOnly = await store.updateStory(owner.user.id, story.id, {
+      title: "Title without reattaching"
+    });
+
+    expect(titleOnly.coverImageId).toBeNull();
+    await expect(
+      store.updateStory(owner.user.id, story.id, {
+        coverImageId: "image-cover"
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("keeps image validation locked through a concurrent story write", async () => {
+    const owner = await store.register({
+      displayName: "Race Owner",
+      password: "race-owner-password",
+      username: "race-owner"
+    });
+    await pool.query(
+      `INSERT INTO images (
+         id, owner_id, kind, object_key, mime_type, width, height,
+         size_bytes, status, variants
+       )
+       VALUES (
+         'image-race-cover', $1, 'story_cover', 'originals/race-cover',
+         'image/png', 100, 100, 100, 'ready', '{}'::jsonb
+       )`,
+      [owner.user.id]
+    );
+    const story = await store.createStory(owner.user.id, {
+      title: "Race story"
+    });
+    const gate = createClientQueryGate(
+      pool,
+      (query) => /UPDATE stories\s+SET/.test(query)
+    );
+    const raceStore = await StoryStore.open({
+      pool: gate.pool,
+      publicMediaBaseUrl: "https://media.chatsim.philippeho.dev",
+      runMigrations: false,
+      startCleanup: false
+    });
+    const updatePromise = raceStore.updateStory(owner.user.id, story.id, {
+      coverImageId: "image-race-cover"
+    });
+    await gate.queryReached;
+
+    const deleteClient = await pool.connect();
+    let deleteFinished = false;
+    const deletePromise = (async () => {
+      try {
+        await deleteClient.query("BEGIN");
+        await deleteClient.query(
+          `UPDATE images
+           SET status = 'deleting'
+           WHERE id = 'image-race-cover'`
+        );
+        await deleteClient.query(
+          `UPDATE stories
+           SET cover_image_id = NULL
+           WHERE id = $1`,
+          [story.id]
+        );
+        await deleteClient.query("COMMIT");
+      } catch (error) {
+        await deleteClient.query("ROLLBACK");
+        throw error;
+      } finally {
+        deleteFinished = true;
+        deleteClient.release();
+      }
+    })();
+
+    try {
+      await waitForFinishedOrLock(
+        () => deleteFinished,
+        "UPDATE "
+      );
+    } finally {
+      gate.releaseQuery();
+    }
+
+    await Promise.all([updatePromise, deletePromise]);
+    const persisted = await pool.query<{
+      cover_image_id: string | null;
+      status: string;
+    }>(
+      `SELECT s.cover_image_id, i.status
+       FROM stories s
+       JOIN images i ON i.id = 'image-race-cover'
+       WHERE s.id = $1`,
+      [story.id]
+    );
+
+    expect(persisted.rows[0]).toEqual({
+      cover_image_id: null,
+      status: "deleting"
+    });
   });
 });

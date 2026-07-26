@@ -2,13 +2,58 @@ import { z, type ZodType } from "zod";
 import { HttpError } from "./httpError";
 
 const identifier = z.string().trim().min(1).max(160);
+const speedLevel = z.number().int().min(1).max(5);
+const imageId = identifier.nullable().optional();
+const speakerProfile = z
+  .object({
+    avatarImageId: imageId,
+    avatarUrl: z.literal("").optional(),
+    initials: z.string().trim().min(1).max(8),
+    name: z.string().trim().min(1).max(80),
+    status: z.string().trim().max(80)
+  })
+  .strict();
+const messageSchema = z
+  .object({
+    id: identifier,
+    pauseAfterMs: z.number().int().min(0).max(60_000).optional(),
+    speaker: z.enum(["viewer", "contact"]),
+    text: z.string().max(10_000),
+    typingSpeedLevel: speedLevel.optional(),
+    useDefaultPauseAfterMs: z.boolean().optional(),
+    useDefaultTypingMs: z.boolean().optional()
+  })
+  .strict();
+const sceneSchema = z
+  .object({
+    contact: speakerProfile.extend({
+      typingSpeedLevel: speedLevel
+    }),
+    createdByUser: z.boolean().optional(),
+    defaultPauseAfterMs: z.number().int().min(0).max(60_000),
+    defaultSpeakerTypingSpeedLevel: speedLevel,
+    id: identifier,
+    messages: z.array(messageSchema).max(100),
+    sceneTitle: z.string().trim().min(1).max(160),
+    viewer: speakerProfile
+  })
+  .strict();
 const storyboardSchema = z
   .object({
     activeSceneId: z.string().trim().min(1),
+    createdAt: z.iso.datetime().optional(),
+    id: identifier.optional(),
     presentationMode: z.enum(["phone", "battle"]).optional(),
-    scenes: z.array(z.unknown()).max(10)
+    scenes: z.array(sceneSchema).min(1).max(10),
+    title: z.string().trim().min(1).max(160).optional(),
+    updatedAt: z.iso.datetime().optional()
   })
-  .loose();
+  .strict()
+  .refine(
+    (storyboard) =>
+      storyboard.scenes.some((scene) => scene.id === storyboard.activeSceneId),
+    "Active scene must exist."
+  );
 
 export const registrationSchema = z.object({
   displayName: z.string().trim().min(1).max(80).optional(),
@@ -40,7 +85,7 @@ export const storyPatchSchema = z
     title: z.string().trim().min(1).max(160).optional(),
     visibility: z.enum(["public", "private"]).optional()
   })
-  .loose();
+  .strict();
 
 export const uploadRequestSchema = z.object({
   kind: z.enum([

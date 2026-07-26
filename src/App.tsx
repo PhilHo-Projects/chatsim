@@ -6,6 +6,7 @@ import {
   fetchProfiles,
   fetchSession,
   fetchStory,
+  fetchStoryPermissions,
   login,
   logout,
   register,
@@ -25,7 +26,6 @@ import { StorybookMenu } from "./components/StorybookMenu";
 import { StoryControls } from "./components/StoryControls";
 import {
   addStoryScene,
-  EDITOR_REQUIRES_PASSWORD,
   getActiveStoryScene,
   normalizeStoryboard,
   SHOW_SCRIPT_EDITOR,
@@ -35,8 +35,8 @@ import {
 } from "./data/conversationConfig";
 import {
   getSeedStoryRecord,
+  getSeedStoryRecords,
   seedProfiles,
-  seedStoryRecords,
   type PlatformProfile,
   type PlatformSession,
   type PlatformStoryCard,
@@ -176,15 +176,6 @@ function createPlaceholderRecord(card: PlatformStoryCard): PlatformStoryRecord {
   };
 }
 
-function canManageStory(
-  session: PlatformSession | null,
-  record: PlatformStoryRecord
-) {
-  return (
-    session?.user.role === "admin" || session?.user.id === record.ownerId
-  );
-}
-
 function getRequestErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
@@ -198,8 +189,14 @@ export default function App() {
   const [hasHydratedPlatform, setHasHydratedPlatform] = useState(false);
   const [storyRecordsById, setStoryRecordsById] = useState<
     Record<string, PlatformStoryRecord>
-  >(() => toStoryRecordMap(seedStoryRecords));
+  >(() => toStoryRecordMap(getSeedStoryRecords()));
   const [activeStoryId, setActiveStoryId] = useState("story-phil-1");
+  const [storyPermissions, setStoryPermissions] = useState({
+    canDelete: false,
+    canEdit: false,
+    storyId: "",
+    userId: null as string | null
+  });
   const [undoStack, setUndoStack] = useState<PlatformStoryRecord[]>([]);
   const [isStoryEntranceVisible, setIsStoryEntranceVisible] = useState(false);
   const [isConversationIntroComplete, setIsConversationIntroComplete] =
@@ -238,8 +235,16 @@ export default function App() {
     profiles.find((profile) => profile.id === selectedProfileId) ?? null;
   const isStoryListOpen = route.name !== "story";
   const activeOwnerStories = activeProfile?.stories ?? [toStoryCard(activeStoryRecord)];
+  const permissionUserId = session?.user.id ?? null;
+  const hasCurrentStoryPermissions =
+    storyPermissions.storyId === activeStoryId &&
+    storyPermissions.userId === permissionUserId;
   const canEditActiveStory =
-    SHOW_SCRIPT_EDITOR && canManageStory(session, activeStoryRecord);
+    SHOW_SCRIPT_EDITOR &&
+    hasCurrentStoryPermissions &&
+    storyPermissions.canEdit;
+  const canDeleteActiveStory =
+    hasCurrentStoryPermissions && storyPermissions.canDelete;
 
   useEffect(() => {
     let isCancelled = false;
@@ -271,6 +276,42 @@ export default function App() {
       isCancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const userId = session?.user.id ?? null;
+
+    setStoryPermissions({
+      canDelete: false,
+      canEdit: false,
+      storyId: activeStoryId,
+      userId
+    });
+    void fetchStoryPermissions(activeStoryId)
+      .then((permissions) => {
+        if (!isCancelled) {
+          setStoryPermissions({
+            ...permissions,
+            storyId: activeStoryId,
+            userId
+          });
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setStoryPermissions({
+            canDelete: false,
+            canEdit: false,
+            storyId: activeStoryId,
+            userId
+          });
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeStoryId, session?.user.id]);
 
   useEffect(() => {
     if (isStoryListOpen) {
@@ -335,16 +376,15 @@ export default function App() {
   };
 
   const persistStoryRecord = (record: PlatformStoryRecord) => {
-    if (!canManageStory(session, record)) {
-      return Promise.resolve(true);
-    }
-
     setStoryPersistenceError("");
     const saveVersion = storySaveVersionRef.current + 1;
     storySaveVersionRef.current = saveVersion;
     setIsStorySaving(true);
 
-    const savePromise = updateRemoteStory(record.id, record)
+    const previousSave =
+      latestStorySaveRef.current ?? Promise.resolve(true);
+    const savePromise = previousSave
+      .then(() => updateRemoteStory(record.id, record))
       .then((savedRecord) => {
         if (storySaveVersionRef.current === saveVersion) {
           upsertStoryRecord(savedRecord);
@@ -780,6 +820,7 @@ export default function App() {
           activeOwnerStories={activeOwnerStories}
           activeStoryId={activeStoryId}
           activeStoryRecord={activeStoryRecord}
+          canDelete={canDeleteActiveStory}
           isOpen={isStorybookOpen}
           pendingDeleteStoryId={pendingDeleteStoryId}
           storybookError={storybookError}
@@ -930,7 +971,6 @@ export default function App() {
             onSave={() => void saveEditorAndClose()}
             onStoryTitleChange={updateStoryTitle}
             onUndo={undoLastEdit}
-            requiresPassword={EDITOR_REQUIRES_PASSWORD}
             saveError={storyPersistenceError}
             storyTitle={activeStoryRecord.title}
           />
@@ -947,7 +987,6 @@ export default function App() {
             onSceneSelect={selectScene}
             onStoryTitleChange={updateStoryTitle}
             onUndo={undoLastEdit}
-            requiresPassword={EDITOR_REQUIRES_PASSWORD}
             saveError={storyPersistenceError}
             scenes={story.scenes}
             storyTitle={activeStoryRecord.title}

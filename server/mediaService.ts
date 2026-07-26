@@ -34,9 +34,17 @@ type ImageRow = {
   mime_type: string;
   object_key: string;
   owner_id: string;
+  processing_token: string | null;
   requester_role: UserRole;
   size_bytes: string;
-  status: "pending" | "processing" | "ready" | "rejected" | "deleted";
+  status:
+    | "pending"
+    | "processing"
+    | "ready"
+    | "rejected"
+    | "deleting"
+    | "deleted";
+  updated_at: Date;
   variants: unknown;
   width: number | null;
 };
@@ -49,9 +57,15 @@ type StoredVariant = {
 };
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_PENDING_UPLOADS_PER_USER = 10;
+const MAX_PENDING_BYTES_PER_USER = 50 * 1024 * 1024;
+const MAX_CONCURRENT_COMPLETIONS = 2;
+const STALE_UPLOAD_AGE_MS = 24 * 60 * 60 * 1000;
+const STALE_UPLOAD_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const MAX_SIDE_PIXELS = 8192;
 const MAX_INPUT_PIXELS = 40_000_000;
 const UPLOAD_EXPIRY_SECONDS = 5 * 60;
+const PROCESSING_LEASE_MS = 15 * 60 * 1000;
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -75,6 +89,8 @@ const ART_SIZES = [
 ] as const;
 
 export class MediaService {
+  private activeCompletions = 0;
+  private readonly cleanupTimer: NodeJS.Timeout;
   private readonly now: () => Date;
   private readonly publicBaseUrl: string;
 
@@ -85,6 +101,13 @@ export class MediaService {
     if (!this.publicBaseUrl) {
       throw new Error("A public media base URL is required.");
     }
+
+    this.cleanupTimer = setInterval(() => {
+      void this.cleanupStaleUploads().catch((error: unknown) => {
+        console.error("Failed to clean stale image uploads", error);
+      });
+    }, STALE_UPLOAD_CLEANUP_INTERVAL_MS);
+    this.cleanupTimer.unref();
   }
 
   async createUpload(
@@ -114,6 +137,8 @@ export class MediaService {
       );
     }
 
+    await this.cleanupStaleUploads(input.userId);
+
     const imageId = `image-${randomUUID()}`;
     const stagingKey = `staging/${input.userId}/${imageId}`;
     const now = this.now();
@@ -121,6 +146,36 @@ export class MediaService {
 
     try {
       await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+        `chatsim-upload-quota:${input.userId}`
+      ]);
+      const quota = await client.query<{
+        count: string;
+        size_bytes: string;
+      }>(
+        `SELECT
+           COUNT(*)::text AS count,
+           COALESCE(SUM(size_bytes), 0)::text AS size_bytes
+         FROM images
+         WHERE owner_id = $1
+           AND status IN ('pending', 'processing', 'deleting')`,
+        [input.userId]
+      );
+      const pendingCount = Number(quota.rows[0]?.count ?? 0);
+      const pendingBytes = Number(quota.rows[0]?.size_bytes ?? 0);
+
+      if (
+        pendingCount >= MAX_PENDING_UPLOADS_PER_USER ||
+        pendingBytes + input.sizeBytes > MAX_PENDING_BYTES_PER_USER
+      ) {
+        throw new HttpError(
+          "Too many unfinished uploads.",
+          429,
+          "RATE_LIMITED",
+          60
+        );
+      }
+
       await client.query(
         `INSERT INTO images (
            id, owner_id, kind, object_key, mime_type, size_bytes,
@@ -155,6 +210,7 @@ export class MediaService {
       const upload = await this.options.storage.presignOriginalPut(
         stagingKey,
         input.mimeType,
+        input.sizeBytes,
         UPLOAD_EXPIRY_SECONDS
       );
 
@@ -166,9 +222,11 @@ export class MediaService {
           mime_type: input.mimeType,
           object_key: stagingKey,
           owner_id: input.userId,
+          processing_token: null,
           requester_role: "member",
           size_bytes: String(input.sizeBytes),
           status: "pending",
+          updated_at: now,
           variants: {},
           width: null
         }),
@@ -183,6 +241,37 @@ export class MediaService {
     }
   }
 
+  async cleanupStaleUploads(userId?: string) {
+    const staleBefore = new Date(this.now().getTime() - STALE_UPLOAD_AGE_MS);
+    const result = await this.options.pool.query<{
+      id: string;
+      owner_id: string;
+    }>(
+      `SELECT id, owner_id
+       FROM images
+       WHERE (
+           (status IN ('pending', 'processing') AND updated_at <= $1)
+           OR status = 'deleting'
+         )
+         AND ($2::text IS NULL OR owner_id = $2)
+       ORDER BY updated_at, id
+       LIMIT 100`,
+      [staleBefore, userId ?? null]
+    );
+    let cleaned = 0;
+
+    for (const image of result.rows) {
+      try {
+        await this.deleteImage(image.owner_id, image.id);
+        cleaned += 1;
+      } catch (error) {
+        console.error("Failed to delete a stale image upload", error);
+      }
+    }
+
+    return cleaned;
+  }
+
   async completeUpload(
     userId: string,
     imageId: string,
@@ -194,7 +283,30 @@ export class MediaService {
       return { image: this.publicImage(image) };
     }
 
-    if (image.status !== "pending") {
+    if (this.activeCompletions >= MAX_CONCURRENT_COMPLETIONS) {
+      throw new HttpError(
+        "Image processing is busy. Try again shortly.",
+        429,
+        "RATE_LIMITED",
+        1
+      );
+    }
+
+    this.activeCompletions += 1;
+
+    try {
+      return await this.processUpload(userId, image, identity);
+    } finally {
+      this.activeCompletions -= 1;
+    }
+  }
+
+  private async processUpload(
+    userId: string,
+    image: ImageRow,
+    identity: Omit<UploadIdentity, "userId">
+  ) {
+    if (image.status !== "pending" && image.status !== "processing") {
       throw new HttpError(
         "Image cannot be completed in its current state.",
         409,
@@ -202,15 +314,22 @@ export class MediaService {
       );
     }
 
+    const claimTime = this.now();
+    const staleBefore = new Date(claimTime.getTime() - PROCESSING_LEASE_MS);
+    const processingToken = randomUUID();
     const claimed = await this.options.pool.query(
       `UPDATE images
-       SET status = 'processing', updated_at = $1
-       WHERE id = $2 AND status = 'pending'`,
-      [this.now(), imageId]
+       SET status = 'processing', processing_token = $4, updated_at = $1
+       WHERE id = $2
+         AND (
+           status = 'pending'
+           OR (status = 'processing' AND updated_at <= $3)
+         )`,
+      [claimTime, image.id, staleBefore, processingToken]
     );
 
     if (claimed.rowCount !== 1) {
-      const current = await this.authorizedImage(userId, imageId);
+      const current = await this.authorizedImage(userId, image.id);
 
       if (current.status === "ready") {
         return { image: this.publicImage(current) };
@@ -226,8 +345,15 @@ export class MediaService {
       const source = await this.loadAndValidateSource(image);
       const digest = createHash("sha256").update(source.body).digest("hex");
       const extension = source.mimeType.split("/")[1].replace("jpeg", "jpg");
-      originalKey = `originals/${image.owner_id}/${image.id}/${digest}.${extension}`;
-      const variants = await this.createVariants(image, source.body, digest);
+      originalKey =
+        `originals/${image.owner_id}/${image.id}/` +
+        `${digest}-${processingToken}.${extension}`;
+      const variants = await this.createVariants(
+        image,
+        source.body,
+        digest,
+        processingToken
+      );
 
       variantKeys.push(...Object.values(variants).map((variant) => variant.key));
       await this.options.storage.copyOriginal(image.object_key, originalKey);
@@ -267,8 +393,11 @@ export class MediaService {
                size_bytes = $5,
                variants = $6::jsonb,
                status = 'ready',
+               processing_token = NULL,
                updated_at = $7
            WHERE id = $8
+             AND status = 'processing'
+             AND processing_token = $10
            RETURNING *, $9::text AS requester_role`,
           [
             originalKey,
@@ -279,9 +408,19 @@ export class MediaService {
             JSON.stringify(storedVariants),
             this.now(),
             image.id,
-            image.requester_role
+            image.requester_role,
+            processingToken
           ]
         );
+
+        if (updated.rowCount !== 1) {
+          throw new HttpError(
+            "Image completion was cancelled.",
+            409,
+            "CONFLICT"
+          );
+        }
+
         await this.audit(client, {
           action: "upload_completed",
           ...identity,
@@ -307,16 +446,23 @@ export class MediaService {
       await Promise.allSettled([
         this.options.storage.deleteVariants(variantKeys),
         this.options.storage.deleteOriginals(
-          [image.object_key, originalKey].filter(
+          [originalKey].filter(
             (key): key is string => Boolean(key)
           )
         )
       ]);
-      await this.rejectImage(
+      const rejected = await this.rejectImage(
         image.id,
         { ...identity, userId },
-        image.object_key
+        image.object_key,
+        processingToken
       );
+
+      if (rejected) {
+        await this.options.storage
+          .deleteOriginals([image.object_key])
+          .catch(() => undefined);
+      }
 
       if (error instanceof HttpError) {
         throw error;
@@ -341,15 +487,31 @@ export class MediaService {
       return;
     }
 
-    const variantKeys = this.variantKeys(image.variants);
-    await Promise.all([
-      this.options.storage.deleteOriginals([image.object_key]),
-      this.options.storage.deleteVariants(variantKeys)
-    ]);
+    let deletionObjectKey: string | null = null;
+    let deletionVariantKeys: string[] = [];
     const client = await this.options.pool.connect();
 
     try {
       await client.query("BEGIN");
+      const claimed = await client.query<{
+        object_key: string;
+        variants: Record<string, unknown>;
+      }>(
+        `UPDATE images
+         SET status = 'deleting', processing_token = NULL, updated_at = $1
+         WHERE id = $2 AND status <> 'deleted'
+         RETURNING object_key, variants`,
+        [this.now(), imageId]
+      );
+
+      if (claimed.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        return;
+      }
+
+      deletionObjectKey = claimed.rows[0].object_key;
+      deletionVariantKeys = this.variantKeys(claimed.rows[0].variants);
+
       const storyboards = await client.query<{
         id: string;
         storyboard: { scenes?: Array<Record<string, unknown>> };
@@ -370,32 +532,61 @@ export class MediaService {
       }
 
       await client.query(
-        "UPDATE users SET avatar_image_id = NULL WHERE avatar_image_id = $1",
-        [imageId]
-      );
-      await client.query(
-        "UPDATE stories SET cover_image_id = NULL WHERE cover_image_id = $1",
-        [imageId]
-      );
-      await client.query(
-        `UPDATE images
-         SET status = 'deleted', variants = '{}'::jsonb, updated_at = $1
-         WHERE id = $2`,
+        `UPDATE users
+         SET avatar_image_id = NULL, updated_at = $1
+         WHERE avatar_image_id = $2`,
         [this.now(), imageId]
       );
-      await this.audit(client, {
-        action: "deleted",
-        ...identity,
-        imageId,
-        objectKey: image.object_key,
-        userId
-      });
+      await client.query(
+        `UPDATE stories
+         SET cover_image_id = NULL, updated_at = $1
+         WHERE cover_image_id = $2`,
+        [this.now(), imageId]
+      );
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();
+    }
+
+    if (!deletionObjectKey) {
+      throw new Error("Deletion claim did not return an object key.");
+    }
+
+    await Promise.all([
+      this.options.storage.deleteOriginals([deletionObjectKey]),
+      this.options.storage.deleteVariants(deletionVariantKeys)
+    ]);
+
+    const finalClient = await this.options.pool.connect();
+
+    try {
+      await finalClient.query("BEGIN");
+      const deleted = await finalClient.query(
+        `UPDATE images
+         SET status = 'deleted', variants = '{}'::jsonb, updated_at = $1
+         WHERE id = $2 AND status = 'deleting'`,
+        [this.now(), imageId]
+      );
+
+      if (deleted.rowCount === 1) {
+        await this.audit(finalClient, {
+          action: "deleted",
+          ...identity,
+          imageId,
+          objectKey: deletionObjectKey,
+          userId
+        });
+      }
+
+      await finalClient.query("COMMIT");
+    } catch (error) {
+      await finalClient.query("ROLLBACK");
+      throw error;
+    } finally {
+      finalClient.release();
     }
   }
 
@@ -488,7 +679,8 @@ export class MediaService {
   private async createVariants(
     image: ImageRow,
     body: Buffer,
-    digest: string
+    digest: string,
+    processingToken: string
   ) {
     const square = image.kind === "avatar" || image.kind === "profile";
     const sizes = square ? AVATAR_SIZES : ART_SIZES;
@@ -515,7 +707,9 @@ export class MediaService {
         )
         .webp({ effort: 5, quality: 84 });
       const output = await pipeline.toBuffer({ resolveWithObject: true });
-      const key = `variants/${image.id}/${digest}-${name}.webp`;
+      const key =
+        `variants/${image.id}/` +
+        `${digest}-${processingToken}-${name}.webp`;
 
       results[name] = {
         body: output.data,
@@ -613,18 +807,35 @@ export class MediaService {
   private async rejectImage(
     imageId: string,
     identity: UploadIdentity,
-    objectKey: string
+    objectKey: string,
+    processingToken?: string
   ) {
     const client = await this.options.pool.connect();
 
     try {
       await client.query("BEGIN");
-      await client.query(
+      const updated = await client.query(
         `UPDATE images
-         SET status = 'rejected', variants = '{}'::jsonb, updated_at = $1
-         WHERE id = $2 AND status <> 'ready'`,
-        [this.now(), imageId]
+         SET status = 'rejected',
+             processing_token = NULL,
+             variants = '{}'::jsonb,
+             updated_at = $1
+         WHERE id = $2
+           AND (
+             (status = 'pending' AND $3::text IS NULL)
+             OR (
+               status = 'processing'
+               AND processing_token = $3
+             )
+           )`,
+        [this.now(), imageId, processingToken ?? null]
       );
+
+      if (updated.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        return false;
+      }
+
       await this.audit(client, {
         action: "rejected",
         ...identity,
@@ -632,6 +843,7 @@ export class MediaService {
         objectKey
       });
       await client.query("COMMIT");
+      return true;
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;

@@ -62,6 +62,7 @@ type ApiError = {
     | "CONFLICT"
     | "PAYLOAD_TOO_LARGE"
     | "UNSUPPORTED_MEDIA_TYPE"
+    | "MEDIA_REJECTED"
     | "RATE_LIMITED"
     | "INTERNAL_ERROR";
 };
@@ -281,8 +282,14 @@ type StartUploadResponse = {
 ```
 
 The client uploads the exact file bytes directly to `upload.url` with the
-returned headers. The URL expires after five minutes. Claimed size must be at
+returned headers. The URL expires after five minutes. The signature binds both
+the returned `Content-Type` and the claimed content length; browsers supply the
+matching `Content-Length` for the exact request body. Claimed size must be at
 most 10 MiB; actual size and content are verified during completion.
+
+Each user may reserve at most 30 uploads per hour and may hold at most 10
+unfinished uploads totaling 50 MiB. A rate or quota limit returns `429` with
+`Retry-After`.
 
 ### `POST /api/uploads/:id/complete`
 
@@ -305,7 +312,8 @@ type CompleteUploadResponse = {
 
 Completion is idempotent. Repeating completion for a ready image returns the
 same response. Invalid content is marked rejected and returns an appropriate
-4xx response.
+4xx response. Processing concurrency is capped per application instance, and
+stale unfinished uploads are reclaimed automatically.
 
 ### `DELETE /api/images/:id`
 

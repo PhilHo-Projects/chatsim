@@ -41,20 +41,27 @@ async function uploadReference(
     userAgent: "legacy-data-url-extractor",
     userId: ownerId
   });
-  const response = await fetch(created.upload.url, {
-    body: Uint8Array.from(reference.body).buffer,
-    headers: created.upload.headers,
-    method: created.upload.method
-  });
+  try {
+    const response = await fetch(created.upload.url, {
+      body: Uint8Array.from(reference.body).buffer,
+      headers: created.upload.headers,
+      method: created.upload.method
+    });
 
-  if (!response.ok) {
-    throw new Error(`R2 staging upload failed with status ${response.status}.`);
+    if (!response.ok) {
+      throw new Error(
+        `R2 staging upload failed with status ${response.status}.`
+      );
+    }
+
+    const completed = await media.completeUpload(ownerId, created.image.id, {
+      userAgent: "legacy-data-url-extractor"
+    });
+    return completed.image.id;
+  } catch (error) {
+    await media.deleteImage(ownerId, created.image.id).catch(() => undefined);
+    throw error;
   }
-
-  const completed = await media.completeUpload(ownerId, created.image.id, {
-    userAgent: "legacy-data-url-extractor"
-  });
-  return completed.image.id;
 }
 
 async function main() {
@@ -97,6 +104,8 @@ async function main() {
       storage: createR2ObjectStorageFromEnvironment()
     });
 
+    let migratedImageCount = 0;
+
     for (const { references, story } of entries) {
       for (const reference of references) {
         const imageId = await uploadReference(
@@ -112,20 +121,28 @@ async function main() {
           (profile as Record<string, unknown>).avatarUrl = "";
           delete (profile as Record<string, unknown>).avatarImage;
         }
-      }
 
-      await pool.query(
-        `UPDATE stories
-         SET storyboard = $1::jsonb, updated_at = NOW()
-         WHERE id = $2`,
-        [JSON.stringify(story.storyboard), story.id]
-      );
+        try {
+          await pool.query(
+            `UPDATE stories
+             SET storyboard = $1::jsonb, updated_at = NOW()
+             WHERE id = $2`,
+            [JSON.stringify(story.storyboard), story.id]
+          );
+          migratedImageCount += 1;
+        } catch (error) {
+          await media
+            .deleteImage(story.owner_id, imageId)
+            .catch(() => undefined);
+          throw error;
+        }
+      }
     }
 
     console.log(
       JSON.stringify({
         apply: true,
-        migratedImageCount: referenceCount,
+        migratedImageCount,
         storyCount: entries.length
       })
     );

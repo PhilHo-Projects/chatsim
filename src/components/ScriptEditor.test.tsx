@@ -38,7 +38,6 @@ function Harness({ initial }: { initial: ConversationConfig }) {
       onSceneSelect={() => {}}
       onStoryTitleChange={() => {}}
       onUndo={() => {}}
-      requiresPassword={false}
       scenes={[scene]}
       storyTitle="Story 8"
     />

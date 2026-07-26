@@ -24,6 +24,7 @@ export interface ObjectStorage {
   presignOriginalPut(
     key: string,
     contentType: string,
+    contentLength: number,
     expiresInSeconds: number
   ): Promise<PresignedUpload>;
   headOriginal(key: string): Promise<ObjectHead | null>;
@@ -79,12 +80,14 @@ export class R2ObjectStorage implements ObjectStorage {
   async presignOriginalPut(
     key: string,
     contentType: string,
+    contentLength: number,
     expiresInSeconds: number
   ) {
     const url = await getSignedUrl(
       this.originalsClient,
       new PutObjectCommand({
         Bucket: this.options.originals.bucket,
+        ContentLength: contentLength,
         ContentType: contentType,
         Key: key
       }),
@@ -203,7 +206,7 @@ export class R2ObjectStorage implements ObjectStorage {
       return;
     }
 
-    await client.send(
+    const result = await client.send(
       new DeleteObjectsCommand({
         Bucket: bucket,
         Delete: {
@@ -212,6 +215,12 @@ export class R2ObjectStorage implements ObjectStorage {
         }
       })
     );
+
+    if (result.Errors?.length) {
+      throw new Error(
+        `R2 failed to delete ${result.Errors.length} object(s).`
+      );
+    }
   }
 }
 

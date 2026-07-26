@@ -32,6 +32,71 @@ let media: MediaService;
 let ownerId: string;
 let adminId: string;
 
+function createClientQueryGate(
+  basePool: Pool,
+  matches: (query: string) => boolean
+) {
+  let releaseQuery: () => void = () => undefined;
+  let signalQueryReached: () => void = () => undefined;
+  let hasBlocked = false;
+  const queryReached = new Promise<void>((resolve) => {
+    signalQueryReached = resolve;
+  });
+  const queryReleased = new Promise<void>((resolve) => {
+    releaseQuery = resolve;
+  });
+  const gatedPool = new Proxy(basePool, {
+    get(target, property) {
+      if (property === "connect") {
+        return async () => {
+          const client = await target.connect();
+
+          return new Proxy(client, {
+            get(clientTarget, clientProperty) {
+              const value = Reflect.get(
+                clientTarget,
+                clientProperty,
+                clientTarget
+              );
+
+              if (clientProperty !== "query") {
+                return typeof value === "function"
+                  ? value.bind(clientTarget)
+                  : value;
+              }
+
+              return async (...args: unknown[]) => {
+                const query = typeof args[0] === "string" ? args[0] : "";
+
+                if (!hasBlocked && matches(query)) {
+                  hasBlocked = true;
+                  signalQueryReached();
+                  await queryReleased;
+                }
+
+                return (
+                  clientTarget.query.bind(clientTarget) as (
+                    ...queryArgs: unknown[]
+                  ) => Promise<unknown>
+                )(...args);
+              };
+            }
+          });
+        };
+      }
+
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  });
+
+  return {
+    pool: gatedPool as Pool,
+    queryReached,
+    releaseQuery
+  };
+}
+
 class FakeObjectStorage implements ObjectStorage {
   readonly originals = new Map<
     string,
@@ -41,11 +106,14 @@ class FakeObjectStorage implements ObjectStorage {
     string,
     { body: Buffer; cacheControl: string; contentType: string }
   >();
+  failDeleteAfterRemoval = false;
+  onFirstVariantPut?: () => Promise<void>;
   presignCalls = 0;
 
   async presignOriginalPut(
     key: string,
     contentType: string,
+    _contentLength: number,
     expiresInSeconds: number
   ): Promise<PresignedUpload> {
     this.presignCalls += 1;
@@ -102,10 +170,21 @@ class FakeObjectStorage implements ObjectStorage {
     input: { cacheControl: string; contentType: string }
   ) {
     this.variants.set(key, { ...input, body: Buffer.from(body) });
+
+    if (this.onFirstVariantPut) {
+      const callback = this.onFirstVariantPut;
+      this.onFirstVariantPut = undefined;
+      await callback();
+    }
   }
 
   async deleteOriginals(keys: string[]) {
     keys.forEach((key) => this.originals.delete(key));
+
+    if (this.failDeleteAfterRemoval) {
+      this.failDeleteAfterRemoval = false;
+      throw new Error("Fake R2 delete failed after removing originals.");
+    }
   }
 
   async deleteVariants(keys: string[]) {
@@ -189,6 +268,60 @@ describe("MediaService", () => {
     });
     expect(image.rows[0]).toMatchObject({ status: "pending" });
     expect(audit.rows).toEqual([{ action: "upload_started" }]);
+  });
+
+  it("limits unfinished upload reservations per user", async () => {
+    for (let index = 0; index < 10; index += 1) {
+      await media.createUpload({
+        kind: "avatar",
+        mimeType: "image/png",
+        sizeBytes: 1024,
+        userId: ownerId
+      });
+    }
+
+    await expect(
+      media.createUpload({
+        kind: "avatar",
+        mimeType: "image/png",
+        sizeBytes: 1024,
+        userId: ownerId
+      })
+    ).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+      statusCode: 429
+    });
+  });
+
+  it("reaps abandoned staging uploads so reservations recover", async () => {
+    const created = await media.createUpload({
+      kind: "avatar",
+      mimeType: "image/png",
+      sizeBytes: 1024,
+      userId: ownerId
+    });
+    await pool.query(
+      `UPDATE images
+       SET updated_at = '2026-07-24T11:00:00.000Z'
+       WHERE id = $1`,
+      [created.image.id]
+    );
+
+    const cleaned = await media.cleanupStaleUploads(ownerId);
+    const replacement = await media.createUpload({
+      kind: "avatar",
+      mimeType: "image/png",
+      sizeBytes: 1024,
+      userId: ownerId
+    });
+    const stale = await pool.query<{ status: string }>(
+      "SELECT status FROM images WHERE id = $1",
+      [created.image.id]
+    );
+
+    expect(cleaned).toBe(1);
+    expect(stale.rows[0].status).toBe("deleted");
+    expect(replacement.image.status).toBe("pending");
   });
 
   it("sanitizes a valid image into immutable WebP variants idempotently", async () => {
@@ -365,6 +498,205 @@ describe("MediaService", () => {
     expect(image.rows[0].status).toBe("deleted");
     expect(storage.originals.size).toBe(0);
     expect(storage.variants.size).toBe(0);
+  });
+
+  it("does not resurrect an image deleted during completion", async () => {
+    const source = await sharp({
+      create: {
+        background: "purple",
+        channels: 3,
+        height: 30,
+        width: 40
+      }
+    })
+      .png()
+      .toBuffer();
+    const created = await media.createUpload({
+      kind: "story_cover",
+      mimeType: "image/png",
+      sizeBytes: source.byteLength,
+      userId: ownerId
+    });
+    const stagingKey = await getObjectKey(created.image.id);
+    storage.upload(stagingKey, source, "image/png");
+    storage.onFirstVariantPut = () =>
+      media.deleteImage(ownerId, created.image.id);
+
+    await expect(
+      media.completeUpload(ownerId, created.image.id)
+    ).rejects.toMatchObject({ statusCode: 409 });
+
+    const image = await pool.query<{ status: string }>(
+      "SELECT status FROM images WHERE id = $1",
+      [created.image.id]
+    );
+    expect(image.rows[0].status).toBe("deleted");
+    expect(storage.originals.size).toBe(0);
+    expect(storage.variants.size).toBe(0);
+  });
+
+  it("deletes the object keys committed after authorization but before claim", async () => {
+    const source = await sharp({
+      create: {
+        background: "magenta",
+        channels: 3,
+        height: 30,
+        width: 40
+      }
+    })
+      .png()
+      .toBuffer();
+    const created = await media.createUpload({
+      kind: "story_cover",
+      mimeType: "image/png",
+      sizeBytes: source.byteLength,
+      userId: ownerId
+    });
+    const stagingKey = await getObjectKey(created.image.id);
+    storage.upload(stagingKey, source, "image/png");
+    const gate = createClientQueryGate(
+      pool,
+      (query) => /SET status = 'deleting'/.test(query)
+    );
+    const raceMedia = new MediaService({
+      now: () => new Date("2026-07-25T12:00:00.000Z"),
+      pool: gate.pool,
+      publicBaseUrl: "https://media.chatsim.philippeho.dev",
+      storage
+    });
+    let deletion: Promise<void> | undefined;
+    storage.onFirstVariantPut = async () => {
+      deletion = raceMedia.deleteImage(ownerId, created.image.id);
+      await gate.queryReached;
+    };
+
+    await raceMedia.completeUpload(ownerId, created.image.id);
+    gate.releaseQuery();
+    await deletion;
+
+    const image = await pool.query<{ status: string }>(
+      "SELECT status FROM images WHERE id = $1",
+      [created.image.id]
+    );
+    expect(image.rows[0].status).toBe("deleted");
+    expect(storage.originals.size).toBe(0);
+    expect(storage.variants.size).toBe(0);
+  });
+
+  it("leaves failed deletions recoverable and retries idempotently", async () => {
+    const source = await sharp({
+      create: {
+        background: "orange",
+        channels: 3,
+        height: 30,
+        width: 40
+      }
+    })
+      .webp()
+      .toBuffer();
+    const created = await media.createUpload({
+      kind: "story_cover",
+      mimeType: "image/webp",
+      sizeBytes: source.byteLength,
+      userId: ownerId
+    });
+    const stagingKey = await getObjectKey(created.image.id);
+    storage.upload(stagingKey, source, "image/webp");
+    await media.completeUpload(ownerId, created.image.id);
+    storage.failDeleteAfterRemoval = true;
+
+    await expect(
+      media.deleteImage(ownerId, created.image.id)
+    ).rejects.toThrow("Fake R2 delete failed");
+
+    const interrupted = await pool.query<{ status: string }>(
+      "SELECT status FROM images WHERE id = $1",
+      [created.image.id]
+    );
+    expect(interrupted.rows[0].status).toBe("deleting");
+
+    await media.deleteImage(ownerId, created.image.id);
+    await media.deleteImage(ownerId, created.image.id);
+
+    const recovered = await pool.query<{ status: string }>(
+      "SELECT status FROM images WHERE id = $1",
+      [created.image.id]
+    );
+    expect(recovered.rows[0].status).toBe("deleted");
+  });
+
+  it("reclaims a stale processing upload after its lease expires", async () => {
+    const source = await sharp({
+      create: {
+        background: "cyan",
+        channels: 3,
+        height: 30,
+        width: 40
+      }
+    })
+      .png()
+      .toBuffer();
+    const created = await media.createUpload({
+      kind: "story_cover",
+      mimeType: "image/png",
+      sizeBytes: source.byteLength,
+      userId: ownerId
+    });
+    const stagingKey = await getObjectKey(created.image.id);
+    storage.upload(stagingKey, source, "image/png");
+    await pool.query(
+      `UPDATE images
+       SET status = 'processing',
+           updated_at = '2026-07-25T11:30:00.000Z'
+       WHERE id = $1`,
+      [created.image.id]
+    );
+
+    const completed = await media.completeUpload(ownerId, created.image.id);
+
+    expect(completed.image.status).toBe("ready");
+  });
+
+  it("keeps the winning attempt intact after a stale worker loses its claim", async () => {
+    const source = await sharp({
+      create: {
+        background: "magenta",
+        channels: 3,
+        height: 30,
+        width: 40
+      }
+    })
+      .png()
+      .toBuffer();
+    const created = await media.createUpload({
+      kind: "story_cover",
+      mimeType: "image/png",
+      sizeBytes: source.byteLength,
+      userId: ownerId
+    });
+    const stagingKey = await getObjectKey(created.image.id);
+    storage.upload(stagingKey, source, "image/png");
+    let winner:
+      | Awaited<ReturnType<MediaService["completeUpload"]>>
+      | undefined;
+    storage.onFirstVariantPut = async () => {
+      await pool.query(
+        `UPDATE images
+         SET updated_at = '2026-07-25T11:30:00.000Z'
+         WHERE id = $1`,
+        [created.image.id]
+      );
+      winner = await media.completeUpload(ownerId, created.image.id);
+    };
+
+    await expect(
+      media.completeUpload(ownerId, created.image.id)
+    ).rejects.toMatchObject({ statusCode: 409 });
+
+    const repeated = await media.completeUpload(ownerId, created.image.id);
+    expect(repeated).toEqual(winner);
+    expect(storage.variants.size).toBe(3);
+    expect(storage.originals.size).toBe(1);
   });
 });
 

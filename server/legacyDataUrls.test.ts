@@ -19,7 +19,7 @@ describe("legacy data URL extraction", () => {
         },
         {
           contact: {
-            avatarUrl: `data:image/svg+xml;base64,${Buffer.from("<svg/>").toString("base64")}`
+            avatarUrl: ""
           },
           viewer: {
             avatarUrl: `data:image/webp;base64,${Buffer.from("webp").toString("base64")}`
@@ -47,5 +47,19 @@ describe("legacy data URL extraction", () => {
     expect(() =>
       decodeLegacyDataUrl("data:image/png;base64,%%%")
     ).toThrow();
+  });
+
+  it("reports unsupported data URL formats instead of silently skipping them", () => {
+    expect(() =>
+      findLegacyDataUrlReferences({
+        scenes: [
+          {
+            contact: {
+              avatarUrl: `data:image/svg+xml;base64,${Buffer.from("<svg/>").toString("base64")}`
+            }
+          }
+        ]
+      })
+    ).toThrow("invalid or unsupported");
   });
 });

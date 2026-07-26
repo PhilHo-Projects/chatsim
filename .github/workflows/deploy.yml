@@ -57,6 +57,24 @@ jobs:
       - name: Build Docker image
         run: docker build -t chatsim-ci .
 
+      - name: Smoke-test Docker runtime
+        env:
+          DATABASE_URL: postgresql://chatsim_test:chatsim_test@host.docker.internal:5432/chatsim_test
+        run: |
+          docker run --detach --name chatsim-ci-runtime \
+            --add-host host.docker.internal:host-gateway \
+            --env DATABASE_URL \
+            --publish 3000:3000 \
+            chatsim-ci
+          trap 'docker logs chatsim-ci-runtime; docker rm --force chatsim-ci-runtime' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: verify

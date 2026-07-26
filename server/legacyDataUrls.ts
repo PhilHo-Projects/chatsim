@@ -80,15 +80,11 @@ export function findLegacyDataUrlReferences(
         continue;
       }
 
-      try {
-        references.push({
-          ...decodeLegacyDataUrl(avatarUrl),
-          sceneIndex,
-          speaker
-        });
-      } catch {
-        continue;
-      }
+      references.push({
+        ...decodeLegacyDataUrl(avatarUrl),
+        sceneIndex,
+        speaker
+      });
     }
   });
 

@@ -11,6 +11,9 @@ Compact handoff for future agents working in this repo.
 ## Commands
 - Dev server: `npm run dev -- --port 5174`
 - Standalone API server: `npm run dev:api` (defaults to `127.0.0.1:8787`)
+- Start the local Postgres service: `npm run dev:db`
+- Apply migrations and the canonical showcase seed: `npm run db:migrate && npm run db:seed`
+- Stop the local Postgres service: `npm run dev:db:down`
 - Tests: `npm test`
 - Production build: `npm run build`
 - User usually previews: `http://127.0.0.1:5174/`
@@ -21,16 +24,14 @@ Compact handoff for future agents working in this repo.
 - `/stories/:storyId`: phone story player.
 
 ## Scene Memory / Script Data
-- Canonical crafted Phil story seed: `src/data/storyDatabase.json`.
-- Platform profile/story seed helpers: `src/data/platformSeed.ts`.
-- Local API store: `server/data/story-store.local.json` by default, ignored by git.
-- Override local API store path with `CHATSIM_STORE_FILE`.
-- `server/data/story-store.json` is a checked-in legacy/reference snapshot, not the default runtime store.
-- Future pasted back-and-forth scripts should usually be implemented by editing this JSON.
+- Canonical public fixture: `src/data/platformSeed.json`.
+- `src/data/platformSeed.ts` normalizes the same fixture for browser fallback data.
+- API persistence is Postgres-only. Migrations live under `server/db/migrations/` and are applied automatically on API startup.
+- `npm run db:seed` is idempotent. Showcase identities are content-only owners and cannot log in.
+- Future public seed scripts should be implemented in the canonical fixture, not duplicated in TypeScript.
 - Browser editor changes now persist through the local API when signed in as the owner/admin.
-- Older localStorage helpers still exist for compatibility and tests, but the shell hydrates from `/api/profiles`, `/api/auth/session`, and `/api/stories/:storyId`.
+- Older conversation localStorage helpers remain for compatibility and tests, but they are not the API's persistence boundary.
 - localStorage key: `story.conversationConfig.v3`
-- If the browser shows old/user-edited data, clear the ignored local store file or use the editor/API state intentionally.
 
 Message shape:
 ```ts
@@ -56,9 +57,11 @@ Important naming:
 - `src/components/AccountPanel.tsx`, `StorybookMenu.tsx`: auth and owner/admin story management UI.
 - `src/navigation/appRoute.ts`: tiny URL route parser/formatter.
 - `src/api/storyApi.ts`: frontend API client.
-- `server/api.ts`, `server/storyStore.ts`: local API routes and file-backed story/auth store.
+- `server/api.ts`, `server/storyStore.ts`: API routes and asynchronous Postgres store.
+- `server/db/`: ordered SQL migrations, advisory-lock migration runner, and database CLI.
+- `server/mediaService.ts`, `server/objectStorage.ts`: image validation/processing and R2 adapter.
 - `src/data/conversationConfig.ts`: types, defaults, normalizer, localStorage load/save, speed presets.
-- `src/data/storyDatabase.json`: editable scene/script seed.
+- `src/data/platformSeed.json`: canonical public profiles/stories fixture.
 - `src/hooks/useScriptedConversation.ts`: animation timeline/state machine (shared by both presentation modes).
 - `src/components/ScriptEditor.tsx`: full-screen PHONE editor, foldable line cards, avatar uploads.
 - `src/components/BattleStoryPlayer.tsx`: Pokemon-style battle renderer (pixel sprites + static dialogue panels).
@@ -73,7 +76,7 @@ Important naming:
 - The typewriter difference is the `typeAllSpeakers` option on `useScriptedConversation` (true only for battle). One parameterized hook is used (not two) to respect React's rules of hooks; the split lives in the render + editor components.
 - In battle terms: `viewer` = opponent (top), `contact` = player (bottom).
 - Battle sprites are box-shadow pixel grids defined in `BattleStoryPlayer.tsx` (`BATTLE_SPRITE_ROWS`); a test asserts the grids stay rectangular.
-- The seeded battle story (`story-phil-battle`) has its own script in BOTH `server/storyStore.ts` (`BATTLE_SCRIPT`) and `src/data/platformSeed.ts` (`battleScript`). It is separate from the phone story; keep the two in sync. `normalizeStoreData` only re-adds missing seed stories, so to refresh battle content in an existing local store, delete that story's entry (or the whole local store file).
+- The seeded battle story (`story-phil-battle`) lives once in `src/data/platformSeed.json`. It is separate from the phone story; update the canonical fixture and rerun the idempotent database seed when changing it.
 
 ## Timing Model
 - POV typing speed is proportional to message length.
@@ -84,9 +87,18 @@ Important naming:
 
 ## Editor / Access
 - Gear icon is controlled by `SHOW_SCRIPT_EDITOR` in `conversationConfig.ts`.
-- Password is `0000` in production builds.
-- Password is disabled in dev via `EDITOR_REQUIRES_PASSWORD = !import.meta.env.DEV`.
-- Production unlock is remembered for 24 hours in localStorage.
+- There is no client-side editor password or editor-unlock localStorage key.
+- Editor visibility comes from `GET /api/stories/:id/permissions`.
+- Every story mutation independently enforces owner/admin authorization in the API.
+
+## Greenfield Production
+- The new root-path app is `https://chatsim.philippeho.dev`, Coolify application UUID `q11urabk74uu6o0l09i7hrqa`.
+- Its dedicated private Postgres 16 resource UUID is `g149qxoyrc0jbtnuzn52dqwm`, limited to 512 MiB with persistent storage.
+- The app currently tracks `codex/backend-data-infra` while draft PR #1 is reviewed. Direct Coolify auto-deploy is disabled by using manual releases.
+- Daily full database backups run at `0 2 * * *` to the private `philippeho-coolify-db-backups` R2 bucket. A post-seed backup restore has been verified.
+- The legacy `/chatsim` application remains live and untouched. DNS changes, redirects, cutover, and legacy deletion require explicit approval.
+- R2 application buckets and `media.chatsim.philippeho.dev` are specified but not provisioned yet because a Cloudflare setup credential is not available locally.
+- Full deployment and rollback details are in `docs/deployment.md`.
 
 ## Style / UX Notes
 - Keep the glassmorphism coffee-shop background direction.
@@ -96,6 +108,7 @@ Important naming:
 - When touching story/player layout, browser-check both `390x844` mobile and `1280x720` desktop for clipped or covered controls.
 
 ## Testing Expectations
-- Run `npm test` and `npm run build` after code changes.
+- Run `npm run dev:db`, then `npm test` and `npm run build` after code changes.
 - For UI changes, browser-check the local app and inspect console warnings/errors.
-- Existing tests cover config normalization, timeline behavior, long-bubble wrapping, editor basics, folded lines, shell routing, API-backed story management, repository hygiene, and local store behavior.
+- Backend tests use a real Postgres database and cover migrations, store/API behavior, auth/session rules, rate limits, and fake-object-storage media processing.
+- Existing frontend tests cover config normalization, timeline behavior, long-bubble wrapping, editor basics, folded lines, shell routing, API-backed story management, and repository hygiene.

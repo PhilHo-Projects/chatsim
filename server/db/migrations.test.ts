@@ -100,10 +100,15 @@ describe("database migrations", () => {
         {
           column_name: "provider_subject",
           is_nullable: "YES"
+        },
+        {
+          column_name: "updated_at",
+          is_nullable: "NO"
         }
       ])
     );
     expect(imageStatusConstraint.rows[0].definition).toContain("processing");
+    expect(imageStatusConstraint.rows[0].definition).toContain("deleting");
   });
 
   it("is idempotent and records each migration once", async () => {
@@ -114,8 +119,24 @@ describe("database migrations", () => {
       "SELECT COUNT(*)::text AS count FROM schema_migrations"
     );
 
-    expect(result.rows).toEqual([{ count: "2" }]);
+    expect(result.rows).toEqual([{ count: "6" }]);
     expect(await areMigrationsCurrent(pool)).toBe(true);
+  });
+
+  it("detects an edited migration through its stored checksum", async () => {
+    const original = await pool.query<{ checksum: string }>(
+      "SELECT checksum FROM schema_migrations WHERE name = '001_initial.sql'"
+    );
+    await pool.query(
+      "UPDATE schema_migrations SET checksum = 'changed' WHERE name = '001_initial.sql'"
+    );
+
+    expect(await areMigrationsCurrent(pool)).toBe(false);
+
+    await pool.query(
+      "UPDATE schema_migrations SET checksum = $1 WHERE name = '001_initial.sql'",
+      [original.rows[0].checksum]
+    );
   });
 
   it("reports a schema that has not applied every migration as unready", async () => {
