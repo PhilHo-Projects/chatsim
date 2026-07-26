@@ -1,4 +1,4 @@
-name: Chatsim CI
+name: Chatsim CI and deploy
 
 on:
   pull_request:
@@ -11,14 +11,29 @@ permissions:
   contents: read
 
 concurrency:
-  group: chatsim-ci
+  group: chatsim-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chatsim_test
+          POSTGRES_PASSWORD: chatsim_test
+          POSTGRES_USER: chatsim_test
+        options: >-
+          --health-cmd "pg_isready -U chatsim_test -d chatsim_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+        ports:
+          - 5432:5432
+    env:
+      TEST_DATABASE_URL: postgresql://chatsim_test:chatsim_test@127.0.0.1:5432/chatsim_test
 
     steps:
       - name: Check out repository
@@ -37,7 +52,52 @@ jobs:
         run: npm test
 
       - name: Build Chatsim
-        run: npm run build:chatsim
+        run: npm run build
 
       - name: Build Docker image
         run: docker build -t chatsim-ci .
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Trigger Coolify deployment
+        id: trigger
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+        run: |
+          response="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            "${COOLIFY_WEBHOOK}")"
+          deployment_uuid="$(jq -er 'if type == "array" then .[0].deployment_uuid else (.deployment_uuid // .deployments[0].deployment_uuid) end' <<<"${response}")"
+          coolify_origin="$(node -e "process.stdout.write(new URL(process.env.COOLIFY_WEBHOOK).origin)")"
+          echo "deployment_uuid=${deployment_uuid}" >> "${GITHUB_OUTPUT}"
+          echo "coolify_origin=${coolify_origin}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for Coolify
+        env:
+          COOLIFY_ORIGIN: ${{ steps.trigger.outputs.coolify_origin }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          DEPLOYMENT_UUID: ${{ steps.trigger.outputs.deployment_uuid }}
+        run: |
+          for attempt in $(seq 1 90); do
+            response="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
+              "${COOLIFY_ORIGIN}/api/v1/deployments/${DEPLOYMENT_UUID}")"
+            status="$(jq -r '.status // empty' <<<"${response}")"
+            case "${status}" in
+              finished) exit 0 ;;
+              failed|cancelled) echo "Coolify deployment ${status}." >&2; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "Timed out waiting for Coolify deployment." >&2
+          exit 1
+
+      - name: Smoke-test production
+        run: curl --fail --silent --show-error --retry 6 --retry-delay 5 https://chatsim.philippeho.dev/api/health

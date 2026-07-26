@@ -1,6 +1,7 @@
-import storyDatabase from "./storyDatabase.json";
+import canonicalSeed from "./platformSeed.json";
 import mayaAnimeAvatar from "../assets/maya-anime-avatar.png";
 import mysterySpeakerAvatar from "../assets/mystery-speaker-avatar.png";
+import type { ImageReference } from "./mediaTypes";
 
 export type SpeakerId = "viewer" | "contact";
 export type PresentationMode = "phone" | "battle";
@@ -17,6 +18,8 @@ export type ConversationMessage = {
 };
 
 export type ConversationProfile = {
+  avatarImage?: ImageReference | null;
+  avatarImageId?: string | null;
   name: string;
   initials: string;
 };
@@ -80,6 +83,8 @@ type ConversationMessageInput = Omit<
 };
 
 type ConversationProfileInput = {
+  avatarImage?: unknown;
+  avatarImageId?: unknown;
   name?: unknown;
   initials?: unknown;
 };
@@ -220,6 +225,56 @@ function cleanRequiredEditableText(value: unknown, fallback: string): string {
   }
 
   return value;
+}
+
+function cleanImageId(value: unknown): string | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function cleanImageReference(value: unknown): ImageReference | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const image = value as {
+    id?: unknown;
+    variants?: {
+      card?: unknown;
+      full?: unknown;
+      thumb?: unknown;
+    };
+  };
+
+  if (
+    typeof image.id !== "string" ||
+    typeof image.variants?.card !== "string" ||
+    typeof image.variants.full !== "string" ||
+    typeof image.variants.thumb !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    id: image.id,
+    variants: {
+      card: image.variants.card,
+      full: image.variants.full,
+      thumb: image.variants.thumb
+    }
+  };
 }
 
 function clampNumber(value: unknown, fallback: number, min: number, max: number) {
@@ -447,6 +502,8 @@ export function normalizeConversationConfig(
     defaultSpeakerTypingSpeedLevel,
     defaultPauseAfterMs,
     contact: {
+      avatarImage: cleanImageReference(input.contact?.avatarImage),
+      avatarImageId: cleanImageId(input.contact?.avatarImageId),
       name: contactName,
       initials: cleanInitials(
         input.contact?.initials,
@@ -458,6 +515,8 @@ export function normalizeConversationConfig(
       typingSpeedLevel: contactTypingSpeedLevel
     },
     viewer: {
+      avatarImage: cleanImageReference(input.viewer?.avatarImage),
+      avatarImageId: cleanImageId(input.viewer?.avatarImageId),
       name: viewerName,
       initials: cleanInitials(
         input.viewer?.initials,
@@ -734,9 +793,17 @@ export function getActiveStoryboard(library: StoryLibrary): Storyboard {
   );
 }
 
-export const defaultStoryDatabase = normalizeStoryDatabase(storyDatabase);
+const canonicalFallbackStoryboard =
+  canonicalSeed.stories.find((story) => story.id === "story-phil-1")
+    ?.storyboard ?? canonicalSeed.stories[0].storyboard;
 
-export const defaultStoryLibrary = normalizeStoryLibrary(storyDatabase);
+export const defaultStoryDatabase = normalizeStoryDatabase(
+  canonicalFallbackStoryboard
+);
+
+export const defaultStoryLibrary = normalizeStoryLibrary(
+  canonicalFallbackStoryboard
+);
 
 export const defaultConversationConfig =
   getActiveStoryScene(getActiveStoryboard(defaultStoryLibrary));

@@ -4,17 +4,9 @@ import {
   type Storyboard
 } from "./conversationConfig";
 import canonicalSeed from "./platformSeed.json";
+import type { ImageReference } from "./mediaTypes";
 
-export type ImageVariants = {
-  card: string;
-  full: string;
-  thumb: string;
-};
-
-export type ImageReference = {
-  id: string;
-  variants: ImageVariants;
-};
+export type { ImageReference, ImageVariants } from "./mediaTypes";
 
 export type PlatformStoryRecord = {
   coverColor: string;
@@ -50,7 +42,7 @@ export type PlatformProfile = {
 };
 
 export type PlatformSession = {
-  token: string;
+  expiresAt: string;
   user: {
     displayName: string;
     id: string;

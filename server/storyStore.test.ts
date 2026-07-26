@@ -38,6 +38,7 @@ beforeEach(async () => {
   now = new Date("2026-07-25T12:00:00.000Z");
   store = await StoryStore.open({
     pool,
+    publicMediaBaseUrl: "https://media.chatsim.philippeho.dev",
     runMigrations: false,
     startCleanup: false,
     now: () => now
@@ -214,6 +215,33 @@ describe("Postgres StoryStore", () => {
     expect(await store.getStory(story.id)).toBeNull();
   });
 
+  it("bootstraps the admin once without creating a browser session", async () => {
+    const first = await store.bootstrapAdmin({
+      displayName: "Chatsim Admin",
+      password: "first-admin-password",
+      username: "admin"
+    });
+    const before = await pool.query<{ password_hash: string }>(
+      "SELECT password_hash FROM users WHERE id = 'user-admin'"
+    );
+    const repeated = await store.bootstrapAdmin({
+      displayName: "Replaced Admin",
+      password: "second-admin-password",
+      username: "replacement-admin"
+    });
+    const after = await pool.query<{ password_hash: string }>(
+      "SELECT password_hash FROM users WHERE id = 'user-admin'"
+    );
+    const sessions = await pool.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM sessions WHERE user_id = 'user-admin'"
+    );
+
+    expect(first.user.username).toBe("admin");
+    expect(repeated.user.username).toBe("admin");
+    expect(after.rows[0].password_hash).toBe(before.rows[0].password_hash);
+    expect(sessions.rows).toEqual([{ count: "0" }]);
+  });
+
   it("returns stable cursor pages from the public story feed", async () => {
     const firstPage = await store.getStoryFeed({ limit: 10 });
     const secondPage = await store.getStoryFeed({
@@ -238,5 +266,82 @@ describe("Postgres StoryStore", () => {
       coverFallbackColor: expect.any(String),
       presentationMode: expect.stringMatching(/^(phone|battle)$/)
     });
+  });
+
+  it("accepts only ready owned image IDs and hydrates story image references", async () => {
+    const owner = await store.register({
+      displayName: "Media Owner",
+      password: "media-owner-password",
+      username: "media-owner"
+    });
+    const other = await store.register({
+      displayName: "Media Other",
+      password: "media-other-password",
+      username: "media-other"
+    });
+    const variants = {
+      card: { key: "variants/cover/card.webp" },
+      full: { key: "variants/cover/full.webp" },
+      thumb: { key: "variants/cover/thumb.webp" }
+    };
+    await pool.query(
+      `INSERT INTO images (
+         id, owner_id, kind, object_key, mime_type, width, height,
+         size_bytes, status, variants
+       )
+       VALUES
+         ('image-cover', $1, 'story_cover', 'originals/cover', 'image/png',
+          100, 100, 100, 'ready', $3::jsonb),
+         ('image-avatar', $1, 'avatar', 'originals/avatar', 'image/png',
+          100, 100, 100, 'ready', $3::jsonb),
+         ('image-pending', $1, 'story_cover', 'staging/pending', 'image/png',
+          NULL, NULL, 100, 'pending', '{}'::jsonb),
+         ('image-other', $2, 'story_cover', 'originals/other', 'image/png',
+          100, 100, 100, 'ready', $3::jsonb)`,
+      [owner.user.id, other.user.id, JSON.stringify(variants)]
+    );
+
+    await expect(
+      store.createStory(owner.user.id, { coverImageId: "image-other" })
+    ).rejects.toMatchObject({ statusCode: 403 });
+    await expect(
+      store.createStory(owner.user.id, { coverImageId: "image-pending" })
+    ).rejects.toMatchObject({ statusCode: 400 });
+
+    const story = await store.createStory(owner.user.id, {
+      coverImageId: "image-cover",
+      storyboard: {
+        activeSceneId: "scene-1",
+        scenes: [
+          {
+            contact: {
+              avatarImageId: "image-avatar",
+              avatarUrl: "",
+              initials: "M",
+              name: "Maya",
+              status: "online now",
+              typingSpeedLevel: 3
+            },
+            id: "scene-1",
+            messages: []
+          }
+        ]
+      },
+      title: "Hydrated media"
+    });
+
+    expect(story.coverImage).toEqual({
+      id: "image-cover",
+      variants: {
+        card: "https://media.chatsim.philippeho.dev/variants/cover/card.webp",
+        full: "https://media.chatsim.philippeho.dev/variants/cover/full.webp",
+        thumb: "https://media.chatsim.philippeho.dev/variants/cover/thumb.webp"
+      }
+    });
+    expect(
+      (story.storyboard.scenes[0] as {
+        contact: { avatarImage: { id: string } };
+      }).contact.avatarImage.id
+    ).toBe("image-avatar");
   });
 });

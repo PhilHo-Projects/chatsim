@@ -10,8 +10,10 @@ export class HttpError extends Error {
       | "CONFLICT"
       | "PAYLOAD_TOO_LARGE"
       | "UNSUPPORTED_MEDIA_TYPE"
+      | "MEDIA_REJECTED"
       | "RATE_LIMITED"
-      | "INTERNAL_ERROR"
+      | "INTERNAL_ERROR",
+    readonly retryAfter?: number
   ) {
     super(message);
   }

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { runMigrations } from "./migrations";
+import { areMigrationsCurrent, runMigrations } from "./migrations";
 
 const testDatabaseUrl =
   process.env.TEST_DATABASE_URL ??
@@ -52,6 +52,15 @@ describe("database migrations", () => {
        FROM information_schema.columns
        WHERE table_schema = 'migrations_test' AND table_name = 'users'`
     );
+    const imageStatusConstraint = await pool.query<{ definition: string }>(
+      `SELECT pg_get_constraintdef(c.oid) AS definition
+       FROM pg_constraint c
+       JOIN pg_class t ON t.oid = c.conrelid
+       JOIN pg_namespace n ON n.oid = t.relnamespace
+       WHERE n.nspname = 'migrations_test'
+         AND t.relname = 'images'
+         AND c.conname = 'images_status_check'`
+    );
 
     expect(tables.rows.map((row) => row.table_name)).toEqual([
       "images",
@@ -94,6 +103,7 @@ describe("database migrations", () => {
         }
       ])
     );
+    expect(imageStatusConstraint.rows[0].definition).toContain("processing");
   });
 
   it("is idempotent and records each migration once", async () => {
@@ -104,6 +114,15 @@ describe("database migrations", () => {
       "SELECT COUNT(*)::text AS count FROM schema_migrations"
     );
 
-    expect(result.rows).toEqual([{ count: "1" }]);
+    expect(result.rows).toEqual([{ count: "2" }]);
+    expect(await areMigrationsCurrent(pool)).toBe(true);
+  });
+
+  it("reports a schema that has not applied every migration as unready", async () => {
+    await pool.query(
+      "DELETE FROM schema_migrations WHERE name = '001_initial.sql'"
+    );
+
+    expect(await areMigrationsCurrent(pool)).toBe(false);
   });
 });

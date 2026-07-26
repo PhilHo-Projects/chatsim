@@ -13,7 +13,7 @@ import {
 } from "./data/platformSeed";
 
 const ownerSession: PlatformSession = {
-  token: "test-session",
+  expiresAt: "2026-08-24T12:00:00.000Z",
   user: {
     displayName: "phil's stories",
     id: "user-phil",
@@ -23,7 +23,7 @@ const ownerSession: PlatformSession = {
 };
 
 const adminSession: PlatformSession = {
-  token: "admin-session",
+  expiresAt: "2026-08-24T12:00:00.000Z",
   user: {
     displayName: "admin",
     id: "user-admin",
@@ -131,7 +131,7 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
 
       if (method === "POST" && url.pathname === "/api/auth/register") {
         mockSession = {
-          token: "registered-session",
+          expiresAt: "2026-08-24T12:00:00.000Z",
           user: {
             displayName: body.displayName || `${body.username}'s stories`,
             id: `user-${body.username}`,

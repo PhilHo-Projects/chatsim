@@ -9,6 +9,28 @@ const migrationsDirectory = join(
   "migrations"
 );
 
+async function listMigrationNames() {
+  return (await readdir(migrationsDirectory))
+    .filter((name) => /^\d+_.+\.sql$/.test(name))
+    .sort();
+}
+
+export async function areMigrationsCurrent(pool: Pool) {
+  try {
+    const expected = await listMigrationNames();
+    const appliedResult = await pool.query<{ name: string }>(
+      "SELECT name FROM schema_migrations ORDER BY name"
+    );
+
+    return (
+      appliedResult.rows.length === expected.length &&
+      appliedResult.rows.every((row, index) => row.name === expected[index])
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function runMigrations(pool: Pool) {
   const client = await pool.connect();
 
@@ -28,9 +50,7 @@ export async function runMigrations(pool: Pool) {
       "SELECT name FROM schema_migrations"
     );
     const applied = new Set(appliedResult.rows.map((row) => row.name));
-    const migrations = (await readdir(migrationsDirectory))
-      .filter((name) => /^\d+_.+\.sql$/.test(name))
-      .sort();
+    const migrations = await listMigrationNames();
 
     for (const name of migrations) {
       if (applied.has(name)) {

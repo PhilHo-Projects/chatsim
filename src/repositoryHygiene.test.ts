@@ -13,4 +13,20 @@ describe("repository hygiene", () => {
     expect(existsSync("vite.config.js")).toBe(false);
     expect(existsSync("vite.config.d.ts")).toBe(false);
   });
+
+  it("packages a root-path stateless production image", () => {
+    const dockerfile = readFileSync("Dockerfile", "utf8");
+    const exampleEnvironment = readFileSync(".env.example", "utf8");
+
+    expect(dockerfile).toContain("RUN npm run build");
+    expect(dockerfile).toContain("HEALTHCHECK");
+    expect(dockerfile).not.toContain("RUN npm test");
+    expect(dockerfile).not.toContain("CHATSIM_BASE_PATH");
+    expect(dockerfile).not.toContain("CHATSIM_STORE_FILE");
+    expect(exampleEnvironment).not.toContain("CHATSIM_BASE_PATH");
+    expect(exampleEnvironment).not.toContain("CHATSIM_STORE_FILE");
+    expect(existsSync("ecosystem.config.cjs")).toBe(false);
+    expect(existsSync("server/data/story-store.json")).toBe(false);
+    expect(existsSync("src/data/storyDatabase.json")).toBe(false);
+  });
 });
