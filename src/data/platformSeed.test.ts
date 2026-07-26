@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
+import canonicalSeed from "./platformSeed.json";
 import { seedProfiles, seedStoryRecords } from "./platformSeed";
 
 describe("platform seed data", () => {
+  it("uses one credential-free canonical fixture", () => {
+    expect(canonicalSeed.users).toHaveLength(25);
+    expect(canonicalSeed.stories).toHaveLength(26);
+    expect(
+      canonicalSeed.stories
+        .filter((story) => story.ownerId === "user-phil")
+        .map((story) => story.id)
+    ).toEqual(["story-phil-1", "story-phil-battle"]);
+    expect(JSON.stringify(canonicalSeed)).not.toMatch(
+      /passwordHash|passwordSalt|sessions/
+    );
+  });
+
   it("seeds only Phil's renamed phone story and battle story", () => {
     const philProfile = seedProfiles.find((profile) => profile.id === "user-phil");
     const philStories = seedStoryRecords.filter(

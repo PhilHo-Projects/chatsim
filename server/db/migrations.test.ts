@@ -1,0 +1,109 @@
+// @vitest-environment node
+import { Pool } from "pg";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runMigrations } from "./migrations";
+
+const testDatabaseUrl =
+  process.env.TEST_DATABASE_URL ??
+  "postgresql://chatsim_dev:chatsim_dev@127.0.0.1:54339/chatsim_test";
+
+const adminPool = new Pool({ connectionString: testDatabaseUrl });
+const pool = new Pool({
+  connectionString: testDatabaseUrl,
+  options: "-c search_path=migrations_test"
+});
+
+beforeAll(async () => {
+  await adminPool.query("DROP SCHEMA IF EXISTS migrations_test CASCADE");
+  await adminPool.query("CREATE SCHEMA migrations_test");
+});
+
+afterAll(async () => {
+  await pool.end();
+  await adminPool.query("DROP SCHEMA IF EXISTS migrations_test CASCADE");
+  await adminPool.end();
+});
+
+describe("database migrations", () => {
+  it("creates the production data model with JSONB storyboards", async () => {
+    await runMigrations(pool);
+
+    const tables = await pool.query<{ table_name: string }>(
+      `SELECT table_name
+       FROM information_schema.tables
+       WHERE table_schema = 'migrations_test'
+       ORDER BY table_name`
+    );
+    const stories = await pool.query<{
+      column_name: string;
+      data_type: string;
+      is_nullable: "YES" | "NO";
+    }>(
+      `SELECT column_name, data_type, is_nullable
+       FROM information_schema.columns
+       WHERE table_schema = 'migrations_test' AND table_name = 'stories'
+       ORDER BY ordinal_position`
+    );
+    const users = await pool.query<{
+      column_name: string;
+      is_nullable: "YES" | "NO";
+    }>(
+      `SELECT column_name, is_nullable
+       FROM information_schema.columns
+       WHERE table_schema = 'migrations_test' AND table_name = 'users'`
+    );
+
+    expect(tables.rows.map((row) => row.table_name)).toEqual([
+      "images",
+      "schema_migrations",
+      "sessions",
+      "stories",
+      "upload_audit_log",
+      "users"
+    ]);
+    expect(stories.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          column_name: "storyboard",
+          data_type: "jsonb",
+          is_nullable: "NO"
+        }),
+        expect.objectContaining({
+          column_name: "cover_image_id",
+          is_nullable: "YES"
+        })
+      ])
+    );
+    expect(users.rows).toEqual(
+      expect.arrayContaining([
+        {
+          column_name: "auth_provider",
+          is_nullable: "YES"
+        },
+        {
+          column_name: "password_hash",
+          is_nullable: "YES"
+        },
+        {
+          column_name: "password_salt",
+          is_nullable: "YES"
+        },
+        {
+          column_name: "provider_subject",
+          is_nullable: "YES"
+        }
+      ])
+    );
+  });
+
+  it("is idempotent and records each migration once", async () => {
+    await runMigrations(pool);
+    await runMigrations(pool);
+
+    const result = await pool.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM schema_migrations"
+    );
+
+    expect(result.rows).toEqual([{ count: "1" }]);
+  });
+});

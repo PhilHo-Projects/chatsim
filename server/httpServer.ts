@@ -17,7 +17,7 @@ import { StoryStore } from "./storyStore";
 type RequestHandlerOptions = {
   basePath?: string;
   distDir?: string;
-  store?: StoryStore;
+  store?: Promise<StoryStore> | StoryStore;
 };
 
 const MIME_TYPES: Record<string, string> = {

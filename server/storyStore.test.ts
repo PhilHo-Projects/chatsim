@@ -1,325 +1,242 @@
 // @vitest-environment node
+import { createHash } from "node:crypto";
+import { Pool } from "pg";
 import {
-  readFileSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { createSeedStoreData, StoryStore } from "./storyStore";
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it
+} from "vitest";
+import { runMigrations } from "./db/migrations";
+import { StoryStore } from "./storyStore";
 
-describe("StoryStore", () => {
-  it("seeds the admin and mock accounts with password-backed sessions", async () => {
-    const store = StoryStore.createMemory(createSeedStoreData());
+const testDatabaseUrl =
+  process.env.TEST_DATABASE_URL ??
+  "postgresql://chatsim_dev:chatsim_dev@127.0.0.1:54339/chatsim_test";
+const adminPool = new Pool({ connectionString: testDatabaseUrl });
+const pool = new Pool({
+  connectionString: testDatabaseUrl,
+  options: "-c search_path=story_store_test"
+});
 
-    for (const username of [
-      "admin",
-      "phil",
-      "neon",
-      "orbit",
-      "motel",
-      "void",
-      "dummy01",
-      "dummy20"
-    ]) {
-      const session = await store.login({
-        password: "0000",
-        username
-      });
+let now = new Date("2026-07-25T12:00:00.000Z");
+let store: StoryStore;
 
-      expect(session.user).toMatchObject({
-        role: username === "admin" ? "admin" : "member",
-        username
-      });
-    }
+beforeAll(async () => {
+  await adminPool.query("DROP SCHEMA IF EXISTS story_store_test CASCADE");
+  await adminPool.query("CREATE SCHEMA story_store_test");
+  await runMigrations(pool);
+});
+
+beforeEach(async () => {
+  await pool.query(
+    `TRUNCATE upload_audit_log, stories, sessions, images, users
+     RESTART IDENTITY CASCADE`
+  );
+  now = new Date("2026-07-25T12:00:00.000Z");
+  store = await StoryStore.open({
+    pool,
+    runMigrations: false,
+    startCleanup: false,
+    now: () => now
   });
+  await store.seed();
+});
 
-  it("returns public profiles without leaking password or session data", () => {
-    const store = StoryStore.createMemory(createSeedStoreData());
+afterAll(async () => {
+  await pool.end();
+  await adminPool.query("DROP SCHEMA IF EXISTS story_store_test CASCADE");
+  await adminPool.end();
+});
 
-    const profiles = store.getPublicProfiles();
+describe("Postgres StoryStore", () => {
+  it("idempotently seeds credential-free public owners and stories", async () => {
+    await store.seed();
 
-    expect(profiles[0]).toMatchObject({
-      displayName: "phil's stories",
-      username: "phil"
-    });
-    expect(profiles[0].stories[0]).toMatchObject({
-      ownerId: "user-phil",
-      storyId: "story-phil-1",
-      title: "Ketamine prison"
-    });
-    expect(profiles[0].stories.map((story) => story.title)).toEqual([
-      "Ketamine prison",
-      "Battle"
-    ]);
-    expect(store.getStory("story-phil-battle")).toMatchObject({
-      id: "story-phil-battle",
-      ownerId: "user-phil",
-      storyboard: expect.objectContaining({
-        presentationMode: "battle"
-      }),
-      title: "Battle"
-    });
+    const users = await pool.query<{
+      password_hash: string | null;
+      password_salt: string | null;
+    }>("SELECT password_hash, password_salt FROM users ORDER BY id");
+    const stories = await pool.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM stories"
+    );
+    const profiles = await store.getPublicProfiles();
+
+    expect(users.rows).toHaveLength(25);
+    expect(
+      users.rows.every(
+        (user) => user.password_hash === null && user.password_salt === null
+      )
+    ).toBe(true);
+    expect(stories.rows).toEqual([{ count: "26" }]);
     expect(profiles).toHaveLength(25);
-    expect(profiles.find((profile) => profile.username === "dummy01")).toMatchObject({
-      displayName: "demo account 01",
-      id: "user-dummy-01",
-      stories: [
-        expect.objectContaining({
-          ownerId: "user-dummy-01",
-          storyId: "story-dummy-01",
-          title: "Placeholder Story 01"
-        })
-      ],
-      username: "dummy01"
-    });
-    expect(profiles.find((profile) => profile.username === "dummy20")).toMatchObject({
-      displayName: "demo account 20",
-      id: "user-dummy-20",
-      stories: [
-        expect.objectContaining({
-          ownerId: "user-dummy-20",
-          storyId: "story-dummy-20",
-          title: "Placeholder Story 20"
-        })
-      ],
-      username: "dummy20"
-    });
-    expect(JSON.stringify(profiles)).not.toContain("passwordHash");
-    expect(JSON.stringify(profiles)).not.toContain("sessions");
-    expect(profiles.some((profile) => profile.username === "admin")).toBe(false);
-  });
-
-  it("creates password-backed accounts and session tokens without storing plain passwords", async () => {
-    const store = StoryStore.createMemory(createSeedStoreData());
-
-    const session = await store.register({
-      displayName: "Tiny Studio",
-      password: "cloud-room-7",
-      username: "tiny"
-    });
-
-    expect(session.user).toMatchObject({
-      displayName: "Tiny Studio",
-      id: expect.any(String),
-      username: "tiny"
-    });
-    expect(session.token).toEqual(expect.any(String));
-    expect(store.getSession(session.token)?.user.username).toBe("tiny");
-    expect(JSON.stringify(store.snapshot())).not.toContain("cloud-room-7");
-  });
-
-  it("only lets the active owner create, update, or delete their own stories", async () => {
-    const store = StoryStore.createMemory(createSeedStoreData());
-    const philSession = await store.login({
-      password: "0000",
-      username: "phil"
-    });
-    const tinySession = await store.register({
-      displayName: "Tiny Studio",
-      password: "cloud-room-7",
-      username: "tiny"
-    });
-
-    const createdStory = store.createStory(tinySession.user.id);
-
-    expect(createdStory.ownerId).toBe(tinySession.user.id);
-    expect(() =>
-      store.updateStory(philSession.user.id, createdStory.id, {
-        title: "stolen title"
+    expect(
+      profiles.find((profile) => profile.id === "user-phil")?.stories
+    ).toEqual([
+      expect.objectContaining({
+        storyId: "story-phil-1",
+        title: "Ketamine prison"
+      }),
+      expect.objectContaining({
+        presentationMode: "battle",
+        storyId: "story-phil-battle",
+        title: "Battle"
       })
-    ).toThrow(/owner/i);
-
-    const updatedStory = store.updateStory(tinySession.user.id, createdStory.id, {
-      title: "Tiny chaos"
-    });
-
-    expect(updatedStory.title).toBe("Tiny chaos");
-    expect(() =>
-      store.deleteStory(philSession.user.id, createdStory.id)
-    ).toThrow(/owner/i);
-
-    store.deleteStory(tinySession.user.id, createdStory.id);
-
-    expect(store.getStory(createdStory.id)).toBeNull();
+    ]);
   });
 
-  it("lets admins update and delete stories owned by other users", async () => {
-    const store = StoryStore.createMemory(createSeedStoreData());
-    const adminSession = await store.login({
-      password: "0000",
+  it("registers password users and stores only password/session hashes", async () => {
+    const started = await store.register({
+      displayName: "Tiny Studio",
+      password: "cloud-room-2026",
+      username: "tiny"
+    });
+    const persistedUser = await pool.query<{
+      password_hash: string;
+      password_salt: string;
+    }>(
+      `SELECT password_hash, password_salt
+       FROM users
+       WHERE username = 'tiny'`
+    );
+    const persistedSession = await pool.query<{ token_hash: Buffer }>(
+      "SELECT token_hash FROM sessions"
+    );
+
+    expect(started.user).toMatchObject({
+      displayName: "Tiny Studio",
+      role: "member",
+      username: "tiny"
+    });
+    expect(started.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(started.expiresAt).toBe("2026-08-24T12:00:00.000Z");
+    expect(persistedUser.rows[0].password_hash).not.toContain(
+      "cloud-room-2026"
+    );
+    expect(persistedUser.rows[0].password_salt).not.toHaveLength(0);
+    expect(persistedSession.rows[0].token_hash).toEqual(
+      createHash("sha256").update(started.token).digest()
+    );
+    expect(JSON.stringify(persistedSession.rows)).not.toContain(started.token);
+  });
+
+  it("rejects weak passwords and does not give seeded owners password access", async () => {
+    await expect(
+      store.register({
+        displayName: "Weak",
+        password: "password",
+        username: "weak"
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      store.login({ password: "0000", username: "phil" })
+    ).rejects.toMatchObject({
+      statusCode: 401
+    });
+  });
+
+  it("expires sessions and throttles last-seen writes", async () => {
+    const started = await store.register({
+      displayName: "Clock",
+      password: "clock-password-2026",
+      username: "clock"
+    });
+    const initial = await store.getSession(started.token);
+
+    now = new Date("2026-07-25T12:10:00.000Z");
+    await store.getSession(started.token);
+    const beforeThreshold = await pool.query<{ last_seen_at: Date }>(
+      "SELECT last_seen_at FROM sessions"
+    );
+
+    now = new Date("2026-07-25T12:16:00.000Z");
+    await store.getSession(started.token);
+    const afterThreshold = await pool.query<{ last_seen_at: Date }>(
+      "SELECT last_seen_at FROM sessions"
+    );
+
+    now = new Date("2026-08-24T12:00:01.000Z");
+    const expired = await store.getSession(started.token);
+    const sessions = await pool.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM sessions"
+    );
+
+    expect(initial).toMatchObject({
+      user: expect.objectContaining({ username: "clock" })
+    });
+    expect(beforeThreshold.rows[0].last_seen_at.toISOString()).toBe(
+      "2026-07-25T12:00:00.000Z"
+    );
+    expect(afterThreshold.rows[0].last_seen_at.toISOString()).toBe(
+      "2026-07-25T12:16:00.000Z"
+    );
+    expect(expired).toBeNull();
+    expect(sessions.rows).toEqual([{ count: "0" }]);
+  });
+
+  it("supports owner story changes and admin overrides", async () => {
+    const owner = await store.register({
+      displayName: "Owner",
+      password: "owner-password-2026",
+      username: "owner"
+    });
+    const other = await store.register({
+      displayName: "Other",
+      password: "other-password-2026",
+      username: "other"
+    });
+    const admin = await store.bootstrapAdmin({
+      displayName: "Chatsim Admin",
+      password: "admin-password-2026",
       username: "admin"
     });
-
-    const updatedStory = store.updateStory(adminSession.user.id, "story-neon-1", {
-      title: "Admin retitle"
+    const story = await store.createStory(owner.user.id, {
+      title: "Owner story"
     });
 
-    expect(updatedStory).toMatchObject({
-      id: "story-neon-1",
-      ownerId: "user-neon",
-      title: "Admin retitle"
+    await expect(
+      store.updateStory(other.user.id, story.id, { title: "Stolen" })
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    const ownerUpdate = await store.updateStory(owner.user.id, story.id, {
+      title: "Owner update"
+    });
+    const adminUpdate = await store.updateStory(admin.user.id, story.id, {
+      title: "Admin update"
     });
 
-    store.deleteStory(adminSession.user.id, "story-neon-1");
+    expect(ownerUpdate.title).toBe("Owner update");
+    expect(adminUpdate.title).toBe("Admin update");
 
-    expect(store.getStory("story-neon-1")).toBeNull();
+    await store.deleteStory(admin.user.id, story.id);
+    expect(await store.getStory(story.id)).toBeNull();
   });
 
-  it("backfills admin and roles when opening an existing store file", async () => {
-    const tempDir = mkdtempSync(join(tmpdir(), "story-store-"));
+  it("returns stable cursor pages from the public story feed", async () => {
+    const firstPage = await store.getStoryFeed({ limit: 10 });
+    const secondPage = await store.getStoryFeed({
+      cursor: firstPage.nextCursor ?? undefined,
+      limit: 10
+    });
 
-    try {
-      const dataFile = join(tempDir, "story-store.json");
-      const legacyData = createSeedStoreData() as any;
-      legacyData.users = legacyData.users
-        .filter(
-          (user: { username: string }) =>
-            !["admin", "dummy01"].includes(user.username)
-        )
-        .map((user: Record<string, unknown>) => {
-          const { role: _role, ...legacyUser } = user;
-          return legacyUser;
-        });
-      legacyData.stories = legacyData.stories.filter(
-        (story: { id: string }) => story.id !== "story-dummy-01"
-      );
-      writeFileSync(dataFile, JSON.stringify(legacyData), "utf8");
-
-      const store = StoryStore.open(dataFile);
-      const adminSession = await store.login({
-        password: "0000",
-        username: "admin"
-      });
-
-      expect(adminSession.user).toMatchObject({
-        role: "admin",
-        username: "admin"
-      });
-      expect(
-        store.snapshot().users.every((user) => ["admin", "member"].includes(user.role))
-      ).toBe(true);
-      expect(store.snapshot().users.some((user) => user.username === "dummy01")).toBe(true);
-      expect(store.getStory("story-dummy-01")).toMatchObject({
-        id: "story-dummy-01",
-        ownerId: "user-dummy-01",
-        title: "Placeholder Story 01"
-      });
-    } finally {
-      rmSync(tempDir, { force: true, recursive: true });
-    }
-  });
-
-  it("repairs stale Phil seed stories in existing store files", () => {
-    const tempDir = mkdtempSync(join(tmpdir(), "story-store-"));
-
-    try {
-      const dataFile = join(tempDir, "story-store.json");
-      const legacyData = createSeedStoreData() as any;
-      const staleBattleStory = legacyData.stories.find(
-        (story: { id: string }) => story.id === "story-phil-battle"
-      );
-      const stalePhoneStory = legacyData.stories.find(
-        (story: { id: string }) => story.id === "story-phil-1"
-      );
-
-      staleBattleStory.storyboard.presentationMode = "phone";
-      stalePhoneStory.title = "Story";
-      stalePhoneStory.storyboard.title = "Story";
-      legacyData.stories = [
-        ...legacyData.stories.filter(
-          (story: { id: string }) => story.id !== "story-phil-battle"
-        ),
-        staleBattleStory,
-        {
-          ...stalePhoneStory,
-          id: "story-phil-wyd",
-          title: "wyd",
-          storyboard: {
-            ...stalePhoneStory.storyboard,
-            id: "story-phil-wyd",
-            title: "wyd"
-          }
-        },
-        {
-          ...stalePhoneStory,
-          id: "story-phil-1780686378567-f3d08a",
-          title: "Story 8",
-          storyboard: {
-            ...stalePhoneStory.storyboard,
-            id: "story-phil-1780686378567-f3d08a",
-            scenes: [
-              {
-                id: "scene-1",
-                messages: [
-                  {
-                    speaker: "viewer",
-                    text: "new story opening soon"
-                  }
-                ]
-              }
-            ],
-            title: "Story 8"
-          }
-        }
-      ];
-      writeFileSync(dataFile, JSON.stringify(legacyData), "utf8");
-
-      const store = StoryStore.open(dataFile);
-
-      expect(store.getStory("story-phil-battle")).toMatchObject({
-        storyboard: expect.objectContaining({
-          presentationMode: "battle"
-        })
-      });
-      expect(store.getStory("story-phil-1")).toMatchObject({
-        storyboard: expect.objectContaining({
-          title: "Ketamine prison"
-        }),
-        title: "Ketamine prison"
-      });
-      expect(store.getStory("story-phil-wyd")).toBeNull();
-      expect(store.getStory("story-phil-1780686378567-f3d08a")).toBeNull();
-      expect(
-        store.getPublicProfiles()[0].stories.map((story) => story.title)
-      ).toEqual(["Ketamine prison", "Battle"]);
-    } finally {
-      rmSync(tempDir, { force: true, recursive: true });
-    }
-  });
-
-  it("uses CHATSIM_STORE_FILE as the default runtime store path", async () => {
-    const tempDir = mkdtempSync(join(tmpdir(), "story-store-"));
-    const previousStoreFile = process.env.CHATSIM_STORE_FILE;
-
-    try {
-      const dataFile = join(tempDir, "story-store.local.json");
-      process.env.CHATSIM_STORE_FILE = dataFile;
-
-      const store = StoryStore.open();
-
-      expect(store.getStory("story-phil-1")).toMatchObject({
-        id: "story-phil-1",
-        ownerId: "user-phil"
-      });
-
-      await store.register({
-        displayName: "Env Store",
-        password: "cloud-room-7",
-        username: "envstore"
-      });
-
-      expect(readFileSync(dataFile, "utf8")).toContain('"username": "envstore"');
-    } finally {
-      if (previousStoreFile === undefined) {
-        delete process.env.CHATSIM_STORE_FILE;
-      } else {
-        process.env.CHATSIM_STORE_FILE = previousStoreFile;
-      }
-
-      rmSync(tempDir, { force: true, recursive: true });
-    }
+    expect(firstPage.stories).toHaveLength(10);
+    expect(firstPage.nextCursor).toEqual(expect.any(String));
+    expect(secondPage.stories).toHaveLength(10);
+    expect(
+      secondPage.stories.some((story) =>
+        firstPage.stories.some((firstStory) => firstStory.id === story.id)
+      )
+    ).toBe(false);
+    expect(firstPage.stories[0]).toMatchObject({
+      author: expect.objectContaining({
+        avatarImage: null,
+        displayName: expect.any(String)
+      }),
+      coverImage: null,
+      coverFallbackColor: expect.any(String),
+      presentationMode: expect.stringMatching(/^(phone|battle)$/)
+    });
   });
 });

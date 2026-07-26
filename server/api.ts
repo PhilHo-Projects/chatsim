@@ -1,13 +1,20 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { StoryStore } from "./storyStore";
+import { HttpError } from "./httpError";
+import {
+  StoryStore,
+  type SessionPayload,
+  type StartedSession
+} from "./storyStore";
 
 const SESSION_COOKIE = "chatsim_session";
+const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const MAX_JSON_BODY_BYTES = 1024 * 1024;
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8"
 };
 
 type ApiHandlerOptions = {
-  store?: StoryStore;
+  store?: Promise<StoryStore> | StoryStore;
 };
 
 function parseCookies(header: string | undefined) {
@@ -18,17 +25,31 @@ function parseCookies(header: string | undefined) {
       .filter(Boolean)
       .map((cookie) => {
         const [name, ...valueParts] = cookie.split("=");
-        return [decodeURIComponent(name), decodeURIComponent(valueParts.join("="))];
+        return [
+          decodeURIComponent(name),
+          decodeURIComponent(valueParts.join("="))
+        ];
       })
   );
 }
 
+function cookieSecurityAttribute() {
+  return process.env.NODE_ENV === "production" ? "; Secure" : "";
+}
+
 function sessionCookie(token: string) {
-  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`;
+  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}${cookieSecurityAttribute()}`;
 }
 
 function clearSessionCookie() {
-  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
+  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${cookieSecurityAttribute()}`;
+}
+
+function publicSession(session: StartedSession): SessionPayload {
+  return {
+    expiresAt: session.expiresAt,
+    user: session.user
+  };
 }
 
 function sendJson(
@@ -46,31 +67,51 @@ function sendJson(
 
 async function readJsonBody(request: IncomingMessage) {
   const chunks: Buffer[] = [];
+  let size = 0;
 
   for await (const chunk of request) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+    const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+    size += buffer.byteLength;
+
+    if (size > MAX_JSON_BODY_BYTES) {
+      throw new HttpError(
+        "JSON request body is too large.",
+        413,
+        "PAYLOAD_TOO_LARGE"
+      );
+    }
+
+    chunks.push(buffer);
   }
 
   if (chunks.length === 0) {
     return {};
   }
 
-  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<
-    string,
-    unknown
-  >;
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    throw new HttpError("Request body must be valid JSON.", 400, "BAD_REQUEST");
+  }
 }
 
 function getSessionToken(request: IncomingMessage) {
   return parseCookies(request.headers.cookie)[SESSION_COOKIE];
 }
 
-function getSessionUserId(store: StoryStore, request: IncomingMessage) {
-  return store.getSession(getSessionToken(request))?.user.id ?? null;
-}
-
 export function createApiHandler(options: ApiHandlerOptions = {}) {
-  const store = options.store ?? StoryStore.open();
+  let defaultStore: Promise<StoryStore> | undefined;
+  const getStore = () => {
+    if (options.store) {
+      return Promise.resolve(options.store);
+    }
+
+    defaultStore ??= StoryStore.open();
+    return defaultStore;
+  };
 
   return async function handleApiRequest(
     request: IncomingMessage,
@@ -83,15 +124,52 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
     }
 
     try {
+      const store = await getStore();
+
+      if (request.method === "GET" && url.pathname === "/api/health") {
+        const healthy = await store.healthCheck();
+        sendJson(response, healthy ? 200 : 503, {
+          status: healthy ? "ok" : "unavailable",
+          database: healthy ? "ok" : "unavailable"
+        });
+        return true;
+      }
+
       if (request.method === "GET" && url.pathname === "/api/profiles") {
-        sendJson(response, 200, { profiles: store.getPublicProfiles() });
+        sendJson(response, 200, {
+          profiles: await store.getPublicProfiles()
+        });
+        return true;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/feed/stories") {
+        const limit = url.searchParams.has("limit")
+          ? Number.parseInt(url.searchParams.get("limit") ?? "", 10)
+          : undefined;
+
+        if (limit !== undefined && !Number.isFinite(limit)) {
+          throw new HttpError("Invalid feed limit.", 400, "BAD_REQUEST");
+        }
+
+        sendJson(
+          response,
+          200,
+          await store.getStoryFeed({
+            cursor: url.searchParams.get("cursor") ?? undefined,
+            limit
+          })
+        );
         return true;
       }
 
       if (request.method === "GET" && url.pathname === "/api/auth/session") {
-        sendJson(response, 200, {
-          session: store.getSession(getSessionToken(request))
-        });
+        const session = await store.getSession(getSessionToken(request));
+        sendJson(
+          response,
+          200,
+          { session },
+          session ? {} : { "Set-Cookie": clearSessionCookie() }
+        );
         return true;
       }
 
@@ -104,9 +182,12 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
           username: String(body.username ?? "")
         });
 
-        sendJson(response, 201, { session }, {
-          "Set-Cookie": sessionCookie(session.token)
-        });
+        sendJson(
+          response,
+          201,
+          { session: publicSession(session) },
+          { "Set-Cookie": sessionCookie(session.token) }
+        );
         return true;
       }
 
@@ -117,35 +198,60 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
           username: String(body.username ?? "")
         });
 
-        sendJson(response, 200, { session }, {
-          "Set-Cookie": sessionCookie(session.token)
-        });
+        sendJson(
+          response,
+          200,
+          { session: publicSession(session) },
+          { "Set-Cookie": sessionCookie(session.token) }
+        );
         return true;
       }
 
       if (request.method === "POST" && url.pathname === "/api/auth/logout") {
-        store.logout(getSessionToken(request));
-        sendJson(response, 200, { ok: true }, {
-          "Set-Cookie": clearSessionCookie()
-        });
+        await store.logout(getSessionToken(request));
+        sendJson(
+          response,
+          200,
+          { ok: true },
+          { "Set-Cookie": clearSessionCookie() }
+        );
+        return true;
+      }
+
+      const permissionsMatch = url.pathname.match(
+        /^\/api\/stories\/([^/]+)\/permissions$/
+      );
+
+      if (request.method === "GET" && permissionsMatch) {
+        const session = await store.getSession(getSessionToken(request));
+        sendJson(
+          response,
+          200,
+          await store.getStoryPermissions(
+            session?.user.id ?? null,
+            permissionsMatch[1]
+          )
+        );
         return true;
       }
 
       const storyMatch = url.pathname.match(/^\/api\/stories\/([^/]+)$/);
 
       if (request.method === "GET" && storyMatch) {
-        const story = store.getStory(storyMatch[1]);
+        const story = await store.getStory(storyMatch[1]);
 
         if (!story) {
-          sendJson(response, 404, { error: "Story not found." });
-          return true;
+          throw new HttpError("Story not found.", 404, "NOT_FOUND");
         }
 
-        const sessionUserId = getSessionUserId(store, request);
+        const session = await store.getSession(getSessionToken(request));
 
-        if (story.visibility !== "public" && story.ownerId !== sessionUserId) {
-          sendJson(response, 403, { error: "Story is private." });
-          return true;
+        if (
+          story.visibility !== "public" &&
+          story.ownerId !== session?.user.id &&
+          session?.user.role !== "admin"
+        ) {
+          throw new HttpError("Story is private.", 403, "FORBIDDEN");
         }
 
         sendJson(response, 200, { story });
@@ -153,54 +259,80 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       }
 
       if (request.method === "POST" && url.pathname === "/api/stories") {
-        const session = store.getSession(getSessionToken(request));
+        const session = await store.getSession(getSessionToken(request));
 
         if (!session) {
-          sendJson(response, 401, { error: "Sign in to create stories." });
-          return true;
+          throw new HttpError(
+            "Sign in to create stories.",
+            401,
+            "UNAUTHENTICATED"
+          );
         }
 
         const body = await readJsonBody(request);
-        const story = store.createStory(session.user.id, body);
+        const story = await store.createStory(session.user.id, body);
 
         sendJson(response, 201, { story });
         return true;
       }
 
       if (storyMatch && request.method === "PUT") {
-        const session = store.getSession(getSessionToken(request));
+        const session = await store.getSession(getSessionToken(request));
 
         if (!session) {
-          sendJson(response, 401, { error: "Sign in to edit stories." });
-          return true;
+          throw new HttpError(
+            "Sign in to edit stories.",
+            401,
+            "UNAUTHENTICATED"
+          );
         }
 
         const body = await readJsonBody(request);
-        const story = store.updateStory(session.user.id, storyMatch[1], body);
+        const story = await store.updateStory(
+          session.user.id,
+          storyMatch[1],
+          body
+        );
 
         sendJson(response, 200, { story });
         return true;
       }
 
       if (storyMatch && request.method === "DELETE") {
-        const session = store.getSession(getSessionToken(request));
+        const session = await store.getSession(getSessionToken(request));
 
         if (!session) {
-          sendJson(response, 401, { error: "Sign in to delete stories." });
-          return true;
+          throw new HttpError(
+            "Sign in to delete stories.",
+            401,
+            "UNAUTHENTICATED"
+          );
         }
 
-        store.deleteStory(session.user.id, storyMatch[1]);
+        await store.deleteStory(session.user.id, storyMatch[1]);
         sendJson(response, 200, { ok: true });
         return true;
       }
 
-      sendJson(response, 404, { error: "API route not found." });
-      return true;
+      throw new HttpError("API route not found.", 404, "NOT_FOUND");
     } catch (error) {
-      sendJson(response, 400, {
-        error: error instanceof Error ? error.message : "Request failed."
-      });
+      if (error instanceof HttpError) {
+        sendJson(
+          response,
+          error.statusCode,
+          { error: error.message, code: error.code },
+          error.code === "RATE_LIMITED" && "retryAfter" in error
+            ? { "Retry-After": String(error.retryAfter) }
+            : {}
+        );
+      } else {
+        console.error("Unhandled API error", error);
+        sendJson(response, 500, {
+          error: "Request failed.",
+          code: "INTERNAL_ERROR"
+        });
+      }
+
       return true;
     }
   };
