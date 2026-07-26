@@ -12,6 +12,7 @@ or delete the legacy `/chatsim` application.
 | New application URL | `https://chatsim.philippeho.dev` |
 | Coolify application UUID | `q11urabk74uu6o0l09i7hrqa` |
 | Application branch | `codex/backend-data-infra` until PR approval |
+| Verified runtime commit | `549d13c` |
 | Application port | `3000` |
 | Application memory limit | `768 MiB` |
 | Postgres UUID | `g149qxoyrc0jbtnuzn52dqwm` |
@@ -114,11 +115,14 @@ Verified backup executions:
 
 - Initial empty backup: `vygxqk2fscznd1adbh2qnn24`.
 - Post-seed backup: `fecern9hcc0xhaaaomgzn43j`, uploaded to R2, 20,736 bytes.
+- Post-hardening backup: `lpbddnx5kj07bta2pwcfhg2k`, uploaded to R2,
+  21,578 bytes.
 
-The post-seed dump was restored into a temporary isolated database. Verification
-returned 2 migrations, 26 users, and 26 stories. The temporary database was
-then dropped. For future drills, restore to a new database first, verify
-migration and row counts, and never overwrite the live database.
+The latest dump was restored into temporary isolated database
+`chatsim_restore_lpbddnx5`. Verification returned 6 migrations, 26 users, and
+26 stories. The temporary database and its copied dump were then removed. For
+future drills, restore to a new database first, verify migration and row
+counts, and never overwrite the live database.
 
 ## Deployment
 
@@ -155,7 +159,8 @@ After PR approval:
 - Registration, login, logout, secure cookie flags, owner permissions, private
   story denial, and admin update/delete passed production smoke tests.
 - Application restart preserved the Postgres data.
-- Post-seed backup and isolated restore passed.
+- Post-hardening backup and isolated restore passed with 6 migrations, 26
+  users, and 26 stories.
 - The legacy `/chatsim` route still returns successfully.
 
 The R2 create/upload/complete/read/delete smoke test is pending Cloudflare
