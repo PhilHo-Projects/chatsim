@@ -93,28 +93,25 @@ jobs:
             --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
             "${COOLIFY_WEBHOOK}")"
           deployment_uuid="$(jq -er 'if type == "array" then .[0].deployment_uuid else (.deployment_uuid // .deployments[0].deployment_uuid) end' <<<"${response}")"
-          coolify_origin="$(node -e "process.stdout.write(new URL(process.env.COOLIFY_WEBHOOK).origin)")"
+          echo "Triggered Coolify deployment ${deployment_uuid}."
           echo "deployment_uuid=${deployment_uuid}" >> "${GITHUB_OUTPUT}"
-          echo "coolify_origin=${coolify_origin}" >> "${GITHUB_OUTPUT}"
 
-      - name: Wait for Coolify
+      - name: Wait for the requested commit
         env:
-          COOLIFY_ORIGIN: ${{ steps.trigger.outputs.coolify_origin }}
-          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          DEPLOYMENT_UUID: ${{ steps.trigger.outputs.deployment_uuid }}
+          EXPECTED_COMMIT: ${{ github.sha }}
         run: |
           for attempt in $(seq 1 90); do
-            response="$(curl --fail --silent --show-error \
-              --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
-              "${COOLIFY_ORIGIN}/api/v1/deployments/${DEPLOYMENT_UUID}")"
-            status="$(jq -r '.status // empty' <<<"${response}")"
-            case "${status}" in
-              finished) exit 0 ;;
-              failed|cancelled) echo "Coolify deployment ${status}." >&2; exit 1 ;;
-            esac
+            if response="$(curl --fail --silent --show-error \
+              https://chatsim.philippeho.dev/api/health)"; then
+              status="$(jq -r '.status // empty' <<<"${response}")"
+              source_commit="$(jq -r '.sourceCommit // empty' <<<"${response}")"
+              if [[ "${status}" == "ok" && "${source_commit}" == "${EXPECTED_COMMIT}" ]]; then
+                exit 0
+              fi
+            fi
             sleep 10
           done
-          echo "Timed out waiting for Coolify deployment." >&2
+          echo "Timed out waiting for ${EXPECTED_COMMIT} to become healthy." >&2
           exit 1
 
       - name: Smoke-test production

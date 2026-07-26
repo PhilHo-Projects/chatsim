@@ -12,7 +12,7 @@ or delete the legacy `/chatsim` application.
 | New application URL | `https://chatsim.philippeho.dev` |
 | Coolify application UUID | `q11urabk74uu6o0l09i7hrqa` |
 | Application branch | `codex/backend-data-infra` until PR approval |
-| Verified runtime commit | `549d13c` |
+| Verified runtime commit | `68a4360` |
 | Application port | `3000` |
 | Application memory limit | `768 MiB` |
 | Postgres UUID | `g149qxoyrc0jbtnuzn52dqwm` |
@@ -43,25 +43,29 @@ Public seed content lives once in `src/data/platformSeed.json`. Showcase users
 have no password hashes and cannot authenticate. `npm run db:seed` may be
 repeated safely.
 
-The intended media resources are:
+The live media resources are:
 
 - Private originals: `philippeho-chatsim-originals`.
 - Public sanitized variants: `philippeho-chatsim-variants`.
 - Variant custom domain: `https://media.chatsim.philippeho.dev`.
 
-These three Cloudflare resources and their two bucket-scoped application
-credentials have not been provisioned yet. The local machine has no
-authenticated Cloudflare setup credential. The application has the non-secret
-bucket names and public base URL, but intentionally does not have R2 access-key
-secrets. Health checks remain healthy because R2 is not a health dependency;
-the upload flow must not be considered production-ready until the live R2 smoke
-test passes.
+Both buckets use Standard storage. Their `r2.dev` endpoints are disabled. The
+variants bucket is public only through the custom domain, whose ownership and
+SSL statuses are active and whose minimum TLS version is 1.2. The application
+uses two permanent Object Read & Write credentials, each restricted to exactly
+one bucket and stored as hidden, runtime-only Coolify environment variables.
 
-When provisioning the originals bucket, add a one-day object lifecycle rule for
-the `staging/` prefix. The application also reaps pending, processing, or
-deleting rows older than 24 hours on upload attempts and every six hours. The
-R2 lifecycle is the backstop for objects left behind while the application is
-offline.
+The originals bucket accepts `PUT` and `HEAD` from the production origin and
+the two local Vite origins, permits `Content-Type`, exposes `ETag`, and caches
+preflight responses for 3,600 seconds. It has a one-day lifecycle expiry for
+the `staging/` prefix. The variants bucket accepts `GET` and `HEAD` from those
+same origins. The application also reaps pending, processing, or deleting rows
+older than 24 hours on upload attempts and every six hours; the R2 lifecycle is
+the backstop for objects left behind while the application is offline.
+
+R2 is deliberately not a general health-check dependency. Media routes return
+a typed `503 SERVICE_UNAVAILABLE` without leaking configuration details if
+storage cannot initialize.
 
 ## Local workflow
 
@@ -153,12 +157,13 @@ After PR approval:
    deploy-only Coolify token.
 3. Keep direct Coolify auto-deploy disabled.
 4. Pushes to `main` run tests/build/Docker verification, trigger the Coolify
-   webhook, poll the returned deployment UUID, and smoke-test
-   `https://chatsim.philippeho.dev/api/health`.
+   webhook with a deploy-only token, and poll
+   `https://chatsim.philippeho.dev/api/health` until its `sourceCommit` equals
+   the workflow commit.
 
 ## Verification completed
 
-- All 23 repository test files pass (174 tests).
+- All 23 repository test files pass (178 tests).
 - Production TypeScript/Vite build passed.
 - Linux Docker build passed.
 - `npm audit` reports zero known dependency vulnerabilities.
@@ -170,14 +175,28 @@ After PR approval:
 - Application restart preserved the Postgres data.
 - Post-hardening backup and isolated restore passed with 6 migrations, 26
   users, and 26 stories.
+- The live R2 flow passed reserve, browser CORS preflight for all three allowed
+  origins, direct private upload, completion, and cleanup. A 1,254 x 1,254 PNG
+  produced 256, 640, and 1,200 pixel WebP variants with immutable one-year
+  cache headers through `media.chatsim.philippeho.dev`.
+- A temporary private story hydrated the ready avatar image reference. Deleting
+  the story and image returned all original, staging, and variant object counts
+  to zero, and all three public variant URLs returned `404`.
+- A 9.55 MiB, 6,000 x 6,000 JPEG (36 million pixels) completed under the
+  768 MiB application limit. The container cgroup recorded a 579.1 MiB peak,
+  zero OOM events, zero restarts, and healthy status afterward; the host still
+  had 1,361.8 MiB available.
+- The daily database backup schedule remains enabled. Its latest checked
+  execution succeeded and uploaded to R2.
 - The legacy `/chatsim` route still returns successfully.
 
-The R2 create/upload/complete/read/delete smoke test is pending Cloudflare
-provisioning. The existing data-URL/file avatar controls are intentionally
-disabled so the editor cannot report a successful save while discarding local
-bytes. Hydrated story avatar variants render through their public `thumb` URL;
-the secure start/PUT/complete picker and dynamic profile/card media rendering
-remain explicit follow-up UI work.
+The backend media pipeline is operational. The existing data-URL/file avatar
+controls remain intentionally disabled so the editor cannot report a
+successful save while discarding local bytes. The UI overhaul must implement
+the documented start -> direct PUT -> complete sequence and then attach the
+returned image ID. Hydrated story avatar variants already render through their
+public `thumb` URL; dynamic profile/card media rendering remains explicit
+follow-up UI work.
 
 ## Approval-gated cutover
 

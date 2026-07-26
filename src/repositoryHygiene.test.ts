@@ -41,5 +41,8 @@ describe("repository hygiene", () => {
       "(github.event_name == 'push' && github.ref == 'refs/heads/main')"
     );
     expect(workflow).toContain("needs: verify");
+    expect(workflow).toContain("EXPECTED_COMMIT: ${{ github.sha }}");
+    expect(workflow).toContain("sourceCommit");
+    expect(workflow).not.toContain("/api/v1/deployments/");
   });
 });

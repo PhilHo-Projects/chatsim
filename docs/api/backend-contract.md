@@ -80,12 +80,15 @@ when the R2 service cannot initialize.
 ```json
 {
   "status": "ok",
-  "database": "ok"
+  "database": "ok",
+  "sourceCommit": "68a4360bea27bf4f13abb3e49dd9ecf5d1bf0326"
 }
 ```
 
 Returns `503` when Postgres or the migration state is unavailable. R2 is not a
-health dependency.
+health dependency. `sourceCommit` is the running Coolify `SOURCE_COMMIT`, or
+`null` outside a source-controlled deployment. CI uses it to confirm that the
+requested commit, rather than an older healthy container, is serving traffic.
 
 ## Story-first Feed
 

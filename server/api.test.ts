@@ -116,6 +116,19 @@ afterAll(async () => {
 });
 
 describe("story API auth", () => {
+  it("reports the running source commit through health", async () => {
+    vi.stubEnv("SOURCE_COMMIT", "commit-under-test");
+    const baseUrl = await startApiServer();
+    const response = await fetch(`${baseUrl}/api/health`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      database: "ok",
+      sourceCommit: "commit-under-test",
+      status: "ok"
+    });
+  });
+
   it("reports health as unavailable when the store cannot initialize", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const unavailableStore = {
@@ -135,6 +148,7 @@ describe("story API auth", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({
       database: "unavailable",
+      sourceCommit: null,
       status: "unavailable"
     });
   });

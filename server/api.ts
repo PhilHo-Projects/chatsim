@@ -287,7 +287,8 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
 
         sendJson(response, healthy ? 200 : 503, {
           status: healthy ? "ok" : "unavailable",
-          database: healthy ? "ok" : "unavailable"
+          database: healthy ? "ok" : "unavailable",
+          sourceCommit: process.env.SOURCE_COMMIT?.trim() || null
         });
         return true;
       }
