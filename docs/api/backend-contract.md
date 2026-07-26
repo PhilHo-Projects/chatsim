@@ -346,3 +346,15 @@ metadata row deleted.
 - Use `/api/stories/:id/permissions` for editor visibility.
 - Upload UI must perform start -> direct PUT -> complete before attaching the
   returned image ID to a user or story.
+
+## Approved Crop-Aware Media Follow-Up
+
+The UI overhaul must preserve the private original, submit normalized crop
+metadata, and let the backend generate immutable renditions. Responsive screen
+sizes select among `thumb`, `card`, and `full`; they do not receive arbitrary
+per-request crops. Separate named crop profiles are used only when product
+surfaces require different aspect ratios.
+
+Current avatar/profile processing uses an automatic center crop. The required
+manual crop and recrop contract is designed but not implemented. See
+[`2026-07-26-crop-aware-responsive-media-design.md`](../superpowers/specs/2026-07-26-crop-aware-responsive-media-design.md).
