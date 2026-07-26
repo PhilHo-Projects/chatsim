@@ -1,6 +1,7 @@
-import storyDatabase from "./storyDatabase.json";
+import canonicalSeed from "./platformSeed.json";
 import mayaAnimeAvatar from "../assets/maya-anime-avatar.png";
 import mysterySpeakerAvatar from "../assets/mystery-speaker-avatar.png";
+import type { ImageReference } from "./mediaTypes";
 
 export type SpeakerId = "viewer" | "contact";
 export type PresentationMode = "phone" | "battle";
@@ -17,6 +18,8 @@ export type ConversationMessage = {
 };
 
 export type ConversationProfile = {
+  avatarImage?: ImageReference | null;
+  avatarImageId?: string | null;
   name: string;
   initials: string;
 };
@@ -80,6 +83,8 @@ type ConversationMessageInput = Omit<
 };
 
 type ConversationProfileInput = {
+  avatarImage?: unknown;
+  avatarImageId?: unknown;
   name?: unknown;
   initials?: unknown;
 };
@@ -131,15 +136,11 @@ type StoryLibraryInput = {
   stories?: unknown;
 };
 
-export const EDITOR_PASSWORD = "0000";
 export const SHOW_SCRIPT_EDITOR = true;
-export const EDITOR_REQUIRES_PASSWORD = !import.meta.env.DEV;
 export const CONVERSATION_STORAGE_KEY = "story.conversationConfig.v3";
-export const EDITOR_UNLOCK_STORAGE_KEY = "story.editorUnlockAt.v1";
 
 const MIN_PAUSE_MS = 0;
 const MAX_PAUSE_MS = 5000;
-const EDITOR_UNLOCK_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_STORY_SCENE_COUNT = 10;
 const DEFAULT_TIMESTAMP = "2026-05-14T00:00:00.000Z";
 const SPEAKER_TYPING_REFERENCE_CHARACTERS = 24;
@@ -220,6 +221,56 @@ function cleanRequiredEditableText(value: unknown, fallback: string): string {
   }
 
   return value;
+}
+
+function cleanImageId(value: unknown): string | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function cleanImageReference(value: unknown): ImageReference | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const image = value as {
+    id?: unknown;
+    variants?: {
+      card?: unknown;
+      full?: unknown;
+      thumb?: unknown;
+    };
+  };
+
+  if (
+    typeof image.id !== "string" ||
+    typeof image.variants?.card !== "string" ||
+    typeof image.variants.full !== "string" ||
+    typeof image.variants.thumb !== "string"
+  ) {
+    return undefined;
+  }
+
+  return {
+    id: image.id,
+    variants: {
+      card: image.variants.card,
+      full: image.variants.full,
+      thumb: image.variants.thumb
+    }
+  };
 }
 
 function clampNumber(value: unknown, fallback: number, min: number, max: number) {
@@ -438,6 +489,8 @@ export function normalizeConversationConfig(
       ? input.messages
       : fallbackConfig.messages;
   const cappedMessages = sourceMessages.slice(0, SCENE_MESSAGE_MAX_COUNT);
+  const contactAvatarImage = cleanImageReference(input.contact?.avatarImage);
+  const viewerAvatarImage = cleanImageReference(input.viewer?.avatarImage);
 
   return {
     sceneTitle: cleanRequiredEditableText(
@@ -447,6 +500,8 @@ export function normalizeConversationConfig(
     defaultSpeakerTypingSpeedLevel,
     defaultPauseAfterMs,
     contact: {
+      avatarImage: contactAvatarImage,
+      avatarImageId: cleanImageId(input.contact?.avatarImageId),
       name: contactName,
       initials: cleanInitials(
         input.contact?.initials,
@@ -454,10 +509,14 @@ export function normalizeConversationConfig(
         fallbackConfig.contact.initials
       ),
       status: contactStatus,
-      avatarUrl: cleanText(input.contact?.avatarUrl, fallbackConfig.contact.avatarUrl),
+      avatarUrl:
+        contactAvatarImage?.variants.thumb ??
+        cleanText(input.contact?.avatarUrl, fallbackConfig.contact.avatarUrl),
       typingSpeedLevel: contactTypingSpeedLevel
     },
     viewer: {
+      avatarImage: viewerAvatarImage,
+      avatarImageId: cleanImageId(input.viewer?.avatarImageId),
       name: viewerName,
       initials: cleanInitials(
         input.viewer?.initials,
@@ -465,7 +524,9 @@ export function normalizeConversationConfig(
         fallbackConfig.viewer.initials
       ),
       status: normalizeProfileStatus(input.viewer?.status, viewerStatusFallback),
-      avatarUrl: cleanText(input.viewer?.avatarUrl, fallbackConfig.viewer.avatarUrl)
+      avatarUrl:
+        viewerAvatarImage?.variants.thumb ??
+        cleanText(input.viewer?.avatarUrl, fallbackConfig.viewer.avatarUrl)
     },
     messages: cappedMessages.map((message, index) => {
       const speaker = normalizeSpeaker(message.speaker, index);
@@ -734,9 +795,17 @@ export function getActiveStoryboard(library: StoryLibrary): Storyboard {
   );
 }
 
-export const defaultStoryDatabase = normalizeStoryDatabase(storyDatabase);
+const canonicalFallbackStoryboard =
+  canonicalSeed.stories.find((story) => story.id === "story-phil-1")
+    ?.storyboard ?? canonicalSeed.stories[0].storyboard;
 
-export const defaultStoryLibrary = normalizeStoryLibrary(storyDatabase);
+export const defaultStoryDatabase = normalizeStoryDatabase(
+  canonicalFallbackStoryboard
+);
+
+export const defaultStoryLibrary = normalizeStoryLibrary(
+  canonicalFallbackStoryboard
+);
 
 export const defaultConversationConfig =
   getActiveStoryScene(getActiveStoryboard(defaultStoryLibrary));
@@ -926,28 +995,4 @@ export function saveStoryLibrary(library: StoryLibrary) {
     CONVERSATION_STORAGE_KEY,
     JSON.stringify(normalizeStoryLibrary(library))
   );
-}
-
-export function rememberEditorUnlock(now = Date.now()) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(EDITOR_UNLOCK_STORAGE_KEY, String(now));
-}
-
-export function isEditorUnlockValid(now = Date.now()): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const storedValue = window.localStorage.getItem(EDITOR_UNLOCK_STORAGE_KEY);
-  const unlockedAt = Number.parseInt(String(storedValue), 10);
-
-  if (!Number.isFinite(unlockedAt)) {
-    return false;
-  }
-
-  const ageMs = now - unlockedAt;
-  return ageMs >= 0 && ageMs <= EDITOR_UNLOCK_TTL_MS;
 }

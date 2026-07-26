@@ -13,7 +13,7 @@ import {
 } from "./data/platformSeed";
 
 const ownerSession: PlatformSession = {
-  token: "test-session",
+  expiresAt: "2026-08-24T12:00:00.000Z",
   user: {
     displayName: "phil's stories",
     id: "user-phil",
@@ -23,7 +23,7 @@ const ownerSession: PlatformSession = {
 };
 
 const adminSession: PlatformSession = {
-  token: "admin-session",
+  expiresAt: "2026-08-24T12:00:00.000Z",
   user: {
     displayName: "admin",
     id: "user-admin",
@@ -37,6 +37,10 @@ let mockSession: PlatformSession | null;
 let mockStories: Record<string, PlatformStoryRecord>;
 let failNextStoryDelete: boolean;
 let failNextStoryUpdate: boolean;
+let holdStoryUpdates: boolean;
+let activeStoryUpdates: number;
+let maxConcurrentStoryUpdates: number;
+let pendingStoryUpdateReleases: Array<() => void>;
 let storyCounter: number;
 
 function clone<T>(value: T): T {
@@ -102,6 +106,10 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
   );
   failNextStoryDelete = false;
   failNextStoryUpdate = false;
+  holdStoryUpdates = false;
+  activeStoryUpdates = 0;
+  maxConcurrentStoryUpdates = 0;
+  pendingStoryUpdateReleases = [];
   storyCounter = seedStoryRecords.filter(
     (story) => story.ownerId === "user-phil"
   ).length;
@@ -131,7 +139,7 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
 
       if (method === "POST" && url.pathname === "/api/auth/register") {
         mockSession = {
-          token: "registered-session",
+          expiresAt: "2026-08-24T12:00:00.000Z",
           user: {
             displayName: body.displayName || `${body.username}'s stories`,
             id: `user-${body.username}`,
@@ -155,6 +163,19 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
       if (method === "POST" && url.pathname === "/api/auth/logout") {
         mockSession = null;
         return jsonResponse({ ok: true });
+      }
+
+      const permissionsMatch = url.pathname.match(
+        /^\/api\/stories\/([^/]+)\/permissions$/
+      );
+
+      if (permissionsMatch && method === "GET") {
+        const story = mockStories[permissionsMatch[1]];
+        const canManage =
+          Boolean(story && mockSession) &&
+          (mockSession?.user.role === "admin" ||
+            mockSession?.user.id === story.ownerId);
+        return jsonResponse({ canDelete: canManage, canEdit: canManage });
       }
 
       if (method === "POST" && url.pathname === "/api/stories") {
@@ -195,23 +216,39 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
       }
 
       if (storyMatch && method === "PUT") {
-        if (failNextStoryUpdate) {
-          failNextStoryUpdate = false;
-          return jsonResponse({ error: "Could not save story." }, 500);
+        activeStoryUpdates += 1;
+        maxConcurrentStoryUpdates = Math.max(
+          maxConcurrentStoryUpdates,
+          activeStoryUpdates
+        );
+
+        try {
+          if (holdStoryUpdates) {
+            await new Promise<void>((resolve) => {
+              pendingStoryUpdateReleases.push(resolve);
+            });
+          }
+
+          if (failNextStoryUpdate) {
+            failNextStoryUpdate = false;
+            return jsonResponse({ error: "Could not save story." }, 500);
+          }
+
+          const currentStory = mockStories[storyMatch[1]];
+          const story = {
+            ...currentStory,
+            ...body,
+            id: currentStory.id,
+            ownerId: currentStory.ownerId,
+            storyboard: body.storyboard ?? currentStory.storyboard,
+            updatedAt: "2026-05-28T00:00:00.000Z"
+          } as PlatformStoryRecord;
+
+          mockStories[story.id] = story;
+          return jsonResponse({ story });
+        } finally {
+          activeStoryUpdates -= 1;
         }
-
-        const currentStory = mockStories[storyMatch[1]];
-        const story = {
-          ...currentStory,
-          ...body,
-          id: currentStory.id,
-          ownerId: currentStory.ownerId,
-          storyboard: body.storyboard ?? currentStory.storyboard,
-          updatedAt: "2026-05-28T00:00:00.000Z"
-        } as PlatformStoryRecord;
-
-        mockStories[story.id] = story;
-        return jsonResponse({ story });
       }
 
       if (storyMatch && method === "DELETE") {
@@ -233,6 +270,14 @@ async function flushPlatformEffects() {
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
+  });
+}
+
+async function flushQueuedStorySaves() {
+  await act(async () => {
+    for (let index = 0; index < 100; index += 1) {
+      await Promise.resolve();
+    }
   });
 }
 
@@ -298,7 +343,8 @@ describe("App", () => {
     setupApiMock();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await flushQueuedStorySaves();
     vi.unstubAllGlobals();
     vi.clearAllTimers();
     vi.useRealTimers();
@@ -885,12 +931,14 @@ describe("App", () => {
     );
     expect(screen.queryByRole("button", { name: "Choose scene 10: Scene 10" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("POV name")).toBeInTheDocument();
-    expect(screen.getByLabelText("POV avatar image")).toBeInTheDocument();
     expect(screen.getByLabelText("Speaker name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Speaker avatar image")).toBeInTheDocument();
     expect(screen.getByLabelText("Speaker status")).toBeInTheDocument();
     expect(screen.getByLabelText("Speaker status")).toHaveValue("online now");
-    expect(screen.getByLabelText("Upload speaker avatar")).toBeInTheDocument();
+    expect(screen.getByRole("note", { name: "Avatar upload status" })).toHaveTextContent(
+      "temporarily unavailable"
+    );
+    expect(screen.queryByLabelText("Upload POV avatar")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Upload speaker avatar")).not.toBeInTheDocument();
     expect(screen.getByText("Timing defaults")).toBeInTheDocument();
     expect(screen.getByLabelText("Speaker is typing speed")).toBeInTheDocument();
     expect(screen.getByLabelText("Default pause after ms")).toBeInTheDocument();
@@ -1367,6 +1415,46 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog", { name: "Script editor" })).toBeInTheDocument();
     expect(screen.getByText("Could not save story.")).toBeInTheDocument();
+  });
+
+  it("serializes editor autosaves so older writes cannot finish last", async () => {
+    await renderEditorOnStory();
+    holdStoryUpdates = true;
+
+    fireEvent.change(screen.getByLabelText("Story name"), {
+      target: { value: "First queued title" }
+    });
+    await flushPlatformEffects();
+
+    fireEvent.change(screen.getByLabelText("Story name"), {
+      target: { value: "Newest queued title" }
+    });
+    await flushPlatformEffects();
+
+    expect(activeStoryUpdates).toBe(1);
+    expect(pendingStoryUpdateReleases).toHaveLength(1);
+    expect(maxConcurrentStoryUpdates).toBe(1);
+
+    await act(async () => {
+      pendingStoryUpdateReleases.shift()?.();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(activeStoryUpdates).toBe(1);
+    expect(pendingStoryUpdateReleases).toHaveLength(1);
+
+    holdStoryUpdates = false;
+    await act(async () => {
+      pendingStoryUpdateReleases.shift()?.();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(maxConcurrentStoryUpdates).toBe(1);
+    expect(mockStories["story-phil-1"].title).toBe("Newest queued title");
   });
 
   it("keeps storybook rows visible and reports failed deletes", async () => {

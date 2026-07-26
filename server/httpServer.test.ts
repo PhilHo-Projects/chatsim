@@ -3,22 +3,41 @@ import { createServer, type Server } from "node:http";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { Pool } from "pg";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it
+} from "vitest";
+import { runMigrations } from "./db/migrations";
 import { createRequestHandler } from "./httpServer";
-import { createSeedStoreData, StoryStore } from "./storyStore";
+import { StoryStore } from "./storyStore";
 
 type TestServer = {
   baseUrl: string;
 };
 
 const openServers: Server[] = [];
+const testDatabaseUrl =
+  process.env.TEST_DATABASE_URL ??
+  "postgresql://chatsim_dev:chatsim_dev@127.0.0.1:54339/chatsim_test";
+const adminPool = new Pool({ connectionString: testDatabaseUrl });
+const pool = new Pool({
+  connectionString: testDatabaseUrl,
+  options: "-c search_path=http_server_test"
+});
+let store: StoryStore;
 
 async function startTestServer(distDir: string): Promise<TestServer> {
   const server = createServer(
     createRequestHandler({
       basePath: "/chatsim",
       distDir,
-      store: StoryStore.createMemory(createSeedStoreData())
+      store
     })
   );
 
@@ -52,6 +71,25 @@ function createDistFixture() {
   return distDir;
 }
 
+beforeAll(async () => {
+  await adminPool.query("DROP SCHEMA IF EXISTS http_server_test CASCADE");
+  await adminPool.query("CREATE SCHEMA http_server_test");
+  await runMigrations(pool);
+});
+
+beforeEach(async () => {
+  await pool.query(
+    `TRUNCATE upload_audit_log, stories, sessions, images, users
+     RESTART IDENTITY CASCADE`
+  );
+  store = await StoryStore.open({
+    pool,
+    runMigrations: false,
+    startCleanup: false
+  });
+  await store.seed();
+});
+
 afterEach(async () => {
   const servers = openServers.splice(0);
 
@@ -63,6 +101,12 @@ afterEach(async () => {
         })
     )
   );
+});
+
+afterAll(async () => {
+  await pool.end();
+  await adminPool.query("DROP SCHEMA IF EXISTS http_server_test CASCADE");
+  await adminPool.end();
 });
 
 describe("createRequestHandler", () => {

@@ -5,6 +5,7 @@ type StorybookMenuProps = {
   activeOwnerStories: PlatformStoryCard[];
   activeStoryId: string;
   activeStoryRecord: PlatformStoryRecord;
+  canDelete: boolean;
   isOpen: boolean;
   pendingDeleteStoryId: string | null;
   storybookError?: string;
@@ -21,6 +22,7 @@ export function StorybookMenu({
   activeOwnerStories,
   activeStoryId,
   activeStoryRecord,
+  canDelete,
   isOpen,
   pendingDeleteStoryId,
   storybookError = "",
@@ -103,7 +105,7 @@ export function StorybookMenu({
                   >
                     <span className="block truncate">{storyItem.title}</span>
                   </button>
-                  {isPendingDelete ? (
+                  {canDelete && isPendingDelete ? (
                     <>
                       <button
                         type="button"
@@ -143,19 +145,25 @@ export function StorybookMenu({
                       >
                         <Edit3 className="h-4 w-4" aria-hidden="true" />
                       </button>
-                      <button
-                        type="button"
-                        aria-label={`Delete ${storyItem.title}`}
-                        title={`Delete ${storyItem.title}`}
-                        onClick={() => onPendingDeleteStoryChange(storyItem.storyId)}
-                        className={`grid h-8 w-8 place-items-center rounded-lg transition ${
-                          isActive
-                            ? "text-rose-100 hover:bg-white/10"
-                            : "text-rose-700 hover:bg-rose-50"
-                        }`}
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </button>
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          aria-label={`Delete ${storyItem.title}`}
+                          title={`Delete ${storyItem.title}`}
+                          onClick={() =>
+                            onPendingDeleteStoryChange(storyItem.storyId)
+                          }
+                          className={`grid h-8 w-8 place-items-center rounded-lg transition ${
+                            isActive
+                              ? "text-rose-100 hover:bg-white/10"
+                              : "text-rose-700 hover:bg-rose-50"
+                          }`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      ) : (
+                        <span aria-hidden="true" />
+                      )}
                     </>
                   )}
                 </div>

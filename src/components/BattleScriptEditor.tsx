@@ -1,12 +1,7 @@
-import type { FormEvent } from "react";
-import { useState } from "react";
 import { Check, Plus, Swords, Trash2, Undo2 } from "lucide-react";
 import {
   addConversationMessage,
-  EDITOR_PASSWORD,
-  isEditorUnlockValid,
   normalizeConversationConfig,
-  rememberEditorUnlock,
   removeConversationMessage,
   updateConversationMessage,
   type ConversationConfig,
@@ -23,7 +18,6 @@ type BattleScriptEditorProps = {
   onSave?: () => void | Promise<void>;
   onStoryTitleChange: (title: string) => void;
   onUndo: () => void;
-  requiresPassword?: boolean;
   saveError?: string;
   storyTitle: string;
 };
@@ -85,30 +79,10 @@ export function BattleScriptEditor({
   onSave = onClose,
   onStoryTitleChange,
   onUndo,
-  requiresPassword = true,
   saveError = "",
   storyTitle
 }: BattleScriptEditorProps) {
-  const [isUnlocked, setIsUnlocked] = useState(
-    () => !requiresPassword || isEditorUnlockValid()
-  );
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-
   const speedLevel = config.contact.typingSpeedLevel;
-
-  const unlock = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (password === EDITOR_PASSWORD) {
-      setIsUnlocked(true);
-      rememberEditorUnlock();
-      setPasswordError("");
-      return;
-    }
-
-    setPasswordError("Wrong password");
-  };
 
   const setTrainerName = (role: SpeakerId, value: string) => {
     onChange(
@@ -156,19 +130,17 @@ export function BattleScriptEditor({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isUnlocked ? (
-            <button
-              type="button"
-              aria-label="Undo last edit"
-              title="Undo last edit"
-              disabled={!canUndo}
-              onClick={onUndo}
-              className={secondaryButtonClass}
-            >
-              <Undo2 className="h-4 w-4" aria-hidden="true" />
-              Undo
-            </button>
-          ) : null}
+          <button
+            type="button"
+            aria-label="Undo last edit"
+            title="Undo last edit"
+            disabled={!canUndo}
+            onClick={onUndo}
+            className={secondaryButtonClass}
+          >
+            <Undo2 className="h-4 w-4" aria-hidden="true" />
+            Undo
+          </button>
           <button
             type="button"
             aria-label="Done editing"
@@ -183,35 +155,7 @@ export function BattleScriptEditor({
         </div>
       </div>
 
-      {requiresPassword && !isUnlocked ? (
-        <form
-          onSubmit={unlock}
-          className="mx-auto mt-16 w-[min(420px,calc(100vw-32px))] rounded-2xl border border-[var(--latte-border)] bg-[#fffdf8]/85 p-5 shadow-xl backdrop-blur-md"
-        >
-          <label className={labelClass} htmlFor="battle-editor-password">
-            Editor password
-          </label>
-          <input
-            id="battle-editor-password"
-            aria-label="Editor password"
-            className={`${fieldClass} mt-1`}
-            value={password}
-            inputMode="numeric"
-            type="password"
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          {passwordError ? (
-            <p className="mt-2 text-sm font-medium text-rose-700">{passwordError}</p>
-          ) : null}
-          <button
-            type="submit"
-            className={`${primaryButtonClass} mt-4 w-full`}
-          >
-            Unlock editor
-          </button>
-        </form>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-6 lg:px-8">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto grid w-full max-w-3xl gap-5">
             {saveError ? (
               <p className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm font-semibold text-rose-800">
@@ -414,8 +358,7 @@ export function BattleScriptEditor({
               </button>
             </section>
           </div>
-        </div>
-      )}
+      </div>
     </aside>
   );
 }

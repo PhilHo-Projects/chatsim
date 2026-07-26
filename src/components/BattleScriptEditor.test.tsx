@@ -36,7 +36,6 @@ function renderEditor(onChange = vi.fn()) {
       onClose={vi.fn()}
       onStoryTitleChange={vi.fn()}
       onUndo={vi.fn()}
-      requiresPassword={false}
       storyTitle="Battle"
     />
   );

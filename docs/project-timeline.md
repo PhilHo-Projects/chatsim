@@ -1,5 +1,13 @@
 # Story Project Timeline
 
+## 2026-07-26 - Greenfield Production Backend
+
+Chatsim moved from the development JSON-file store to an asynchronous Postgres boundary with ordered migrations, advisory locking, an idempotent canonical public seed, scrypt password hashes, hashed cookie sessions, API rate limits, typed errors, feed pagination, and owner/admin permission checks. Uploaded-image support now has a direct-to-R2 contract, bounded Sharp processing, immutable WebP variants, audit events, deletion, and fake-storage integration tests.
+
+A separate Coolify application and private Postgres 16 resource now run at `chatsim.philippeho.dev` from the backend feature branch. Daily full backups target the private Coolify backup R2 bucket, and a post-seed dump was restored into an isolated verification database before being removed. The old `/chatsim` application remains available; DNS ownership records, redirects, cutover, and legacy cleanup are still explicit approval gates.
+
+The application now uses two bucket-scoped R2 credentials: private originals and sanitized public variants served only through `media.chatsim.philippeho.dev`. Production smoke testing covered direct browser upload, Sharp processing, story hydration, deletion, CORS, immutable cache headers, and a near-limit image without an OOM or restart. The legacy UI picker remains intentionally disabled until the UI overhaul implements the documented upload contract. See `docs/deployment.md` for exact resource identifiers, measured verification results, rollback, and the remaining CI/CD merge gates.
+
 ## 2026-06-03 - Media Storage And Auth Brainstorm
 
 Image upload planning now has a living note at `docs/brainstorm/media-storage-auth.md`. The current direction is to keep dialogue/story data as JSON or database rows, store uploaded image bytes in Cloudflare R2, use signed/direct uploads, generate compressed variants, and require authenticated users for public-facing uploads. The same note captures the Google/OpenID Connect auth idea, basic upload safety guardrails, and a suggested next-work order for Cloudflare setup, auth, image metadata, and admin moderation.

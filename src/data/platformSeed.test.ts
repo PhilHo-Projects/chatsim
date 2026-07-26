@@ -1,7 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { seedProfiles, seedStoryRecords } from "./platformSeed";
+import canonicalSeed from "./platformSeed.json";
+import {
+  getSeedStoryRecord,
+  getSeedStoryRecords,
+  seedProfiles,
+  seedStoryRecords
+} from "./platformSeed";
 
 describe("platform seed data", () => {
+  it("uses one credential-free canonical fixture", () => {
+    expect(canonicalSeed.users).toHaveLength(25);
+    expect(canonicalSeed.stories).toHaveLength(26);
+    expect(
+      canonicalSeed.stories
+        .filter((story) => story.ownerId === "user-phil")
+        .map((story) => story.id)
+    ).toEqual(["story-phil-1", "story-phil-battle"]);
+    expect(JSON.stringify(canonicalSeed)).not.toMatch(
+      /passwordHash|passwordSalt|sessions/
+    );
+  });
+
   it("seeds only Phil's renamed phone story and battle story", () => {
     const philProfile = seedProfiles.find((profile) => profile.id === "user-phil");
     const philStories = seedStoryRecords.filter(
@@ -43,5 +62,16 @@ describe("platform seed data", () => {
       text: "ok that was kinda sick ngl. gg"
     });
     expect(philStories.some((story) => story.id === "story-phil-wyd")).toBe(false);
+  });
+
+  it("returns isolated story records to runtime consumers", () => {
+    const firstRecord = getSeedStoryRecord("story-phil-1");
+    const firstCollection = getSeedStoryRecords();
+
+    firstRecord.storyboard.scenes.push(firstRecord.storyboard.scenes[0]);
+    firstCollection[0].title = "mutated";
+
+    expect(getSeedStoryRecord("story-phil-1").storyboard.scenes).toHaveLength(5);
+    expect(getSeedStoryRecords()[0].title).toBe("Ketamine prison");
   });
 });

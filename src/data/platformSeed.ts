@@ -1,14 +1,17 @@
 import {
-  createBlankStoryboard,
-  defaultStoryLibrary,
   normalizeStoryboard,
   type PresentationMode,
-  type SpeakerId,
   type Storyboard
 } from "./conversationConfig";
+import canonicalSeed from "./platformSeed.json";
+import type { ImageReference } from "./mediaTypes";
+
+export type { ImageReference, ImageVariants } from "./mediaTypes";
 
 export type PlatformStoryRecord = {
   coverColor: string;
+  coverImage?: ImageReference | null;
+  coverImageId?: string | null;
   createdAt: string;
   id: string;
   ownerId: string;
@@ -20,7 +23,9 @@ export type PlatformStoryRecord = {
 
 export type PlatformStoryCard = {
   coverColor: string;
+  coverImage?: ImageReference | null;
   ownerId: string;
+  presentationMode?: PresentationMode;
   sceneCount: number;
   storyId: string;
   title: string;
@@ -29,6 +34,7 @@ export type PlatformStoryCard = {
 
 export type PlatformProfile = {
   accentColor: string;
+  avatarImage?: ImageReference | null;
   displayName: string;
   id: string;
   stories: PlatformStoryCard[];
@@ -36,7 +42,7 @@ export type PlatformProfile = {
 };
 
 export type PlatformSession = {
-  token: string;
+  expiresAt: string;
   user: {
     displayName: string;
     id: string;
@@ -53,215 +59,26 @@ export const STORY_COVER_COLORS = [
   "#8b5cf6"
 ] as const;
 
-const SEED_TIMESTAMP = "2026-05-28T00:00:00.000Z";
-
-const defaultProfileSpecs = [
-  {
-    displayName: "phil's stories",
-    id: "user-phil",
-    storyId: "story-phil-1",
-    storyTitle: "Ketamine prison",
-    username: "phil"
-  },
-  {
-    displayName: "neon sleepover",
-    id: "user-neon",
-    storyId: "story-neon-1",
-    storyTitle: "Last seen typing",
-    username: "neon"
-  },
-  {
-    displayName: "orbit threads",
-    id: "user-orbit",
-    storyId: "story-orbit-1",
-    storyTitle: "Soft launch",
-    username: "orbit"
-  },
-  {
-    displayName: "motel lobby",
-    id: "user-motel",
-    storyId: "story-motel-1",
-    storyTitle: "Room 12",
-    username: "motel"
-  },
-  {
-    displayName: "void pop",
-    id: "user-void",
-    storyId: "story-void-1",
-    storyTitle: "Read receipts",
-    username: "void"
-  }
-];
-
-const dummyProfileSpecs = Array.from({ length: 20 }, (_, index) => {
-  const number = String(index + 1).padStart(2, "0");
-
-  return {
-    displayName: `demo account ${number}`,
-    id: `user-dummy-${number}`,
-    storyId: `story-dummy-${number}`,
-    storyTitle: `Placeholder Story ${number}`,
-    username: `dummy${number}`
-  };
-});
-
-const profileSpecs = [...defaultProfileSpecs, ...dummyProfileSpecs];
-
-type ShortStoryMessage = {
-  speaker: SpeakerId;
-  text: string;
-};
-
-type StorySpec = {
-  ownerId: string;
-  presentationMode?: PresentationMode;
-  storyId: string;
-  storyTitle: string;
-  useCraftedSeed?: boolean;
-  messages?: ShortStoryMessage[];
-};
-
-function createProfileStorySpec(profile: (typeof profileSpecs)[number]): StorySpec {
-  return {
-    ownerId: profile.id,
-    storyId: profile.storyId,
-    storyTitle: profile.storyTitle,
-    useCraftedSeed: profile.storyId === "story-phil-1"
-  };
-}
-
-// Dedicated battle script. Phil = opponent (top), Nor = player (bottom).
-// Both sides are typed out in battle mode, so keep the lines short and punchy.
-const battleScript: ShortStoryMessage[] = [
-  { speaker: "viewer", text: "Nor! I challenge you to a battle!" },
-  { speaker: "contact", text: "bro it's 3am... fine. let's go" },
-  { speaker: "viewer", text: "Behold my ace! Go, Gary!" },
-  { speaker: "contact", text: "that's a pigeon. that's just a pigeon" },
-  { speaker: "viewer", text: "He is a TRAINED pigeon." },
-  { speaker: "contact", text: "ok send it then 😤" },
-  { speaker: "viewer", text: "Gary used Splash! Super effective!" },
-  { speaker: "contact", text: "it is NOT super effective lmao" },
-  { speaker: "viewer", text: "CRITICAL HIT! You're finished, Nor!" },
-  { speaker: "contact", text: "ok that was kinda sick ngl. gg" }
-];
-
-const philBattleStorySpec: StorySpec = {
-  messages: battleScript,
-  ownerId: "user-phil",
-  presentationMode: "battle",
-  storyId: "story-phil-battle",
-  storyTitle: "Battle"
-};
-
-const storySpecs: StorySpec[] = [
-  ...profileSpecs.flatMap((profile) =>
-    profile.storyId === "story-phil-1"
-      ? [createProfileStorySpec(profile), philBattleStorySpec]
-      : [createProfileStorySpec(profile)]
-  )
-];
-
-function createStoryboard(
-  index: number,
-  id: string,
-  title: string,
-  presentationMode: PresentationMode,
-  source: Storyboard = createBlankStoryboard(index)
-): Storyboard {
-  return normalizeStoryboard(
-    {
-      ...source,
-      createdAt: SEED_TIMESTAMP,
-      id,
-      presentationMode,
-      title,
-      updatedAt: SEED_TIMESTAMP
-    },
-    index
-  );
-}
-
-function createShortStoryboard(
-  index: number,
-  id: string,
-  title: string,
-  messages: ShortStoryMessage[],
-  presentationMode: PresentationMode = "phone"
-): Storyboard {
-  return normalizeStoryboard(
-    {
-      activeSceneId: "scene-1",
-      createdAt: SEED_TIMESTAMP,
-      id,
-      presentationMode,
-      scenes: [
-        {
-          contact: {
-            avatarUrl: "",
-            initials: "N",
-            name: "Nor",
-            status: "online now",
-            typingSpeedLevel: 3
-          },
-          defaultPauseAfterMs: 700,
-          defaultSpeakerTypingSpeedLevel: 4,
-          id: "scene-1",
-          messages: messages.map((message, messageIndex) => ({
-            id: `${message.speaker}-${messageIndex + 1}`,
-            pauseAfterMs: 700,
-            speaker: message.speaker,
-            text: message.text,
-            typingSpeedLevel: 4,
-            useDefaultPauseAfterMs: true,
-            useDefaultTypingMs: true
-          })),
-          sceneTitle: title,
-          viewer: {
-            avatarUrl: "",
-            initials: "P",
-            name: "Phil",
-            status: "online now"
-          }
-        }
-      ],
-      title,
-      updatedAt: SEED_TIMESTAMP
-    },
-    index
-  );
-}
-
-export const seedStoryRecords: PlatformStoryRecord[] = storySpecs.map(
-  (story, index) => ({
-    coverColor: STORY_COVER_COLORS[index % STORY_COVER_COLORS.length],
-    createdAt: SEED_TIMESTAMP,
-    id: story.storyId,
+export const seedStoryRecords: PlatformStoryRecord[] =
+  canonicalSeed.stories.map((story, index) => ({
+    coverColor: story.coverColor,
+    createdAt: story.createdAt,
+    id: story.id,
     ownerId: story.ownerId,
-    storyboard: story.messages
-      ? createShortStoryboard(
-          index,
-          story.storyId,
-          story.storyTitle,
-          story.messages,
-          story.presentationMode ?? "phone"
-        )
-      : createStoryboard(
-          index,
-          story.storyId,
-          story.storyTitle,
-          story.presentationMode ?? "phone",
-          story.useCraftedSeed ? defaultStoryLibrary.stories[0] : undefined
-        ),
-    title: story.storyTitle,
-    updatedAt: SEED_TIMESTAMP,
-    visibility: "public"
-  })
-);
+    storyboard: normalizeStoryboard(
+      story.storyboard as unknown as Parameters<typeof normalizeStoryboard>[0],
+      index
+    ),
+    title: story.title,
+    updatedAt: story.updatedAt,
+    visibility: story.visibility as "public" | "private"
+  }));
 
 function toStoryCard(story: PlatformStoryRecord): PlatformStoryCard {
   return {
     coverColor: story.coverColor,
     ownerId: story.ownerId,
+    presentationMode: story.storyboard.presentationMode,
     sceneCount: story.storyboard.scenes.length,
     storyId: story.id,
     title: story.title,
@@ -269,21 +86,30 @@ function toStoryCard(story: PlatformStoryRecord): PlatformStoryCard {
   };
 }
 
-export const seedProfiles: PlatformProfile[] = profileSpecs.map(
-  (profile, index) => ({
-    accentColor: STORY_COVER_COLORS[index % STORY_COVER_COLORS.length],
-    displayName: profile.displayName,
-    id: profile.id,
+function cloneStoryRecord(story: PlatformStoryRecord): PlatformStoryRecord {
+  return JSON.parse(JSON.stringify(story)) as PlatformStoryRecord;
+}
+
+export const seedProfiles: PlatformProfile[] = canonicalSeed.users.map(
+  (user) => ({
+    accentColor: user.accentColor,
+    displayName: user.displayName,
+    id: user.id,
     stories: seedStoryRecords
-      .filter((story) => story.ownerId === profile.id)
+      .filter((story) => story.ownerId === user.id)
       .map(toStoryCard),
-    username: profile.username
+    username: user.username
   })
 );
 
 export function getSeedStoryRecord(storyId = "story-phil-1") {
-  return (
+  const story =
     seedStoryRecords.find((story) => story.id === storyId) ??
-    seedStoryRecords[0]
-  );
+    seedStoryRecords[0];
+
+  return cloneStoryRecord(story);
+}
+
+export function getSeedStoryRecords() {
+  return seedStoryRecords.map(cloneStoryRecord);
 }
