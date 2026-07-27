@@ -166,14 +166,14 @@ describe("Postgres StoryStore", () => {
     );
     const profiles = await store.getPublicProfiles();
 
-    expect(users.rows).toHaveLength(25);
+    expect(users.rows).toHaveLength(5);
     expect(
       users.rows.every(
         (user) => user.password_hash === null && user.password_salt === null
       )
     ).toBe(true);
-    expect(stories.rows).toEqual([{ count: "26" }]);
-    expect(profiles).toHaveLength(25);
+    expect(stories.rows).toEqual([{ count: "6" }]);
+    expect(profiles).toHaveLength(5);
     expect(
       profiles.find((profile) => profile.id === "user-phil")?.displayName
     ).toBe("phil's stories");
@@ -190,6 +190,45 @@ describe("Postgres StoryStore", () => {
         title: "Battle"
       })
     ]);
+  });
+
+  it("prunes retired showcase owners on reseed but keeps real accounts", async () => {
+    // A showcase identity that the canonical fixture no longer describes.
+    await pool.query(
+      `INSERT INTO users (id, username, display_name, role, accent_color)
+       VALUES ('user-retired', 'retired', 'retired demo', 'member', '#f472b6')`
+    );
+    await pool.query(
+      `INSERT INTO stories (
+         id, owner_id, title, visibility, presentation_mode, cover_color,
+         storyboard
+       )
+       VALUES (
+         'story-retired', 'user-retired', 'Retired', 'public', 'phone',
+         '#f472b6', '{"scenes":[]}'::jsonb
+       )`
+    );
+
+    // A real account whose id is likewise absent from the fixture.
+    const realAccount = await store.register({
+      displayName: "Real Person",
+      password: "real-person-password-2026",
+      username: "realperson"
+    });
+
+    await store.seed();
+
+    const remaining = await pool.query<{ id: string }>(
+      "SELECT id FROM users ORDER BY id"
+    );
+    const remainingIds = remaining.rows.map((row) => row.id);
+
+    expect(remainingIds).not.toContain("user-retired");
+    expect(remainingIds).toContain(realAccount.user.id);
+    expect(remainingIds).toContain("user-phil");
+    expect(
+      await pool.query("SELECT id FROM stories WHERE id = 'story-retired'")
+    ).toMatchObject({ rowCount: 0 });
   });
 
   it("registers password users and stores only password/session hashes", async () => {
@@ -389,15 +428,15 @@ describe("Postgres StoryStore", () => {
   });
 
   it("returns stable cursor pages from the public story feed", async () => {
-    const firstPage = await store.getStoryFeed({ limit: 10 });
+    const firstPage = await store.getStoryFeed({ limit: 4 });
     const secondPage = await store.getStoryFeed({
       cursor: firstPage.nextCursor ?? undefined,
-      limit: 10
+      limit: 4
     });
 
-    expect(firstPage.stories).toHaveLength(10);
+    expect(firstPage.stories).toHaveLength(4);
     expect(firstPage.nextCursor).toEqual(expect.any(String));
-    expect(secondPage.stories).toHaveLength(10);
+    expect(secondPage.stories).toHaveLength(2);
     expect(
       secondPage.stories.some((story) =>
         firstPage.stories.some((firstStory) => firstStory.id === story.id)

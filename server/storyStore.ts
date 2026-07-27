@@ -482,6 +482,35 @@ export class StoryStore {
         );
       }
 
+      // Showcase identities dropped from the canonical fixture have to be
+      // removed, or the feed keeps serving profiles the repository no longer
+      // describes. Only credential-free owners qualify: anyone who has
+      // registered or linked an identity provider is a real account and is
+      // never pruned, even if an id collides with a retired seed row.
+      const seededUserIds = canonicalSeed.users.map((user) => user.id);
+      const retiredOwners = `
+        SELECT id FROM users
+        WHERE password_hash IS NULL
+          AND auth_provider IS NULL
+          AND NOT (id = ANY($1::text[]))
+      `;
+
+      await client.query(
+        `DELETE FROM stories WHERE owner_id IN (${retiredOwners})`,
+        [seededUserIds]
+      );
+      await client.query(
+        `DELETE FROM images WHERE owner_id IN (${retiredOwners})`,
+        [seededUserIds]
+      );
+      await client.query(
+        `DELETE FROM users
+         WHERE password_hash IS NULL
+           AND auth_provider IS NULL
+           AND NOT (id = ANY($1::text[]))`,
+        [seededUserIds]
+      );
+
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");

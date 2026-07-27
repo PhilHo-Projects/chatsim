@@ -4,7 +4,7 @@ Compact handoff for future agents working in this repo.
 
 ## What This Is
 - Vite + React + TypeScript + Tailwind app for scripted texting stories.
-- Current experience: a Pinterest-style browsing shell with profiles/stories, a glassy phone chat player, and a full-screen settings/script editor for owners/admins.
+- Current experience: a browsing shell with an auto-advancing featured profile deck over a plain profile list, a glassy phone chat player, and a full-screen settings/script editor for owners/admins.
 - A small Node HTTP API is mounted into the Vite dev server and also runnable separately for local story/profile/auth persistence.
 - Keep the proper app structure. Do not collapse this into one HTML file.
 
@@ -19,7 +19,7 @@ Compact handoff for future agents working in this repo.
 - User usually previews: `http://127.0.0.1:5174/`
 
 ## Routes
-- `/`: public profile masonry.
+- `/`: featured profile deck plus the full profile list.
 - `/profiles/:profileId`: selected profile story grid.
 - `/stories/:storyId`: phone story player.
 
@@ -28,6 +28,9 @@ Compact handoff for future agents working in this repo.
 - `src/data/platformSeed.ts` normalizes the same fixture for browser fallback data.
 - API persistence is Postgres-only. Migrations live under `server/db/migrations/` and are applied automatically on API startup.
 - `npm run db:seed` is idempotent. Showcase identities are content-only owners and cannot log in.
+- Seeding also PRUNES: credential-free owners no longer in the fixture, and their stories
+  and images, are deleted. Accounts with a password hash or an auth provider are never
+  pruned. This is how the 20 `user-dummy-*` demo profiles were retired on 2026-07-27.
 - Future public seed scripts should be implemented in the canonical fixture, not duplicated in TypeScript.
 - Browser editor changes now persist through the local API when signed in as the owner/admin.
 - Older conversation localStorage helpers remain for compatibility and tests, but they are not the API's persistence boundary.
@@ -53,7 +56,7 @@ Important naming:
 ## Core Files
 - `src/App.tsx`: orchestrates routes, API hydration, story selection, phone UI, story controls, editor.
 - `src/components/AppShell.tsx`: persistent desktop/mobile navigation shell.
-- `src/components/LandingPage.tsx`: profile masonry and profile story grid.
+- `src/components/LandingPage.tsx`: featured profile deck, profile list, and profile story grid.
 - `src/components/AccountPanel.tsx`, `StorybookMenu.tsx`: auth and owner/admin story management UI.
 - `src/navigation/appRoute.ts`: tiny URL route parser/formatter.
 - `src/api/storyApi.ts`: frontend API client.
@@ -84,9 +87,28 @@ Important naming:
 - Its dedicated private Postgres 16 resource UUID is `g149qxoyrc0jbtnuzn52dqwm`, limited to 512 MiB with persistent storage.
 - The app currently tracks `codex/backend-data-infra` while draft PR #1 is reviewed. Direct Coolify auto-deploy is disabled by using manual releases.
 - Daily full database backups run at `0 2 * * *` to the private `philippeho-coolify-db-backups` R2 bucket. A post-seed backup restore has been verified.
-- The legacy `/chatsim` application remains live and untouched. DNS changes, redirects, cutover, and legacy deletion require explicit approval.
+- The legacy `/chatsim` stack was retired on 2026-07-27. `philippeho.dev/chatsim*` now 301s
+  to `https://chatsim.philippeho.dev`, preserving path suffix and query string, via
+  `/data/coolify/proxy/dynamic/chatsim.yaml` (a redirect-only Traefik route, no service).
+  The old compose stack, container, image, frozen source copy, and JSON store are gone;
+  archived with checksums at `/root/archive/chatsim-legacy-2026-07-27/` on Hetzner.
 - R2 application buckets and `media.chatsim.philippeho.dev` are specified but not provisioned yet because a Cloudflare setup credential is not available locally.
 - Full deployment and rollback details are in `docs/deployment.md`.
+
+## Landing Page
+- The explore view is `FeaturedDeck` (a coverflow of up to `MAX_FEATURED_PROFILES`
+  profiles) above a plain, image-free profile list. The list is the directory; the
+  deck is a highlight reel.
+- Deck cards are absolutely positioned and placed by signed offset from the active
+  index (`getDeckOffset` wraps circularly, `getDeckCardStyle` maps offset to
+  translate/scale/rotateY/blur/opacity). Cards past `MAX_VISIBLE_OFFSET` are not painted.
+- Card width is an inline `min(18rem, 62vw)`, not a breakpoint class, so the deck
+  scales continuously instead of jumping at 640px.
+- The card transition lists `transform, opacity, filter` explicitly. Do not switch it
+  back to `transition-all`: that animates `width` on every viewport change, which makes
+  measured widths wrong mid-resize, and animates `filter` on every autoplay step.
+- Autoplay pauses on hover and focus and is disabled under `prefers-reduced-motion`.
+- Searching hides the deck and filters the list only.
 
 ## Style / UX Notes
 - Keep the glassmorphism coffee-shop background direction.

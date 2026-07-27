@@ -300,13 +300,15 @@ async function popTo(pathname: string) {
   await flushPlatformEffects();
 }
 
+function openProfileFromList(name: RegExp) {
+  fireEvent.click(
+    within(screen.getByLabelText("All profiles")).getByRole("button", { name })
+  );
+}
+
 function openFirstStory() {
   if (!screen.queryByLabelText("Story bento grid")) {
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /Open phil's stories/
-      })
-    );
+    openProfileFromList(/Open phil's stories/);
   }
   fireEvent.click(
     within(screen.getByLabelText("Story bento grid")).getByRole("button", {
@@ -350,7 +352,7 @@ describe("App", () => {
     vi.useRealTimers();
   });
 
-  it("starts in a persistent Pinterest-style browsing shell", async () => {
+  it("starts in a persistent browsing shell with a featured deck and profile list", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
@@ -393,39 +395,44 @@ describe("App", () => {
       )
     );
     expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
-    expect(screen.getByText("phil's stories")).toBeInTheDocument();
-    expect(screen.getByLabelText("Profile masonry")).toHaveClass(
-      "overflow-y-auto"
-    );
     expect(
-      screen.getByRole("button", {
+      within(screen.getByLabelText("All profiles")).getByText("phil's stories")
+    ).toBeInTheDocument();
+    const featuredDeck = screen.getByRole("group", { name: "Featured profiles" });
+    const profileList = screen.getByLabelText("All profiles");
+
+    expect(featuredDeck).toHaveAttribute("aria-roledescription", "carousel");
+    expect(
+      within(featuredDeck).getByRole("button", {
         name: /Open phil's stories/
       })
     ).toBeInTheDocument();
     expect(
-      within(screen.getByRole("button", { name: /Open phil's stories/ })).getByText(
-        "2 stories"
-      )
+      within(
+        within(profileList).getByRole("button", { name: /Open phil's stories/ })
+      ).getByText("2 stories")
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Story bento grid")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Ketamine prison 5 scenes/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Open story")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Profile masonry")).toHaveClass(
-      "columns-2",
-      "lg:columns-5"
-    );
-    expect(screen.getByRole("button", { name: /Open phil's stories/ })).toHaveClass(
-      "rounded-lg",
-      "break-inside-avoid"
-    );
-    expect(screen.getByRole("button", { name: /Open phil's stories/ })).not.toHaveClass(
-      "bg-slate-950"
-    );
     expect(
-      screen.getByRole("button", { name: /Open phil's stories/ }).getAttribute("style")
+      within(featuredDeck).getByRole("button", { name: "Previous featured profile" })
+    ).toBeInTheDocument();
+    expect(
+      within(featuredDeck).getByRole("button", { name: "Next featured profile" })
+    ).toBeInTheDocument();
+    expect(
+      within(profileList).getAllByRole("button")
+    ).toHaveLength(seedProfiles.length);
+    expect(
+      within(featuredDeck)
+        .getByRole("button", { name: /Open phil's stories/ })
+        .getAttribute("style")
     ).toMatch(/#e11d48|225,\s*29,\s*72/);
     expect(
-      screen.getByRole("button", { name: /Open phil's stories/ }).querySelector(".top-0.h-1")
+      within(featuredDeck)
+        .getByRole("button", { name: /Open phil's stories/ })
+        .querySelector(".top-0.h-1")
     ).toBeNull();
     seedProfiles.forEach((profile) => {
       expect(
@@ -434,7 +441,7 @@ describe("App", () => {
     });
     expect(screen.queryByTestId("phone-shell")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Open phil's stories/ }));
+    openProfileFromList(/Open phil's stories/);
 
     expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
     expect(
@@ -481,7 +488,7 @@ describe("App", () => {
         { name: "Home" }
       )
     );
-    expect(screen.getByLabelText("Profile masonry")).toBeInTheDocument();
+    expect(screen.getByLabelText("All profiles")).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search stories" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
 
@@ -514,14 +521,14 @@ describe("App", () => {
   it("renders a selected profile directly from the URL", async () => {
     mockSession = null;
 
-    await renderAppAtPath("/profiles/user-dummy-20");
+    await renderAppAtPath("/profiles/user-void");
 
-    expect(window.location.pathname).toBe("/profiles/user-dummy-20");
+    expect(window.location.pathname).toBe("/profiles/user-void");
     expect(screen.getByLabelText("App shell")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "void pop" })).toBeInTheDocument();
     expect(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
-        name: /Placeholder Story 20 1 scene/
+        name: /Read receipts 1 scene/
       })
     ).toBeInTheDocument();
   });
@@ -561,19 +568,19 @@ describe("App", () => {
     render(<App />);
     await flushPlatformEffects();
 
-    fireEvent.click(screen.getByRole("button", { name: /Open demo account 20/ }));
+    openProfileFromList(/Open void pop/);
 
-    expect(window.location.pathname).toBe("/profiles/user-dummy-20");
-    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/profiles/user-void");
+    expect(screen.getByRole("heading", { name: "void pop" })).toBeInTheDocument();
 
     fireEvent.click(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
-        name: /Placeholder Story 20 1 scene/
+        name: /Read receipts 1 scene/
       })
     );
     await flushPlatformEffects();
 
-    expect(window.location.pathname).toBe("/stories/story-dummy-20");
+    expect(window.location.pathname).toBe("/stories/story-void-1");
     expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
   });
 
@@ -583,18 +590,18 @@ describe("App", () => {
     render(<App />);
     await flushPlatformEffects();
 
-    fireEvent.click(screen.getByRole("button", { name: /Open demo account 20/ }));
+    openProfileFromList(/Open void pop/);
     fireEvent.click(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
-        name: /Placeholder Story 20 1 scene/
+        name: /Read receipts 1 scene/
       })
     );
     await flushPlatformEffects();
 
-    await popTo("/profiles/user-dummy-20");
+    await popTo("/profiles/user-void");
 
-    expect(window.location.pathname).toBe("/profiles/user-dummy-20");
-    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/profiles/user-void");
+    expect(screen.getByRole("heading", { name: "void pop" })).toBeInTheDocument();
 
     await popTo("/");
 
@@ -627,105 +634,87 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
   });
 
-  it("renders dummy account placeholder cards and keeps logged-out browsing open", async () => {
+  it("cycles the featured deck and keeps logged-out browsing open", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
 
-    const dummyOne = screen.getByRole("button", {
-      name: /Open demo account 01/
-    });
-    const dummyTwenty = screen.getByRole("button", {
-      name: /Open demo account 20/
-    });
+    const deck = screen.getByRole("group", { name: "Featured profiles" });
+    const cards = within(deck).getAllByRole("button", { name: /^Open / });
 
-    expect(within(dummyOne).getByText("@dummy01")).toBeInTheDocument();
-    expect(within(dummyTwenty).getByText("@dummy20")).toBeInTheDocument();
-    expect(dummyOne).toHaveClass("h-72", "sm:h-80");
-    expect(dummyTwenty).toHaveClass("h-60", "sm:h-80");
-    const dummyOneImage = screen
-      .getByTestId("profile-card-background-user-dummy-01")
-      .querySelector("img")
-      ?.getAttribute("src");
-    const dummyTwentyImage = screen
-      .getByTestId("profile-card-background-user-dummy-20")
-      .querySelector("img")
-      ?.getAttribute("src");
+    expect(cards).toHaveLength(seedProfiles.length);
 
-    expect(dummyOneImage).toBeTruthy();
-    expect(dummyTwentyImage).toBeTruthy();
-    expect(dummyOneImage).not.toBe(dummyTwentyImage);
-    [
-      ["04", "demo-04-vegetation"],
-      ["05", "demo-05-brutalist-decor"],
-      ["06", "demo-06-space-stuff"],
-      ["09", "demo-09-hand-drawn-art"],
-      ["10", "demo-10-stencil-art"],
-      ["13", "demo-13-cosplay"],
-      ["14", "demo-14-computer-geek"],
-      ["15", "demo-15-pastel-crafts"],
-      ["18", "demo-18-goofy-cartoon"],
-      ["19", "demo-19-concrete-jungle"],
-      ["20", "demo-20-crafty-space"]
-    ].forEach(([accountNumber, themedCoverName]) => {
-      const themedImage = screen
-        .getByTestId(`profile-card-background-user-dummy-${accountNumber}`)
+    // Every featured profile paints its own distinct cover.
+    const covers = seedProfiles.map((profile) =>
+      screen
+        .getByTestId(`profile-card-background-${profile.id}`)
         .querySelector("img")
-        ?.getAttribute("src");
-
-      expect(themedImage).toContain(themedCoverName);
-    });
-
-    fireEvent.click(dummyTwenty);
-
-    expect(screen.getByRole("heading", { name: "demo account 20" })).toBeInTheDocument();
-    expect(
-      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
-        name: /Placeholder Story 20 1 scene/
-      })
-    ).toBeInTheDocument();
-
-    fireEvent.click(
-      within(screen.getByLabelText("Story bento grid")).getByRole("button", {
-        name: /Placeholder Story 20 1 scene/
-      })
+        ?.getAttribute("src")
     );
+
+    expect(covers.every(Boolean)).toBe(true);
+    expect(new Set(covers).size).toBe(seedProfiles.length);
+
+    // The centred card is unblurred; its neighbours are pushed back.
+    const centred = cards[0];
+    const neighbour = cards[1];
+
+    expect(centred.getAttribute("style")).not.toMatch(/blur/);
+    expect(neighbour.getAttribute("style")).toMatch(/blur/);
+
+    // Advancing moves the next profile into the centre.
+    fireEvent.click(
+      within(deck).getByRole("button", { name: "Next featured profile" })
+    );
+
+    expect(cards[1].getAttribute("style")).not.toMatch(/blur/);
+    expect(cards[0].getAttribute("style")).toMatch(/blur/);
+
+    // Clicking the centred card opens that profile.
+    fireEvent.click(cards[1]);
     await flushPlatformEffects();
 
-    expect(screen.getByLabelText("App shell")).toBeInTheDocument();
-    expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: seedProfiles[1].displayName })
+    ).toBeInTheDocument();
     expect(screen.queryByText("Sign in to browse")).not.toBeInTheDocument();
   });
 
-  it("filters profile cards from search by visible title or handle", async () => {
+  it("filters profile rows from search by visible title or handle", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
 
-    const masonry = screen.getByLabelText("Profile masonry");
-    const originalCards = within(masonry).getAllByRole("button");
+    const list = screen.getByLabelText("All profiles");
 
-    expect(originalCards).toHaveLength(seedProfiles.length);
-    expect(originalCards[0]).toHaveAccessibleName("Open phil's stories, 2 stories");
+    expect(within(list).getAllByRole("button")).toHaveLength(seedProfiles.length);
+    expect(within(list).getAllByRole("button")[0]).toHaveAccessibleName(
+      "Open phil's stories, 2 stories"
+    );
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
       target: { value: "phil's" }
     });
 
-    const philCards = within(masonry).getAllByRole("button");
+    const philRows = within(list).getAllByRole("button");
 
-    expect(philCards).toHaveLength(1);
-    expect(philCards[0]).toHaveAccessibleName("Open phil's stories, 2 stories");
-    expect(screen.queryByRole("button", { name: /Open demo account 20/ })).not.toBeInTheDocument();
+    expect(philRows).toHaveLength(1);
+    expect(philRows[0]).toHaveAccessibleName("Open phil's stories, 2 stories");
+    expect(screen.queryByRole("button", { name: /Open void pop/ })).not.toBeInTheDocument();
+
+    // Searching collapses the featured deck so only the list remains.
+    expect(
+      screen.queryByRole("group", { name: "Featured profiles" })
+    ).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
-      target: { value: "@dummy20" }
+      target: { value: "@void" }
     });
 
-    const handleCards = within(masonry).getAllByRole("button");
+    const handleRows = within(list).getAllByRole("button");
 
-    expect(handleCards).toHaveLength(1);
-    expect(handleCards[0]).toHaveAccessibleName("Open demo account 20, 1 story");
+    expect(handleRows).toHaveLength(1);
+    expect(handleRows[0]).toHaveAccessibleName("Open void pop, 1 story");
     expect(screen.queryByRole("button", { name: /Open phil's stories/ })).not.toBeInTheDocument();
   });
 
@@ -745,7 +734,7 @@ describe("App", () => {
 
     render(<App />);
     await flushPlatformEffects();
-    fireEvent.click(screen.getByRole("button", { name: /Open phil's stories/ }));
+    openProfileFromList(/Open phil's stories/);
 
     const storyGrid = screen.getByLabelText("Story bento grid");
 
@@ -765,7 +754,7 @@ describe("App", () => {
     render(<App />);
     await flushPlatformEffects();
 
-    fireEvent.click(screen.getByRole("button", { name: /Open neon sleepover/ }));
+    openProfileFromList(/Open neon sleepover/);
     fireEvent.click(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
         name: /Last seen typing 1 scene/

@@ -45,8 +45,7 @@ const TARGETS: OptimizeTarget[] = [
   // Masonry covers. The widest rendered column is ~230px on a 1280px desktop
   // and ~180px on a two-column phone, so 640px still covers a 3x device ratio.
   { path: "story-card-backgrounds", maxWidth: 640, quality: 78 },
-  { path: "story-card-backgrounds/story-covers", maxWidth: 640, quality: 78 },
-  { path: "story-card-backgrounds/user-themes", maxWidth: 640, quality: 78 }
+  { path: "story-card-backgrounds/story-covers", maxWidth: 640, quality: 78 }
 ];
 
 async function collectSources(target: OptimizeTarget) {

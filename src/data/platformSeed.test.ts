@@ -9,8 +9,8 @@ import {
 
 describe("platform seed data", () => {
   it("uses one credential-free canonical fixture", () => {
-    expect(canonicalSeed.users).toHaveLength(25);
-    expect(canonicalSeed.stories).toHaveLength(26);
+    expect(canonicalSeed.users).toHaveLength(5);
+    expect(canonicalSeed.stories).toHaveLength(6);
     expect(
       canonicalSeed.stories
         .filter((story) => story.ownerId === "user-phil")
