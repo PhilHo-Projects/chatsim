@@ -1,6 +1,6 @@
 import canonicalSeed from "./platformSeed.json";
-import mayaAnimeAvatar from "../assets/maya-anime-avatar.png";
-import mysterySpeakerAvatar from "../assets/mystery-speaker-avatar.png";
+import mayaAnimeAvatar from "../assets/maya-anime-avatar.webp";
+import mysterySpeakerAvatar from "../assets/mystery-speaker-avatar.webp";
 import type { ImageReference } from "./mediaTypes";
 
 export type SpeakerId = "viewer" | "contact";

@@ -100,6 +100,22 @@ Important naming:
 - R2 application buckets and `media.chatsim.philippeho.dev` are specified but not provisioned yet because a Cloudflare setup credential is not available locally.
 - Full deployment and rollback details are in `docs/deployment.md`.
 
+## Static Asset Delivery
+- `chatsim.philippeho.dev` is DNS-only on Cloudflare, so the Node server in
+  `server/httpServer.ts` is the only thing between a visitor and the bytes.
+  There is no CDN or edge cache in front of it.
+- Hashed files under `dist/assets` are served `immutable` for a year;
+  everything else is `no-cache` with an `ETag` and `304` handling.
+- `npm run build` runs `scripts/compressDist.mjs`, which writes `.br`/`.gz`
+  siblings for text assets. The server streams those when the client accepts
+  them, so it never compresses at request time.
+- Bundled artwork lives in `src/assets` as WebP. `npm run assets:optimize`
+  regenerates it from the PNG originals; `scripts/optimizedAssets.json` records
+  outputs so reruns do not re-encode WebP-only art into a second lossy
+  generation. The PNGs are kept as lossless sources and are never imported.
+- Add new artwork as a source file, add its directory to `TARGETS` in
+  `scripts/optimizeAssets.ts`, then import the generated `.webp`.
+
 ## Style / UX Notes
 - Keep the glassmorphism coffee-shop background direction.
 - Phone proportions are intentionally narrow/mobile-like.

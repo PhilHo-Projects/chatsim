@@ -14,12 +14,13 @@
     "db:bootstrap-admin": "tsx server/db/cli.ts bootstrap-admin",
     "media:extract-legacy": "tsx server/extractLegacyDataUrls.ts",
     "media:extract-legacy:apply": "tsx server/extractLegacyDataUrls.ts --apply",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/compressDist.mjs dist",
     "preview": "vite preview --host 127.0.0.1",
     "start:api": "tsx server/index.ts",
     "test": "vitest run",
     "test:db": "npm run dev:db && vitest run server",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "assets:optimize": "tsx scripts/optimizeAssets.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1095.0",

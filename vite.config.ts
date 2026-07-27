@@ -27,6 +27,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), chatsimApiPlugin()],
   test: {
     environment: "jsdom",
+    // Checked-out git worktrees carry a full copy of the suite. Running them
+    // too races the real suite for the shared test database schemas.
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.worktrees/**"],
     globals: true,
     setupFiles: "./src/test/setup.ts",
     testTimeout: 20000

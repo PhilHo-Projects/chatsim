@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { createServer, type Server } from "node:http";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { brotliCompressSync } from "node:zlib";
 import { Pool } from "pg";
 import {
   afterAll,
@@ -67,6 +68,16 @@ function createDistFixture() {
     "utf8"
   );
   writeFileSync(join(distDir, "app.js"), "console.log('chatsim');", "utf8");
+  mkdirSync(join(distDir, "assets"));
+  writeFileSync(
+    join(distDir, "assets", "index-ChViSpQQ.js"),
+    "console.log('hashed');",
+    "utf8"
+  );
+  writeFileSync(
+    join(distDir, "assets", "index-ChViSpQQ.js.br"),
+    brotliCompressSync(Buffer.from("console.log('hashed');", "utf8"))
+  );
 
   return distDir;
 }
@@ -177,6 +188,64 @@ describe("createRequestHandler", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toContain("text/javascript");
       expect(body).toContain("chatsim");
+    } finally {
+      rmSync(distDir, { force: true, recursive: true });
+    }
+  });
+
+  it("caches content-hashed assets forever and revalidates the shell", async () => {
+    const distDir = createDistFixture();
+
+    try {
+      const server = await startTestServer(distDir);
+      const hashed = await fetch(
+        `${server.baseUrl}/chatsim/assets/index-ChViSpQQ.js`
+      );
+      const shell = await fetch(`${server.baseUrl}/chatsim/`);
+
+      expect(hashed.headers.get("cache-control")).toBe(
+        "public, max-age=31536000, immutable"
+      );
+      expect(hashed.headers.get("etag")).toBeTruthy();
+      expect(shell.headers.get("cache-control")).toBe("no-cache");
+    } finally {
+      rmSync(distDir, { force: true, recursive: true });
+    }
+  });
+
+  it("answers a matching entity tag with 304 and no body", async () => {
+    const distDir = createDistFixture();
+
+    try {
+      const server = await startTestServer(distDir);
+      const first = await fetch(`${server.baseUrl}/chatsim/app.js`);
+      const entityTag = first.headers.get("etag");
+
+      expect(entityTag).toBeTruthy();
+
+      const second = await fetch(`${server.baseUrl}/chatsim/app.js`, {
+        headers: { "If-None-Match": entityTag as string }
+      });
+
+      expect(second.status).toBe(304);
+      expect(await second.text()).toBe("");
+    } finally {
+      rmSync(distDir, { force: true, recursive: true });
+    }
+  });
+
+  it("serves the precompressed sibling when brotli is accepted", async () => {
+    const distDir = createDistFixture();
+
+    try {
+      const server = await startTestServer(distDir);
+      const response = await fetch(
+        `${server.baseUrl}/chatsim/assets/index-ChViSpQQ.js`,
+        { headers: { "Accept-Encoding": "br" } }
+      );
+
+      expect(response.headers.get("vary")).toBe("Accept-Encoding");
+      expect(await response.text()).toContain("hashed");
     } finally {
       rmSync(distDir, { force: true, recursive: true });
     }

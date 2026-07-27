@@ -1,6 +1,6 @@
-import motelLobbyCover from "../assets/story-card-backgrounds/motel-lobby.png";
-import neonSleepoverCover from "../assets/story-card-backgrounds/neon-sleepover.png";
-import orbitThreadsCover from "../assets/story-card-backgrounds/orbit-threads.png";
+import motelLobbyCover from "../assets/story-card-backgrounds/motel-lobby.webp";
+import neonSleepoverCover from "../assets/story-card-backgrounds/neon-sleepover.webp";
+import orbitThreadsCover from "../assets/story-card-backgrounds/orbit-threads.webp";
 import dummyProfile01Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-01.svg";
 import dummyProfile02Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-02.svg";
 import dummyProfile03Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-03.svg";
@@ -21,7 +21,7 @@ import dummyProfile17Cover from "../assets/story-card-backgrounds/placeholders/d
 import dummyProfile18Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-18.svg";
 import dummyProfile19Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-19.svg";
 import dummyProfile20Cover from "../assets/story-card-backgrounds/placeholders/dummy-profile-20.svg";
-import philStoriesCover from "../assets/story-card-backgrounds/phil-stories.png";
+import philStoriesCover from "../assets/story-card-backgrounds/phil-stories.webp";
 import dummyProfile01AnimeCover from "../assets/story-card-backgrounds/user-themes/demo-01-anime.webp";
 import dummyProfile02CyberpunkCover from "../assets/story-card-backgrounds/user-themes/demo-02-cyberpunk.webp";
 import dummyProfile03AbstractArtCover from "../assets/story-card-backgrounds/user-themes/demo-03-abstract-art.webp";
@@ -42,9 +42,9 @@ import dummyProfile17TravelCover from "../assets/story-card-backgrounds/user-the
 import dummyProfile18GoofyCartoonCover from "../assets/story-card-backgrounds/user-themes/demo-18-goofy-cartoon.webp";
 import dummyProfile19ConcreteJungleCover from "../assets/story-card-backgrounds/user-themes/demo-19-concrete-jungle.webp";
 import dummyProfile20CraftySpaceCover from "../assets/story-card-backgrounds/user-themes/demo-20-crafty-space.webp";
-import voidPopCover from "../assets/story-card-backgrounds/void-pop.png";
-import philBattlePixelCover from "../assets/story-card-backgrounds/story-covers/phil-battle-pixel.png";
-import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-covers/phil-ketamine-prison.png";
+import voidPopCover from "../assets/story-card-backgrounds/void-pop.webp";
+import philBattlePixelCover from "../assets/story-card-backgrounds/story-covers/phil-battle-pixel.webp";
+import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-covers/phil-ketamine-prison.webp";
 import type { CSSProperties } from "react";
 import type { PlatformProfile } from "../data/platformSeed";
 

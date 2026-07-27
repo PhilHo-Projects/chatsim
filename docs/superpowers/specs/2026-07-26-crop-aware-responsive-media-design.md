@@ -2,6 +2,26 @@
 
 **Status:** Approved direction; implementation is deferred to the UI/UX overhaul.
 
+## Scope Correction (2026-07-26)
+
+This document was written while investigating slow image loading, but it does
+not address that. Slow loading came from delivery, not from cropping:
+
+- Bundled application artwork shipped as full-resolution PNG. Seven story cards
+  alone were 18 MB, and one cover was 4.6 MB to paint a 216 px column.
+- The origin sent no `Cache-Control`, `ETag`, or `Last-Modified`, so every
+  visit re-downloaded every byte.
+- Text assets were served uncompressed.
+- `chatsim.philippeho.dev` is DNS-only, so all of it came from Helsinki with no
+  edge cache.
+
+Those four are fixed, taking the shipped image payload from 28.4 MB to 1.8 MB.
+See the Static Asset Delivery section of `CLAUDE.md`. Putting the hostname
+behind the Cloudflare proxy remains open and needs a DNS change.
+
+Nothing below changes. Crop-aware media is still the right design for user
+uploads; it was simply never the cause of the slowness.
+
 ## Goal
 
 Keep every accepted user upload as a private, unchanged original in R2. Store
