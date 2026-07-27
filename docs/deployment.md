@@ -198,20 +198,36 @@ returned image ID. Hydrated story avatar variants already render through their
 public `thumb` URL; dynamic profile/card media rendering remains explicit
 follow-up UI work.
 
-## Approval-gated cutover
+## Cutover: completed 2026-07-27
 
-Do not perform any of these operations without explicit user approval:
+The legacy `/chatsim` stack has been retired. `chatsim.philippeho.dev` is the
+only application host.
 
-1. Add the explicit DNS-only `chatsim.philippeho.dev` A record.
-2. Create the Cloudflare 308 redirect from exact `/chatsim` and
-   `/chatsim/*` paths to the new host.
-3. Archive, stop, remove, or delete the legacy compose, Traefik route, JSON
-   store, source copy, or runtime directories.
-4. Delete stale branches.
+- `philippeho.dev/chatsim` and `/chatsim/*` now return `301` to
+  `https://chatsim.philippeho.dev`, preserving path suffix and query string.
+  This is served by `/data/coolify/proxy/dynamic/chatsim.yaml`, rewritten as a
+  redirect-only Traefik route (`redirectRegex` + `noop@internal`, no backend).
+- The legacy container, image, `/opt/chatsim`, `/home/phil/projects/chatsim`,
+  and `/home/phil/projects/chatsim-runtime` were removed.
+- Archived with SHA256 checksums at
+  `/root/archive/chatsim-legacy-2026-07-27/`: the compose file, the original
+  Traefik route, `docker inspect` output, and the final JSON store (last
+  written 2026-06-08, so no data was lost).
 
-Before removing the legacy stack, capture root-only checksums of its archive and
-verify both new-host routing and the redirect. Preserve query strings and the
-path suffix during redirect.
+No explicit `chatsim.philippeho.dev` A record exists; the host resolves through
+the existing DNS-only `*.philippeho.dev` wildcard. That wildcard is **not**
+proxied, so the origin serves every byte directly from Helsinki with no edge
+cache. `media.chatsim.philippeho.dev` is separate: as an R2 custom domain it is
+always Cloudflare-proxied.
+
+Putting the application host behind the Cloudflare proxy (an explicit `chatsim`
+A record, orange-clouded) remains an open, unapproved option. The locally stored
+Cloudflare setup token is R2-scoped and cannot edit DNS; it was also only ever a
+provisioning credential. Runtime R2 access uses the bucket-scoped S3 access-key
+pairs in Coolify, which do not expire, so letting the setup token lapse breaks
+nothing.
+
+Stale branches have not been deleted.
 
 ## Rollback
 
