@@ -103,6 +103,7 @@ function upsertProfileStory(
       ...profiles,
       {
         accentColor: record.coverColor,
+        bio: null,
         displayName: session.user.displayName,
         id: session.user.id,
         stories: [card],

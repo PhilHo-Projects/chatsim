@@ -1,44 +1,49 @@
 {
   "users": [
     {
-      "accentColor": "#f472b6",
+      "accentColor": "#ff2d78",
+      "bio": "chaotic texts i never should have sent",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "displayName": "phil's stories",
+      "displayName": "phil",
       "id": "user-phil",
       "role": "member",
       "username": "phil"
     },
     {
       "accentColor": "#22d3ee",
+      "bio": "generated account, one placeholder story",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "displayName": "neon sleepover",
-      "id": "user-neon",
+      "displayName": "demo-01",
+      "id": "user-demo-01",
       "role": "member",
-      "username": "neon"
+      "username": "demo-01"
     },
     {
-      "accentColor": "#a3e635",
+      "accentColor": "#a855f7",
+      "bio": "generated account, one placeholder story",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "displayName": "orbit threads",
-      "id": "user-orbit",
+      "displayName": "demo-02",
+      "id": "user-demo-02",
       "role": "member",
-      "username": "orbit"
+      "username": "demo-02"
     },
     {
-      "accentColor": "#f59e0b",
+      "accentColor": "#38bdf8",
+      "bio": "generated account, one placeholder story",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "displayName": "motel lobby",
-      "id": "user-motel",
+      "displayName": "demo-03",
+      "id": "user-demo-03",
       "role": "member",
-      "username": "motel"
+      "username": "demo-03"
     },
     {
-      "accentColor": "#8b5cf6",
+      "accentColor": "#ff6bb0",
+      "bio": "generated account, one placeholder story",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "displayName": "void pop",
-      "id": "user-void",
+      "displayName": "demo-04",
+      "id": "user-demo-04",
       "role": "member",
-      "username": "void"
+      "username": "demo-04"
     }
   ],
   "stories": [
@@ -780,8 +785,8 @@
     {
       "coverColor": "#a3e635",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "id": "story-neon-1",
-      "ownerId": "user-neon",
+      "id": "story-demo-01-1",
+      "ownerId": "user-demo-01",
       "storyboard": {
         "activeSceneId": "scene-1",
         "createdAt": "2026-05-28T00:00:00.000Z",
@@ -829,8 +834,8 @@
     {
       "coverColor": "#f59e0b",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "id": "story-orbit-1",
-      "ownerId": "user-orbit",
+      "id": "story-demo-02-1",
+      "ownerId": "user-demo-02",
       "storyboard": {
         "activeSceneId": "scene-1",
         "createdAt": "2026-05-28T00:00:00.000Z",
@@ -878,8 +883,8 @@
     {
       "coverColor": "#8b5cf6",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "id": "story-motel-1",
-      "ownerId": "user-motel",
+      "id": "story-demo-03-1",
+      "ownerId": "user-demo-03",
       "storyboard": {
         "activeSceneId": "scene-1",
         "createdAt": "2026-05-28T00:00:00.000Z",
@@ -927,8 +932,8 @@
     {
       "coverColor": "#f472b6",
       "createdAt": "2026-05-28T00:00:00.000Z",
-      "id": "story-void-1",
-      "ownerId": "user-void",
+      "id": "story-demo-04-1",
+      "ownerId": "user-demo-04",
       "storyboard": {
         "activeSceneId": "scene-1",
         "createdAt": "2026-05-28T00:00:00.000Z",

@@ -150,7 +150,7 @@ afterAll(async () => {
 describe("Postgres StoryStore", () => {
   it("idempotently seeds credential-free public owners and stories", async () => {
     await pool.query(
-      "UPDATE users SET display_name = 'drifted' WHERE id = 'user-phil'"
+      "UPDATE users SET display_name = 'drifted', bio = 'drifted' WHERE id = 'user-phil'"
     );
     await pool.query(
       "UPDATE stories SET title = 'drifted' WHERE id = 'story-phil-1'"
@@ -176,7 +176,10 @@ describe("Postgres StoryStore", () => {
     expect(profiles).toHaveLength(5);
     expect(
       profiles.find((profile) => profile.id === "user-phil")?.displayName
-    ).toBe("phil's stories");
+    ).toBe("phil");
+    expect(
+      profiles.find((profile) => profile.id === "user-phil")?.bio
+    ).toBe("chaotic texts i never should have sent");
     expect(
       profiles.find((profile) => profile.id === "user-phil")?.stories
     ).toEqual([

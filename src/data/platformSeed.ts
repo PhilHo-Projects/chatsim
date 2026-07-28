@@ -35,6 +35,7 @@ export type PlatformStoryCard = {
 export type PlatformProfile = {
   accentColor: string;
   avatarImage?: ImageReference | null;
+  bio: string | null;
   displayName: string;
   id: string;
   stories: PlatformStoryCard[];
@@ -93,6 +94,7 @@ function cloneStoryRecord(story: PlatformStoryRecord): PlatformStoryRecord {
 export const seedProfiles: PlatformProfile[] = canonicalSeed.users.map(
   (user) => ({
     accentColor: user.accentColor,
+    bio: user.bio,
     displayName: user.displayName,
     id: user.id,
     stories: seedStoryRecords

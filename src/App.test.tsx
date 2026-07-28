@@ -151,6 +151,7 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
           ...mockProfiles,
           {
             accentColor: "#f472b6",
+            bio: null,
             displayName: mockSession.user.displayName,
             id: mockSession.user.id,
             stories: [],

@@ -429,15 +429,16 @@ export class StoryStore {
       for (const user of canonicalSeed.users) {
         await client.query(
           `INSERT INTO users (
-             id, username, display_name, role, accent_color, created_at,
+             id, username, display_name, role, accent_color, bio, created_at,
              updated_at
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $6)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
            ON CONFLICT (id) DO UPDATE
            SET username = EXCLUDED.username,
                display_name = EXCLUDED.display_name,
                role = EXCLUDED.role,
                accent_color = EXCLUDED.accent_color,
+               bio = EXCLUDED.bio,
                created_at = EXCLUDED.created_at,
                updated_at = EXCLUDED.updated_at
            WHERE users.password_hash IS NULL
@@ -448,6 +449,7 @@ export class StoryStore {
             user.displayName,
             user.role,
             user.accentColor,
+            user.bio ?? null,
             user.createdAt
           ]
         );

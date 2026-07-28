@@ -8,17 +8,29 @@ import {
 } from "./platformSeed";
 
 describe("platform seed data", () => {
-  it("uses one credential-free canonical fixture", () => {
+  it("uses one credential-free canonical fixture of handle-only profiles", () => {
     expect(canonicalSeed.users).toHaveLength(5);
     expect(canonicalSeed.stories).toHaveLength(6);
-    expect(
-      canonicalSeed.stories
-        .filter((story) => story.ownerId === "user-phil")
-        .map((story) => story.id)
-    ).toEqual(["story-phil-1", "story-phil-battle"]);
+    expect(canonicalSeed.users.map((user) => user.username)).toEqual([
+      "phil",
+      "demo-01",
+      "demo-02",
+      "demo-03",
+      "demo-04"
+    ]);
     expect(JSON.stringify(canonicalSeed)).not.toMatch(
       /passwordHash|passwordSalt|sessions/
     );
+  });
+
+  it("gives every profile a bio and no invented title", () => {
+    for (const user of canonicalSeed.users) {
+      expect(user.bio.length).toBeGreaterThan(0);
+      expect(user.bio.length).toBeLessThanOrEqual(160);
+      expect(user.displayName).toBe(user.username);
+    }
+
+    expect(seedProfiles.every((profile) => profile.bio)).toBe(true);
   });
 
   it("seeds only Phil's renamed phone story and battle story", () => {
