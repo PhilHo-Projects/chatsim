@@ -519,6 +519,23 @@ describe("App", () => {
     expect(appShell).not.toHaveClass("app-background--story");
   });
 
+  it("keeps the neon background on the browsing route and off the story route", async () => {
+    const { container } = render(<App />);
+    await flushPlatformEffects();
+
+    const appShell = screen.getByRole("main").parentElement;
+
+    expect(appShell).toHaveClass("app-background--landing");
+    expect(container.querySelector(".neon-bg")).not.toBeNull();
+
+    openFirstStory();
+    await flushPlatformEffects();
+
+    expect(appShell).toHaveClass("app-background--story");
+    expect(appShell).not.toHaveClass("app-background--landing");
+    expect(container.querySelector(".neon-bg")).toBeNull();
+  });
+
   it("renders a selected profile directly from the URL", async () => {
     mockSession = null;
 
