@@ -497,6 +497,7 @@ git commit -m "feat: replace light/dark shell with neon theme tokens"
 ### Task 4: Build the animated neon background
 
 **Files:**
+- Create: `src/utils/seededRandom.ts`
 - Create: `src/components/NeonBackground.tsx`
 - Create: `src/components/NeonBackground.test.tsx`
 - Modify: `src/index.css` (append the background layer rules)
@@ -504,7 +505,43 @@ git commit -m "feat: replace light/dark shell with neon theme tokens"
 
 **Interfaces:**
 - Consumes: the CSS variables from Task 3.
-- Produces: `<NeonBackground />`, a component taking no props. Exports `buildTendrils(count: number): Tendril[]` where `Tendril = { d: string; color: string; width: number; dash: number; duration: number; delay: number }`.
+- Produces: `createSeededRandom(seed: string): () => number` from `src/utils/seededRandom.ts` — **Task 5 imports this same function, do not write a second copy.** Also `<NeonBackground />`, a component taking no props, and `buildTendrils(count: number): Tendril[]` where `Tendril = { color: string; d: string; dash: number; delay: number; duration: number; width: number }`.
+
+- [ ] **Step 0: Extract the shared seeded RNG**
+
+Both this task and Task 5 need reproducible pseudo-randomness. It lives in one
+place. Create `src/utils/seededRandom.ts`:
+
+```ts
+/**
+ * FNV-1a derived generator. Deterministic for a given seed, so generated
+ * geometry is identical on every load and in every test snapshot rather
+ * than changing per render.
+ */
+export function createSeededRandom(seed: string): () => number {
+  let hash = 2166136261;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return () => {
+    hash = Math.imul(hash ^ (hash >>> 15), 2246822507);
+    return ((hash >>> 0) % 100000) / 100000;
+  };
+}
+```
+
+In the two implementation steps below, import it rather than redefining it:
+
+```ts
+import { createSeededRandom } from "../utils/seededRandom";
+```
+
+The code blocks in Task 4 and Task 5 already import it. Neither file defines its
+own FNV implementation — if you find yourself writing one, you are duplicating
+this module.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -555,6 +592,8 @@ Expected: FAIL, module not found.
 Create `src/components/NeonBackground.tsx`:
 
 ```tsx
+import { createSeededRandom } from "../utils/seededRandom";
+
 /** Tendril count and node count are fixed by the design spec. */
 const TENDRIL_COUNT = 22;
 const NODE_COUNT = 26;
@@ -577,21 +616,6 @@ export type Tendril = {
   duration: number;
   width: number;
 };
-
-/** FNV-1a, so geometry is reproducible rather than random. */
-function seeded(source: string) {
-  let hash = 2166136261;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash ^= source.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return () => {
-    hash = Math.imul(hash ^ (hash >>> 15), 2246822507);
-    return ((hash >>> 0) % 100000) / 100000;
-  };
-}
 
 /**
  * A smooth cubic chain crossing the full width. `amp` scales the vertical
@@ -623,7 +647,7 @@ function tendrilPath(next: () => number, startY: number, amp: number) {
 }
 
 export function buildTendrils(count: number): Tendril[] {
-  const next = seeded(SEED);
+  const next = createSeededRandom(SEED);
 
   return Array.from({ length: count }, () => {
     const startY = -60 + next() * 1020;
@@ -641,7 +665,7 @@ export function buildTendrils(count: number): Tendril[] {
 }
 
 function buildNodes(count: number) {
-  const next = seeded(`${SEED}-nodes`);
+  const next = createSeededRandom(`${SEED}-nodes`);
 
   return Array.from({ length: count }, (_unused, index) => ({
     color: NEON[Math.floor(next() * NEON.length)],
@@ -834,7 +858,7 @@ git commit -m "feat: add animated neon tendril background"
 - Create: `src/utils/profileArt.test.ts`
 
 **Interfaces:**
-- Consumes: the neon tokens from Task 3.
+- Consumes: the neon tokens from Task 3, and `createSeededRandom` from `src/utils/seededRandom.ts` (created in Task 4). **Import it — do not write a second FNV implementation in this file.**
 - Produces: `buildProfileArt(handle: string, options?: { compact?: boolean }): ProfileArt` where `ProfileArt = { nodes: ArtNode[]; strokes: ArtStroke[]; viewBox: string }`, `ArtStroke = { color: string; d: string; opacity: number; width: number }`, `ArtNode = { color: string; cx: number; cy: number; r: number }`.
 
 Returning data rather than an SVG string keeps it assertable in tests and lets the consumer render real React elements instead of `dangerouslySetInnerHTML`.
@@ -901,6 +925,8 @@ Expected: FAIL, module not found.
 Create `src/utils/profileArt.ts`:
 
 ```ts
+import { createSeededRandom } from "./seededRandom";
+
 const NEON = [
   "var(--neon-1)",
   "var(--neon-2)",
@@ -928,20 +954,6 @@ export type ProfileArt = {
   viewBox: string;
 };
 
-function seeded(source: string) {
-  let hash = 2166136261;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash ^= source.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return () => {
-    hash = Math.imul(hash ^ (hash >>> 15), 2246822507);
-    return ((hash >>> 0) % 100000) / 100000;
-  };
-}
-
 /**
  * Deterministic filament art for a handle, in the same visual language as the
  * background. Colours come only from the neon tokens, so generated art can
@@ -954,7 +966,7 @@ export function buildProfileArt(
   options: { compact?: boolean } = {}
 ): ProfileArt {
   const compact = options.compact === true;
-  const next = seeded(`${handle}-art`);
+  const next = createSeededRandom(`${handle}-art`);
   const lineCount = compact ? 3 : 6;
   const gap = compact ? 88 : 66;
   const strokes: ArtStroke[] = [];
@@ -1374,20 +1386,23 @@ Add to `src/repositoryHygiene.test.ts`:
 
 ```ts
   it("keeps retired artwork out of the bundle but on disk as fixtures", () => {
-    const retired = [
-      "profile-covers/motel-lobby",
-      "profile-covers/neon-sleepover",
-      "profile-covers/orbit-threads",
-      "profile-covers/phil-stories",
-      "profile-covers/void-pop",
-      "backgrounds/landing-minimal-sky"
+    // [fixture path, the src/assets path it must no longer occupy]
+    const retired: [string, string][] = [
+      ["profile-covers/motel-lobby", "story-card-backgrounds/motel-lobby"],
+      ["profile-covers/neon-sleepover", "story-card-backgrounds/neon-sleepover"],
+      ["profile-covers/orbit-threads", "story-card-backgrounds/orbit-threads"],
+      ["profile-covers/phil-stories", "story-card-backgrounds/phil-stories"],
+      ["profile-covers/void-pop", "story-card-backgrounds/void-pop"],
+      ["backgrounds/landing-minimal-sky", "app-backgrounds/landing-minimal-sky"]
     ];
 
-    for (const name of retired) {
-      // Kept for upload/sizing fixtures, so it must still exist ...
-      expect(existsSync(`fixtures/sample-images/${name}.png`)).toBe(true);
+    for (const [fixturePath, assetPath] of retired) {
+      // Kept for upload/sizing fixtures, so both formats must still exist ...
+      expect(existsSync(`fixtures/sample-images/${fixturePath}.png`)).toBe(true);
+      expect(existsSync(`fixtures/sample-images/${fixturePath}.webp`)).toBe(true);
       // ... but never from a path Vite can bundle.
-      expect(existsSync(`src/assets/story-card-backgrounds/${name.split("/")[1]}.webp`)).toBe(false);
+      expect(existsSync(`src/assets/${assetPath}.png`)).toBe(false);
+      expect(existsSync(`src/assets/${assetPath}.webp`)).toBe(false);
     }
 
     const landing = readFileSync("src/components/LandingPage.tsx", "utf8");
@@ -1395,11 +1410,17 @@ Add to `src/repositoryHygiene.test.ts`:
 
     expect(landing).not.toContain("story-card-backgrounds/motel-lobby");
     expect(css).not.toContain("landing-minimal-sky");
-    // Story cover art is out of scope and must survive.
+    // Story cover art and the story-route background are out of scope, and
+    // must survive this cleanup.
     expect(landing).toContain("story-covers/");
     expect(existsSync("src/assets/coffee-shop-background.webp")).toBe(true);
   });
 ```
+
+The old and new paths are paired explicitly because the two groups live in
+different source directories — deriving the `src/assets` path from the fixture
+path makes the `landing-minimal-sky` assertion check a location that never
+existed, so it would pass without proving anything.
 
 The last two assertions are the guards that matter: the two files under
 `story-covers/` and the coffee-shop background are still in use.
