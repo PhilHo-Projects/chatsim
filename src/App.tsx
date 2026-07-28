@@ -871,6 +871,7 @@ export default function App() {
 
   const mainContent = isStoryListOpen ? (
     <LandingPage
+      onSearchQueryChange={setSearchQuery}
       onSelectProfile={(profileId) => {
         navigate({ name: "profile", profileId });
         setIsAccountOpen(false);
@@ -909,14 +910,11 @@ export default function App() {
         accountPanel={accountPanel}
         backgroundModeClass={backgroundModeClass}
         isStoryListOpen={isStoryListOpen}
-        searchQuery={searchQuery}
-        selectedProfile={selectedProfile}
         toolbarActions={toolbarActions}
         onAccountToggle={toggleAccountPanel}
         onActiveProfile={showActiveProfile}
         onCreateStory={() => void createStoryFromShell()}
         onHome={showHome}
-        onSearchQueryChange={setSearchQuery}
       >
         {mainContent}
       </AppShell>

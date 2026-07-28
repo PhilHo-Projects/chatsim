@@ -7,7 +7,6 @@ import {
   Search,
   UserCircle
 } from "lucide-react";
-import type { PlatformProfile } from "../data/platformSeed";
 import { NeonBackground } from "./NeonBackground";
 
 type AppShellProps = {
@@ -15,14 +14,11 @@ type AppShellProps = {
   backgroundModeClass: string;
   children: ReactNode;
   isStoryListOpen: boolean;
-  searchQuery: string;
-  selectedProfile: PlatformProfile | null;
   toolbarActions: ReactNode;
   onAccountToggle: () => void;
   onActiveProfile: () => void;
   onCreateStory: () => void;
   onHome: () => void;
-  onSearchQueryChange: (value: string) => void;
 };
 
 export function AppShell({
@@ -30,21 +26,12 @@ export function AppShell({
   backgroundModeClass,
   children,
   isStoryListOpen,
-  searchQuery,
-  selectedProfile,
   toolbarActions,
   onAccountToggle,
   onActiveProfile,
   onCreateStory,
-  onHome,
-  onSearchQueryChange
+  onHome
 }: AppShellProps) {
-  const isHomeBrowsing = isStoryListOpen && !selectedProfile;
-  const topBarHeightClass = isHomeBrowsing ? "min-h-[72px]" : "min-h-14";
-  const mainHeightClass = isHomeBrowsing
-    ? "min-h-[calc(100dvh-72px)]"
-    : "min-h-[calc(100dvh-56px)]";
-
   return (
     <div
       aria-label="App shell"
@@ -95,7 +82,7 @@ export function AppShell({
         </div>
       </nav>
 
-      <div className={`sticky top-0 z-20 flex ${topBarHeightClass} items-center gap-2 border-b border-slate-800/70 bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:pl-24 md:pr-5`}>
+      <div className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-slate-800/70 bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:pl-24 md:pr-5">
         {!isStoryListOpen ? (
           <button
             type="button"
@@ -108,30 +95,13 @@ export function AppShell({
           </button>
         ) : null}
 
-        {isHomeBrowsing ? (
-          <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-lg bg-slate-800/60 text-slate-300 ring-1 ring-slate-700 transition focus-within:bg-slate-800 focus-within:ring-slate-600">
-            <span className="sr-only">Search stories</span>
-            <Search className="ml-4 h-5 w-5 shrink-0" aria-hidden="true" />
-            <input
-              aria-label="Search stories"
-              type="search"
-              value={searchQuery}
-              onChange={(event) => onSearchQueryChange(event.target.value)}
-              className="h-full min-w-0 flex-1 bg-transparent px-3 text-base font-semibold text-slate-100 outline-none placeholder:text-slate-400"
-              placeholder="Search"
-            />
-          </label>
-        ) : (
-          <span aria-hidden="true" className="min-w-0 flex-1" />
-        )}
-
         <div className="relative ml-auto flex shrink-0 items-center gap-1.5">
           {toolbarActions}
           {accountPanel}
         </div>
       </div>
 
-      <main className={`relative z-10 ${mainHeightClass} px-3 pb-24 pt-5 md:pb-6 md:pl-24 md:pr-6 md:pt-6`}>
+      <main className="relative z-10 min-h-[calc(100dvh-56px)] px-3 pb-24 pt-5 md:pb-6 md:pl-24 md:pr-6 md:pt-6">
         {children}
       </main>
 

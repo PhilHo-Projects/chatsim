@@ -1,30 +1,19 @@
-import motelLobbyCover from "../assets/story-card-backgrounds/motel-lobby.webp";
-import neonSleepoverCover from "../assets/story-card-backgrounds/neon-sleepover.webp";
-import orbitThreadsCover from "../assets/story-card-backgrounds/orbit-threads.webp";
-import philStoriesCover from "../assets/story-card-backgrounds/phil-stories.webp";
-import voidPopCover from "../assets/story-card-backgrounds/void-pop.webp";
 import philBattlePixelCover from "../assets/story-card-backgrounds/story-covers/phil-battle-pixel.webp";
 import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-covers/phil-ketamine-prison.webp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { Search } from "lucide-react";
+import { buildProfileArt } from "../utils/profileArt";
 import type { PlatformProfile } from "../data/platformSeed";
 
 type LandingPageProps = {
+  onSearchQueryChange: (value: string) => void;
   onSelectProfile: (profileId: string) => void;
   onSelectStory: (storyId: string) => void;
   profiles: PlatformProfile[];
   searchQuery: string;
   selectedProfileId: string | null;
 };
-
-type ProfileCover = {
-  accentColor: string;
-  image: string;
-  objectPosition: string;
-  storyClassName: string;
-};
-
-const DEFAULT_STORY_CARD_CLASS = "h-64";
 
 /** How long a featured card holds the centre before the deck advances. */
 const AUTOPLAY_INTERVAL_MS = 5000;
@@ -39,43 +28,7 @@ const MAX_VISIBLE_OFFSET = 2;
  */
 const MAX_FEATURED_PROFILES = 7;
 
-const PROFILE_COVERS: Record<string, ProfileCover> = {
-  "user-phil": {
-    accentColor: "#e11d48",
-    image: philStoriesCover,
-    objectPosition: "50% 52%",
-    storyClassName: "h-[24rem]"
-  },
-  "user-demo-01": {
-    accentColor: "#0891b2",
-    image: neonSleepoverCover,
-    objectPosition: "50% 48%",
-    storyClassName: "h-72"
-  },
-  "user-demo-02": {
-    accentColor: "#65a30d",
-    image: orbitThreadsCover,
-    objectPosition: "56% 50%",
-    storyClassName: "h-64"
-  },
-  "user-demo-03": {
-    accentColor: "#d97706",
-    image: motelLobbyCover,
-    objectPosition: "54% 58%",
-    storyClassName: "h-80"
-  },
-  "user-demo-04": {
-    accentColor: "#7c3aed",
-    image: voidPopCover,
-    objectPosition: "48% 50%",
-    storyClassName: "h-72"
-  }
-};
-
-const STORY_COVERS: Record<
-  string,
-  Pick<ProfileCover, "image" | "objectPosition">
-> = {
+const STORY_COVERS: Record<string, { image: string; objectPosition: string }> = {
   "story-phil-1": {
     image: philKetaminePrisonCover,
     objectPosition: "50% 48%"
@@ -86,17 +39,6 @@ const STORY_COVERS: Record<
   }
 };
 
-function getProfileCover(profile: PlatformProfile): ProfileCover {
-  return (
-    PROFILE_COVERS[profile.id] ?? {
-      accentColor: profile.accentColor,
-      image: "",
-      objectPosition: "50% 50%",
-      storyClassName: DEFAULT_STORY_CARD_CLASS
-    }
-  );
-}
-
 function sceneCountLabel(count: number) {
   return `${count} ${count === 1 ? "scene" : "scenes"}`;
 }
@@ -105,10 +47,63 @@ function storyCountLabel(count: number) {
   return `${count} ${count === 1 ? "story" : "stories"}`;
 }
 
-function getCoverFallbackStyle(color: string): CSSProperties {
-  return {
-    background: `linear-gradient(135deg, rgba(248, 250, 252, 0.94) 0%, ${color} 48%, rgba(15, 23, 42, 0.62) 100%)`
-  };
+function ProfileArtwork({
+  compact = false,
+  handle
+}: {
+  compact?: boolean;
+  handle: string;
+}) {
+  const art = buildProfileArt(handle, { compact });
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid slice"
+      viewBox={art.viewBox}
+    >
+      <rect fill="#08070b" height="400" width="300" x="0" y="0" />
+      <g filter={`url(#profile-soft-${compact ? "c" : "f"})`} opacity="0.8">
+        {art.strokes.map((stroke, index) => (
+          <path
+            key={`glow-${index}`}
+            d={stroke.d}
+            fill="none"
+            opacity={stroke.opacity}
+            stroke={stroke.color}
+            strokeLinecap="round"
+            strokeWidth={stroke.width}
+          />
+        ))}
+      </g>
+      {art.strokes.map((stroke, index) => (
+        <path
+          key={`core-${index}`}
+          d={stroke.d}
+          fill="none"
+          opacity={stroke.opacity}
+          stroke={stroke.color}
+          strokeLinecap="round"
+          strokeWidth={stroke.width}
+        />
+      ))}
+      {art.nodes.map((node, index) => (
+        <circle
+          key={`node-${index}`}
+          cx={node.cx}
+          cy={node.cy}
+          fill={node.color}
+          r={node.r}
+        />
+      ))}
+      <defs>
+        <filter id={`profile-soft-${compact ? "c" : "f"}`}>
+          <feGaussianBlur stdDeviation={compact ? 5 : 7} />
+        </filter>
+      </defs>
+    </svg>
+  );
 }
 
 function normalizeSearchQuery(value: string) {
@@ -119,8 +114,8 @@ function matchesProfileSearch(profile: PlatformProfile, query: string) {
   const handleQuery = query.replace(/^@+/, "");
 
   return (
-    profile.displayName.toLowerCase().includes(query) ||
-    profile.username.toLowerCase().includes(handleQuery)
+    profile.username.toLowerCase().includes(handleQuery) ||
+    (profile.bio ?? "").toLowerCase().includes(query)
   );
 }
 
@@ -271,7 +266,6 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
           const distance = Math.abs(offset);
           const isActive = offset === 0;
           const isHidden = distance > MAX_VISIBLE_OFFSET;
-          const cover = getProfileCover(profile);
           const label = storyCountLabel(profile.stories.length);
 
           return (
@@ -279,7 +273,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
               key={profile.id}
               type="button"
               aria-hidden={isHidden || undefined}
-              aria-label={`Open ${profile.displayName}, ${label}`}
+              aria-label={`Open @${profile.username}, ${label}`}
               tabIndex={isHidden ? -1 : 0}
               onClick={() => {
                 if (isActive) {
@@ -291,7 +285,6 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
               }}
               className="absolute left-1/2 top-0 h-full overflow-hidden rounded-2xl text-left text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-1 ring-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
               style={{
-                ...getCoverFallbackStyle(cover.accentColor),
                 ...getDeckCardStyle(offset),
                 // Sized here rather than with a breakpoint class so the deck
                 // scales smoothly with the viewport instead of jumping at 640px.
@@ -309,38 +302,23 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
                 data-testid={`profile-card-background-${profile.id}`}
                 className="absolute inset-0"
               >
-                {cover.image ? (
-                  <img
-                    alt=""
-                    decoding="async"
-                    draggable={false}
-                    loading={distance <= 1 ? "eager" : "lazy"}
-                    src={cover.image}
-                    className="h-full w-full object-cover"
-                    style={{ objectPosition: cover.objectPosition }}
-                  />
-                ) : (
-                  <span
-                    className="block h-full w-full"
-                    style={getCoverFallbackStyle(cover.accentColor)}
-                  />
-                )}
+                <ProfileArtwork handle={profile.username} />
               </span>
               <span
                 aria-hidden="true"
                 className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.10)_0%,rgba(2,6,23,0.04)_42%,rgba(2,6,23,0.62)_100%)]"
               />
-              <span className="relative z-10 grid h-full content-end gap-2 p-5">
-                <span className="block truncate font-round text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
-                  {profile.displayName}
+              <span className="relative z-10 grid h-full content-end gap-1.5 p-5">
+                <span className="block truncate font-round text-2xl font-bold leading-tight text-[color:var(--text)]">
+                  @{profile.username}
                 </span>
-                <span className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white/80 drop-shadow-[0_1px_6px_rgba(2,6,23,0.5)]">
-                    @{profile.username}
+                {profile.bio ? (
+                  <span className="line-clamp-2 text-sm text-[color:var(--muted)]">
+                    {profile.bio}
                   </span>
-                  <span className="rounded-lg bg-white/90 px-2 py-0.5 text-[0.65rem] font-black uppercase text-slate-950">
-                    {label}
-                  </span>
+                ) : null}
+                <span className="mt-1 w-fit rounded-full border border-[color:var(--neon-1)] px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.12em] text-[color:var(--neon-1)]">
+                  {label}
                 </span>
               </span>
             </button>
@@ -373,7 +351,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
                 key={profile.id}
                 type="button"
                 aria-current={index === activeIndex || undefined}
-                aria-label={`Feature ${profile.displayName}`}
+                aria-label={`Feature @${profile.username}`}
                 onClick={() => setActiveIndex(index)}
                 className={
                   "h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 " +
@@ -391,6 +369,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
 }
 
 export function LandingPage({
+  onSearchQueryChange,
   onSelectProfile,
   onSelectStory,
   profiles,
@@ -403,17 +382,17 @@ export function LandingPage({
   const isSearching = normalizeSearchQuery(searchQuery).length > 0;
 
   if (selectedProfile) {
-    const selectedCover = getProfileCover(selectedProfile);
-
     return (
       <section className="mx-auto grid w-full max-w-6xl gap-5">
         <div className="text-center">
           <h2 className="font-round text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl">
-            {selectedProfile.displayName}
+            @{selectedProfile.username}
           </h2>
-          <p className="mt-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            @{selectedProfile.username} · {storyCountLabel(selectedProfile.stories.length)}
-          </p>
+          {selectedProfile.bio ? (
+            <p className="mt-1.5 text-sm text-slate-500">
+              {selectedProfile.bio}
+            </p>
+          ) : null}
         </div>
 
         <div
@@ -422,13 +401,9 @@ export function LandingPage({
         >
           {selectedProfile.stories.map((story, index) => {
             const label = sceneCountLabel(story.sceneCount);
-            const storyCover = STORY_COVERS[story.storyId] ?? selectedCover;
+            const storyCover = STORY_COVERS[story.storyId];
             const heightClass =
-              index % 3 === 0
-                ? selectedCover.storyClassName
-                : index % 3 === 1
-                  ? "h-64"
-                  : "h-80";
+              index % 3 === 0 ? "h-72" : index % 3 === 1 ? "h-64" : "h-80";
 
             return (
               <button
@@ -437,14 +412,13 @@ export function LandingPage({
                 aria-label={`Open ${story.title} ${label}`}
                 onClick={() => onSelectStory(story.storyId)}
                 className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] ring-1 ring-white/12 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${heightClass}`}
-                style={getCoverFallbackStyle(selectedCover.accentColor)}
               >
                 <span
                   aria-hidden="true"
                   data-testid={`story-card-background-${story.storyId}`}
                   className="absolute inset-0"
                 >
-                  {storyCover.image ? (
+                  {storyCover ? (
                     <img
                       alt=""
                       decoding="async"
@@ -457,7 +431,7 @@ export function LandingPage({
                   ) : (
                     <span
                       className="block h-full w-full"
-                      style={getCoverFallbackStyle(story.coverColor)}
+                      style={{ background: story.coverColor }}
                     />
                   )}
                 </span>
@@ -496,28 +470,43 @@ export function LandingPage({
         />
       ) : null}
 
-      <div aria-label="All profiles" className="w-full">
-        <ul className="grid divide-y divide-white/10 border-y border-white/10">
+      <label className="app-glass mx-auto flex h-12 w-full max-w-md items-center gap-3 rounded-xl px-4 text-[color:var(--muted)]">
+        <span className="sr-only">Search profiles</span>
+        <Search aria-hidden="true" className="h-5 w-5 shrink-0" />
+        <input
+          aria-label="Search profiles"
+          className="h-full min-w-0 flex-1 bg-transparent text-base font-semibold text-[color:var(--text)] outline-none placeholder:text-[color:var(--muted)]"
+          onChange={(event) => onSearchQueryChange(event.target.value)}
+          placeholder="Search profiles"
+          type="search"
+          value={searchQuery}
+        />
+      </label>
+
+      <div aria-label="All profiles" className="app-glass w-full rounded-2xl px-4">
+        <ul className="grid divide-y divide-[color:var(--line)]">
           {visibleProfiles.map((profile) => (
             <li key={profile.id}>
               <button
                 type="button"
-                aria-label={`Open ${profile.displayName}, ${storyCountLabel(profile.stories.length)}`}
+                aria-label={`Open @${profile.username}, ${storyCountLabel(profile.stories.length)}`}
                 onClick={() => onSelectProfile(profile.id)}
-                className="group flex w-full items-center gap-3 px-1 py-3 text-left transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+                className="group flex w-full items-center gap-3 py-3 text-left transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)]"
               >
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: getProfileCover(profile).accentColor }}
-                />
-                <span className="min-w-0 truncate font-round text-base font-bold text-slate-50 group-hover:underline">
-                  {profile.displayName}
+                <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[color:var(--line)]">
+                  <ProfileArtwork compact handle={profile.username} />
                 </span>
-                <span className="min-w-0 truncate text-sm font-semibold text-slate-500">
-                  @{profile.username}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-round text-base font-bold text-[color:var(--text)] group-hover:underline">
+                    @{profile.username}
+                  </span>
+                  {profile.bio ? (
+                    <span className="block truncate text-sm text-[color:var(--muted)]">
+                      {profile.bio}
+                    </span>
+                  ) : null}
                 </span>
-                <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--muted)]">
                   {storyCountLabel(profile.stories.length)}
                 </span>
               </button>
