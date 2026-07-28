@@ -61,6 +61,26 @@ describe("database migrations", () => {
          AND t.relname = 'images'
          AND c.conname = 'images_status_check'`
     );
+    const bioColumn = await pool.query<{
+      column_name: string;
+      data_type: string;
+      is_nullable: "YES" | "NO";
+    }>(
+      `SELECT column_name, data_type, is_nullable
+       FROM information_schema.columns
+       WHERE table_schema = 'migrations_test'
+         AND table_name = 'users'
+         AND column_name = 'bio'`
+    );
+    const usersBioConstraint = await pool.query<{ definition: string }>(
+      `SELECT pg_get_constraintdef(c.oid) AS definition
+       FROM pg_constraint c
+       JOIN pg_class t ON t.oid = c.conrelid
+       JOIN pg_namespace n ON n.oid = t.relnamespace
+       WHERE n.nspname = 'migrations_test'
+         AND t.relname = 'users'
+         AND c.conname = 'users_bio_check'`
+    );
 
     expect(tables.rows.map((row) => row.table_name)).toEqual([
       "images",
@@ -109,6 +129,15 @@ describe("database migrations", () => {
     );
     expect(imageStatusConstraint.rows[0].definition).toContain("processing");
     expect(imageStatusConstraint.rows[0].definition).toContain("deleting");
+    expect(bioColumn.rows).toEqual([
+      {
+        column_name: "bio",
+        data_type: "text",
+        is_nullable: "YES"
+      }
+    ]);
+    expect(usersBioConstraint.rows).toHaveLength(1);
+    expect(usersBioConstraint.rows[0].definition).toContain("160");
   });
 
   it("is idempotent and records each migration once", async () => {

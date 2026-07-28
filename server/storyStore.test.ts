@@ -311,6 +311,59 @@ describe("Postgres StoryStore", () => {
     ).rejects.toThrow();
   });
 
+  it("preserves the avatar on a bio-only patch and clears it only when asked", async () => {
+    const session = await store.register({
+      password: "correct-horse-battery",
+      username: "avatarpreserve"
+    });
+    const variants = JSON.stringify({
+      card: { key: "variants/avatar-preserve/card.webp" },
+      full: { key: "variants/avatar-preserve/full.webp" },
+      thumb: { key: "variants/avatar-preserve/thumb.webp" }
+    });
+    await pool.query(
+      `INSERT INTO images (
+         id, owner_id, kind, object_key, mime_type, width, height,
+         size_bytes, status, variants
+       )
+       VALUES (
+         'image-avatar-preserve', $1, 'avatar', 'originals/avatar-preserve',
+         'image/png', 100, 100, 100, 'ready', $2::jsonb
+       )`,
+      [session.user.id, variants]
+    );
+
+    await store.updateCurrentUser(session.user.id, {
+      avatarImageId: "image-avatar-preserve"
+    });
+
+    const afterSet = await store.getPublicProfiles();
+    expect(
+      afterSet.find((entry) => entry.username === "avatarpreserve")
+        ?.avatarImage?.id
+    ).toBe("image-avatar-preserve");
+
+    await store.updateCurrentUser(session.user.id, {
+      bio: "bio only, avatar should survive"
+    });
+
+    const afterBioOnlyPatch = await store.getPublicProfiles();
+    const bioOnlyProfile = afterBioOnlyPatch.find(
+      (entry) => entry.username === "avatarpreserve"
+    );
+
+    expect(bioOnlyProfile?.avatarImage?.id).toBe("image-avatar-preserve");
+    expect(bioOnlyProfile?.bio).toBe("bio only, avatar should survive");
+
+    await store.updateCurrentUser(session.user.id, { avatarImageId: null });
+
+    const afterClear = await store.getPublicProfiles();
+    expect(
+      afterClear.find((entry) => entry.username === "avatarpreserve")
+        ?.avatarImage
+    ).toBeNull();
+  });
+
   it("expires sessions and throttles last-seen writes", async () => {
     const started = await store.register({
       displayName: "Clock",

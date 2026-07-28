@@ -430,7 +430,7 @@ export function LandingPage({
                       style={{ objectPosition: storyCover.objectPosition }}
                     />
                   ) : (
-                    <ProfileArtwork handle={selectedProfile.username} />
+                    <ProfileArtwork handle={story.storyId} />
                   )}
                 </span>
                 <span

@@ -191,6 +191,7 @@ export async function fetchStoryPermissions(storyId: string) {
 
 export async function updateCurrentUser(input: {
   avatarImageId?: string | null;
+  bio?: string | null;
   displayName?: string;
 }) {
   return requestJson<{ user: PlatformSession["user"] }>("/api/users/me", {

@@ -520,6 +520,22 @@ describe("App", () => {
     expect(triggers[0].parentElement).toBe(panel.parentElement);
   });
 
+  it("shows the signed-in handle in the account panel, never the legacy display name", async () => {
+    mockSession = {
+      ...ownerSession,
+      user: { ...ownerSession.user, displayName: "phil's stories" }
+    };
+    render(<App />);
+    await flushPlatformEffects();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Account" })[0]);
+
+    const panel = screen.getByRole("dialog", { name: "Account panel" });
+
+    expect(within(panel).getByText("@phil")).toBeInTheDocument();
+    expect(within(panel).queryByText("phil's stories")).not.toBeInTheDocument();
+  });
+
   it("keeps a single Account trigger, with the mobile nav limited to Home, Explore, and Create", async () => {
     mockSession = null;
     render(<App />);
@@ -844,6 +860,35 @@ describe("App", () => {
     expect(backdrop.querySelector("img")).toBeNull();
     expect(backdrop.querySelector("svg")).not.toBeNull();
     expect(backdrop.querySelectorAll("svg path").length).toBeGreaterThan(0);
+  });
+
+  it("varies the fallback art across a profile's uncovered stories instead of repeating one image", async () => {
+    mockSession = null;
+    mockStories["story-demo-01-2"] = createMockStory(
+      "user-demo-01",
+      "story-demo-01-2",
+      "Second demo story",
+      7
+    );
+
+    render(<App />);
+    await flushPlatformEffects();
+
+    openProfileFromList(/Open @demo-01/);
+
+    const firstStrokes = Array.from(
+      screen
+        .getByTestId("story-card-background-story-demo-01-1")
+        .querySelectorAll("path")
+    ).map((path) => path.getAttribute("d"));
+    const secondStrokes = Array.from(
+      screen
+        .getByTestId("story-card-background-story-demo-01-2")
+        .querySelectorAll("path")
+    ).map((path) => path.getAttribute("d"));
+
+    expect(firstStrokes.length).toBeGreaterThan(0);
+    expect(firstStrokes).not.toEqual(secondStrokes);
   });
 
   it("keeps the curated cover image for a story that has one", async () => {

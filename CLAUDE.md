@@ -56,7 +56,9 @@ Important naming:
 ## Core Files
 - `src/App.tsx`: orchestrates routes, API hydration, story selection, phone UI, story controls, editor.
 - `src/components/AppShell.tsx`: persistent desktop/mobile navigation shell.
+- `src/components/NeonBackground.tsx`: animated neon tendril/node field rendered behind the browsing shell.
 - `src/components/LandingPage.tsx`: featured profile deck, profile list, and profile story grid.
+- `src/utils/profileArt.ts`, `seededRandom.ts`: deterministic per-handle/per-story generated SVG art (`ProfileArtwork`) and the seeded PRNG it and `NeonBackground` share.
 - `src/components/AccountPanel.tsx`, `StorybookMenu.tsx`: auth and owner/admin story management UI.
 - `src/navigation/appRoute.ts`: tiny URL route parser/formatter.
 - `src/api/storyApi.ts`: frontend API client.
@@ -125,8 +127,12 @@ Important naming:
 
 ## Landing Page
 - The explore view is `FeaturedDeck` (a coverflow of up to `MAX_FEATURED_PROFILES`
-  profiles) above a plain, image-free profile list. The list is the directory; the
-  deck is a highlight reel.
+  profiles) above a plain profile list. The list is the directory; the deck is a
+  highlight reel.
+- No curated profile photos anywhere on this page. Both the deck and the list render
+  `ProfileArtwork` (`buildProfileArt` in `src/utils/profileArt.ts`), deterministic
+  neon-token SVG art seeded from the profile's handle (`compact` mode for the list's
+  small icon). Deck cards also show the `@handle`, bio (if any), and a story-count pill.
 - Deck cards are absolutely positioned and placed by signed offset from the active
   index (`getDeckOffset` wraps circularly, `getDeckCardStyle` maps offset to
   translate/scale/rotateY/blur/opacity). Cards past `MAX_VISIBLE_OFFSET` are not painted.
@@ -137,9 +143,16 @@ Important naming:
   measured widths wrong mid-resize, and animates `filter` on every autoplay step.
 - Autoplay pauses on hover and focus and is disabled under `prefers-reduced-motion`.
 - Searching hides the deck and filters the list only.
+- A selected profile's story grid uses a curated cover (`STORY_COVERS` in
+  `LandingPage.tsx`) when one exists, else falls back to `ProfileArtwork` seeded by
+  that story's own ID (not the profile's handle), so uncovered stories in the same
+  profile don't all repeat one image.
 
 ## Style / UX Notes
-- Keep the glassmorphism coffee-shop background direction.
+- The browsing shell (landing, profile, navigation) is a single near-black neon
+  theme: `--base`, `--surface`, `--line`, `--text`, `--muted`, `--neon-1..4` tokens
+  and the `.app-glass` utility (`src/index.css`). The glassmorphism coffee-shop
+  direction now lives only on the story route (`PhoneShell` chat player).
 - Phone proportions are intentionally narrow/mobile-like.
 - Replay/NXT controls live outside the phone and must stay visible above the mobile bottom nav.
 - Script editor is full-screen; line cards can fold and show `SpeakerInitial: preview text`.

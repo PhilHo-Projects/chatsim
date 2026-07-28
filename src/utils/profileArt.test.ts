@@ -38,6 +38,24 @@ describe("generated profile art", () => {
     expect(full.viewBox).toBe("0 0 300 400");
     expect(compact.viewBox).toBe("0 0 300 300");
     expect(compact.strokes.length).toBeLessThan(full.strokes.length);
+    // Compact's width range ([4, 5.4)) and full's ([0.8, 2.2)) never overlap,
+    // so this only confirms the two ranges stay disjoint in the intended
+    // direction. It is not a check that the two modes draw in lockstep or
+    // share any other state.
     expect(compact.strokes[0].width).toBeGreaterThan(full.strokes[0].width);
+  });
+
+  it("keeps every stroke's width positive and opacity within (0, 1]", () => {
+    for (const handle of ["phil", "demo-01", "demo-02", "demo-03", "demo-04"]) {
+      for (const compact of [false, true]) {
+        const art = buildProfileArt(handle, { compact });
+
+        for (const stroke of art.strokes) {
+          expect(stroke.width).toBeGreaterThan(0);
+          expect(stroke.opacity).toBeGreaterThan(0);
+          expect(stroke.opacity).toBeLessThanOrEqual(1);
+        }
+      }
+    }
   });
 });

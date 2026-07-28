@@ -46,7 +46,7 @@ export function AccountPanel({
               Signed in
             </p>
             <p className="mt-1 text-base font-extrabold text-[color:var(--text)]">
-              {session.user.displayName}
+              @{session.user.username}
             </p>
           </div>
           <button
