@@ -8,6 +8,7 @@ import {
   UserCircle
 } from "lucide-react";
 import type { PlatformProfile } from "../data/platformSeed";
+import { NeonBackground } from "./NeonBackground";
 
 type AppShellProps = {
   accountPanel: ReactNode;
@@ -49,6 +50,7 @@ export function AppShell({
       aria-label="App shell"
       className={`app-background ${backgroundModeClass} relative min-h-screen overflow-hidden text-slate-100`}
     >
+      <NeonBackground />
       <nav
         aria-label="Desktop navigation"
         className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-slate-800/70 bg-[color:var(--surface)] py-5 shadow-[8px_0_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:flex"

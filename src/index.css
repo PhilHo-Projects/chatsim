@@ -152,3 +152,82 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* --- Neon background ---
+   Blur is baked into a static layer and never recomputed. Only transform and
+   stroke-dashoffset animate. Do not move the dash animation into .neon-bg__glow:
+   that forces a full-viewport re-blur every frame. */
+
+.neon-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.neon-bg svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.neon-bg__blooms {
+  position: absolute;
+  inset: -30%;
+  opacity: 0.16;
+  filter: blur(110px);
+  background:
+    radial-gradient(30% 34% at 20% 24%, var(--neon-1), transparent 70%),
+    radial-gradient(28% 30% at 82% 18%, var(--neon-3), transparent 70%),
+    radial-gradient(34% 36% at 70% 84%, var(--neon-2), transparent 70%),
+    radial-gradient(26% 30% at 12% 82%, var(--neon-4), transparent 70%);
+  animation: neon-drift-a 61s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.neon-bg__glow {
+  opacity: 1;
+  filter: blur(13px);
+  mix-blend-mode: screen;
+  animation: neon-drift-b 88s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.neon-bg__core {
+  mix-blend-mode: plus-lighter;
+  animation: neon-drift-b 88s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+/* Light touch only. Anything heavier and the tendrils vanish into the base. */
+.neon-bg__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    86% 70% at 50% 44%,
+    rgba(5, 5, 7, 0) 40%,
+    rgba(5, 5, 7, 0.45) 100%
+  );
+}
+
+@keyframes neon-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(5%, -4%, 0) scale(1.14); }
+}
+
+@keyframes neon-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.04) rotate(0deg); }
+  to { transform: translate3d(-3%, 2%, 0) scale(1.1) rotate(1.6deg); }
+}
+
+@keyframes neon-flow {
+  to { stroke-dashoffset: -2400; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
