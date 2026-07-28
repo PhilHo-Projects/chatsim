@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createSeededRandom } from "../utils/seededRandom";
 
 /** Tendril count and node count are fixed by the design spec. */
@@ -70,7 +71,7 @@ export function buildTendrils(count: number): Tendril[] {
   });
 }
 
-function buildNodes(count: number) {
+export function buildNodes(count: number) {
   const next = createSeededRandom(`${SEED}-nodes`);
 
   return Array.from({ length: count }, (_unused, index) => ({
@@ -90,8 +91,8 @@ function buildNodes(count: number) {
  * layer and is never recomputed; only transform and stroke-dashoffset animate.
  */
 export function NeonBackground() {
-  const tendrils = buildTendrils(TENDRIL_COUNT);
-  const nodes = buildNodes(NODE_COUNT);
+  const tendrils = useMemo(() => buildTendrils(TENDRIL_COUNT), []);
+  const nodes = useMemo(() => buildNodes(NODE_COUNT), []);
 
   return (
     <div aria-hidden="true" className="neon-bg">
