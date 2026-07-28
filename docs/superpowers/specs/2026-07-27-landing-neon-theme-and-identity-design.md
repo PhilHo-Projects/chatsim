@@ -254,8 +254,10 @@ autoplay pause rules. Only the card's contents and colours change. The existing
 
 ## Follow-up, explicitly not in this change
 
-1. Drop the `display_name` column and remove it from the session payload.
-2. Let a real account claim a seeded showcase profile, so `@phil` can be both a
+1. Add profile bio editing UI; the API already accepts `bio`, but no current
+   owner/account surface exposes it.
+2. Drop the `display_name` column and remove it from the session payload.
+3. Let a real account claim a seeded showcase profile, so `@phil` can be both a
    profile and a login.
-3. Decide whether the phone player and editors adopt the neon theme or stay
+4. Decide whether the phone player and editors adopt the neon theme or stay
    light. They are untouched here, so the app currently has two looks.

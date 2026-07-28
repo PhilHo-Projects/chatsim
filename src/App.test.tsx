@@ -341,6 +341,7 @@ async function renderEditorOnStory() {
 describe("App", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubGlobal("scrollTo", vi.fn());
     localStorage.clear();
     setBrowserPath("/");
     setupApiMock();
@@ -382,6 +383,11 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { name: "chatsim" }).parentElement
     ).toHaveClass("text-center");
+    const browseGrid = screen
+      .getByRole("heading", { name: "chatsim" })
+      .closest("section");
+
+    expect(browseGrid).toHaveClass("grid-cols-1");
     fireEvent.click(
       screen.getAllByRole("button", { name: "Account" })[0]
     );

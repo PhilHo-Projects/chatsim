@@ -454,7 +454,7 @@ export function LandingPage({
   }
 
   return (
-    <section className="mx-auto grid w-full max-w-5xl gap-8 pb-24">
+    <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 pb-24">
       <div className="text-center">
         <h2 className="font-round text-5xl font-semibold tracking-tight text-slate-50 sm:text-6xl">
           chatsim

@@ -137,6 +137,8 @@ export function useAppRoute() {
       } else {
         window.history.pushState(null, "", nextPath);
       }
+
+      window.scrollTo({ left: 0, top: 0 });
     }
 
     setRoute(nextRoute);
