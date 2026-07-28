@@ -1335,7 +1335,35 @@ In `AppShell.tsx`, delete the account button from the desktop left rail (the fir
 
 The mobile bottom-nav account button stays where it is. The panel already renders in this cluster, so button and panel now share a parent and no positioning logic is needed.
 
-- [ ] **Step 4: Remove the display-name field**
+- [ ] **Step 4: Re-theme the account panel**
+
+`AccountPanel.tsx` is still hardcoded light from before this change — `bg-white/95`,
+`text-slate-950`, `border-slate-200`, `bg-slate-100` — and it never carried `dark:`
+variants, so Task 3 did not touch it. Against the near-black shell it currently
+renders as a white popup. The spec puts `AccountPanel` in scope, and this is the
+only task that opens the file, so it is re-themed here.
+
+Convert its surfaces to the tokens installed in Task 3:
+
+- panel container: `bg-white/95` → `app-glass` (drop the separate `border-slate-200`
+  and `backdrop-blur-xl`, which `app-glass` already provides)
+- headings and primary text: `text-slate-950` → `text-[color:var(--text)]`
+- secondary labels: `text-slate-500` / `text-slate-600` → `text-[color:var(--muted)]`
+- the login/create segmented control: `bg-slate-100` → `bg-white/[0.06]`, its active
+  pill `bg-white text-slate-950` → `bg-white/[0.12] text-[color:var(--text)]`
+- text inputs: `border-slate-200 bg-white text-slate-950` →
+  `border-[color:var(--line)] bg-white/[0.04] text-[color:var(--text)]`, with focus
+  ring `focus:ring-[color:var(--neon-1)]`
+- primary submit button: `bg-slate-950 text-white` → `bg-[color:var(--neon-1)]
+  text-[color:var(--base)]`, hover `brightness-110`
+- secondary/logout button: `bg-white ring-slate-200 text-slate-800` →
+  `bg-white/[0.04] ring-[color:var(--line)] text-[color:var(--text)]`
+- the error paragraph keeps a rose tone but at `text-rose-300` for contrast on dark
+
+Do not restructure the component, change its markup semantics, or alter its props
+beyond the display-name removal in the next step. This is a colour pass.
+
+- [ ] **Step 5: Remove the display-name field**
 
 In `AccountPanel.tsx`, delete the `displayName` and `onDisplayNameChange` props and the entire `{authMode === "register" ? (...) : null}` block containing the Display name label.
 
@@ -1343,16 +1371,16 @@ In `App.tsx`, delete the `displayName` state (line 209), the `displayName` field
 
 In `src/api/storyApi.ts`, change the `register` input type to `{ password: string; username: string }`.
 
-- [ ] **Step 5: Run the tests**
+- [ ] **Step 6: Run the tests**
 
 Run: `npx vitest run src/App.test.tsx && npx tsc -b`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/components/AppShell.tsx src/components/AccountPanel.tsx src/App.tsx src/api/storyApi.ts src/App.test.tsx
-git commit -m "fix: anchor account panel to its trigger and drop display name entry"
+git commit -m "fix: anchor account panel to its trigger, re-theme it, drop display name entry"
 ```
 
 ---
