@@ -126,9 +126,23 @@ This is the **default** art every profile gets. The existing upload slot stays �
 an owner who uploads their own image still overrides it. Story covers are a
 separate concern and are not touched.
 
-The five bundled profile cover WebPs in `src/assets/story-card-backgrounds/`
-become unreferenced and should be deleted, along with `PROFILE_COVERS` in
-`LandingPage.tsx`. The two story covers under `story-covers/` stay.
+The five bundled profile covers in `src/assets/story-card-backgrounds/` become
+unreferenced, along with `PROFILE_COVERS` in `LandingPage.tsx`. Removing the
+landing background in section 1 also orphans `landing-minimal-sky`.
+
+**Retained, not deleted (amended 2026-07-27).** Both PNG originals and WebP
+downscales move to `fixtures/sample-images/`, out of any path Vite can bundle
+but still tracked in git. They are wanted as sample material for exercising the
+upload pipeline — cropping, resizing, rendition selection — where a 2–3 MB
+original and a 40–180 KB optimized file test different paths.
+
+Nothing needs removing from the server or R2: these are build-time `import`
+statements, never uploads, so they have no `images` row and no R2 object. The
+dev database confirms it — `images` has zero rows and nothing references an
+image.
+
+The two story covers under `story-covers/` and `coffee-shop-background` stay in
+`src/assets`; both are still in use.
 
 ## 4. Identity Model
 

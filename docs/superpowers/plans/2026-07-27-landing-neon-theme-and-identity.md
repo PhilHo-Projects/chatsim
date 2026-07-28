@@ -447,7 +447,17 @@ Replace everything from `@custom-variant dark` through the final `.dark .app-bac
 }
 ```
 
-Delete the old `:root`, `.dark`, and every `.app-background::before` / `::after` rule including the `--landing` and `--story` variants. Keep the `bubble-in`, `typing-dot`, `battle-*` keyframes and the `prefers-reduced-motion` block at the bottom exactly as they are — the phone and battle players still use them.
+Then delete, precisely:
+
+- the old `:root` and `.dark` blocks
+- `.app-background--landing::before` and `.app-background--landing::after` (the neon background replaces them)
+- every `.dark .app-background*` override
+
+**Keep** the shared `.app-background::before, .app-background::after` base rule and both `.app-background--story::before` / `::after` rules. The story route still passes `app-background--story` as `backgroundModeClass`, and the coffee-shop treatment behind the phone player is explicitly out of scope. Deleting them leaves the player on a flat black field.
+
+Also keep the `bubble-in`, `typing-dot`, `battle-*` keyframes and the `prefers-reduced-motion` block at the bottom exactly as they are — the phone and battle players still use them.
+
+Because `.app-background` now sets `background: var(--base)`, check the story route in the browser at the end of this task: the coffee-shop image should still paint over the near-black base.
 
 - [ ] **Step 4: Strip theme state from `src/App.tsx`**
 
@@ -1335,15 +1345,27 @@ git commit -m "fix: anchor account panel to its trigger and drop display name en
 
 ---
 
-### Task 8: Delete the orphaned profile artwork and verify the whole build
+### Task 8: Retire the orphaned artwork to a fixtures directory and verify the whole build
+
+The generated artwork is **kept, not deleted** — it is wanted later as sample
+material for exercising uploads, cropping and sizing. It moves out of
+`src/assets/` so nothing can import it and it can never re-enter the bundle,
+but it stays tracked in git and available on every machine.
+
+**There is nothing to clean off the server or R2.** These files are build-time
+`import` statements bundled by Vite, not uploads — they never passed through
+the upload pipeline, so they have no `images` row and no R2 object. Verified
+against the dev database: `images` has 0 rows, and no user or story references
+an image. The app R2 buckets are not provisioned yet.
 
 **Files:**
-- Delete: `src/assets/story-card-backgrounds/motel-lobby.webp`, `neon-sleepover.webp`, `orbit-threads.webp`, `phil-stories.webp`, `void-pop.webp` (and their `.png` sources if present)
-- Modify: `scripts/optimizedAssets.json`
+- Move: five profile covers (`.webp` + `.png`) from `src/assets/story-card-backgrounds/` to `fixtures/sample-images/profile-covers/`
+- Move: `src/assets/app-backgrounds/landing-minimal-sky.{png,webp}` to `fixtures/sample-images/backgrounds/`
+- Modify: `scripts/optimizeAssets.ts:38-49`, `scripts/optimizedAssets.json`
 - Test: `src/repositoryHygiene.test.ts`
 
 **Interfaces:**
-- Consumes: Task 6 removed the last import of these files.
+- Consumes: Task 6 removed the last import of the profile covers; Task 3 removed the last reference to `landing-minimal-sky`.
 - Produces: nothing.
 
 - [ ] **Step 1: Write the failing test**
@@ -1351,57 +1373,138 @@ git commit -m "fix: anchor account panel to its trigger and drop display name en
 Add to `src/repositoryHygiene.test.ts`:
 
 ```ts
-  it("keeps no orphaned profile cover artwork", () => {
-    const covers = [
-      "src/assets/story-card-backgrounds/motel-lobby.webp",
-      "src/assets/story-card-backgrounds/neon-sleepover.webp",
-      "src/assets/story-card-backgrounds/orbit-threads.webp",
-      "src/assets/story-card-backgrounds/phil-stories.webp",
-      "src/assets/story-card-backgrounds/void-pop.webp"
+  it("keeps retired artwork out of the bundle but on disk as fixtures", () => {
+    const retired = [
+      "profile-covers/motel-lobby",
+      "profile-covers/neon-sleepover",
+      "profile-covers/orbit-threads",
+      "profile-covers/phil-stories",
+      "profile-covers/void-pop",
+      "backgrounds/landing-minimal-sky"
     ];
 
-    for (const cover of covers) {
-      expect(existsSync(cover)).toBe(false);
+    for (const name of retired) {
+      // Kept for upload/sizing fixtures, so it must still exist ...
+      expect(existsSync(`fixtures/sample-images/${name}.png`)).toBe(true);
+      // ... but never from a path Vite can bundle.
+      expect(existsSync(`src/assets/story-card-backgrounds/${name.split("/")[1]}.webp`)).toBe(false);
     }
 
     const landing = readFileSync("src/components/LandingPage.tsx", "utf8");
+    const css = readFileSync("src/index.css", "utf8");
 
     expect(landing).not.toContain("story-card-backgrounds/motel-lobby");
+    expect(css).not.toContain("landing-minimal-sky");
+    // Story cover art is out of scope and must survive.
     expect(landing).toContain("story-covers/");
+    expect(existsSync("src/assets/coffee-shop-background.webp")).toBe(true);
   });
 ```
 
-The second assertion is the guard that matters: the two files under `story-covers/` must survive, because story cover art is out of scope.
+The last two assertions are the guards that matter: the two files under
+`story-covers/` and the coffee-shop background are still in use.
 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `npx vitest run src/repositoryHygiene.test.ts`
-Expected: FAIL, the five webp files still exist.
+Expected: FAIL — the fixtures directory does not exist yet.
 
-- [ ] **Step 3: Confirm nothing imports them, then delete**
-
-```bash
-grep -rn "motel-lobby\|neon-sleepover\|orbit-threads\|phil-stories\|void-pop" src/ scripts/
-```
-
-Expected: matches only in `scripts/optimizedAssets.json`. If `LandingPage.tsx` still appears, Task 6 is incomplete — stop and finish it.
+- [ ] **Step 3: Confirm nothing imports them, then move**
 
 ```bash
-git rm src/assets/story-card-backgrounds/motel-lobby.webp \
-       src/assets/story-card-backgrounds/neon-sleepover.webp \
-       src/assets/story-card-backgrounds/orbit-threads.webp \
-       src/assets/story-card-backgrounds/phil-stories.webp \
-       src/assets/story-card-backgrounds/void-pop.webp
+grep -rn "motel-lobby\|neon-sleepover\|orbit-threads\|phil-stories\|void-pop\|landing-minimal-sky" src/ scripts/
 ```
 
-Delete the matching PNG sources if `ls src/assets/story-card-backgrounds/` shows any, and remove the corresponding entries from `scripts/optimizedAssets.json`.
+Expected: matches only in `scripts/optimizedAssets.json` and `scripts/optimizeAssets.ts`. If `LandingPage.tsx` or `index.css` still appears, Task 6 or Task 3 is incomplete — stop and finish it first.
 
-- [ ] **Step 4: Run the full suite and build**
+```bash
+mkdir -p fixtures/sample-images/profile-covers fixtures/sample-images/backgrounds
+
+git mv src/assets/story-card-backgrounds/motel-lobby.png    fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/motel-lobby.webp   fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/neon-sleepover.png  fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/neon-sleepover.webp fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/orbit-threads.png   fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/orbit-threads.webp  fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/phil-stories.png    fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/phil-stories.webp   fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/void-pop.png        fixtures/sample-images/profile-covers/
+git mv src/assets/story-card-backgrounds/void-pop.webp       fixtures/sample-images/profile-covers/
+git mv src/assets/app-backgrounds/landing-minimal-sky.png    fixtures/sample-images/backgrounds/
+git mv src/assets/app-backgrounds/landing-minimal-sky.webp   fixtures/sample-images/backgrounds/
+```
+
+The PNGs are 2–3 MB multi-megapixel originals and the WebPs are 40–180 KB
+downscales — deliberately keep both, since a large original and a small
+optimized file exercise different paths in the upload and resize pipeline.
+
+- [ ] **Step 4: Write the fixtures README**
+
+Create `fixtures/sample-images/README.md`:
+
+```markdown
+# Sample images
+
+Generated artwork retired from the app on 2026-07-27 when profile cards moved
+to code-drawn art. Kept deliberately as test material for the upload pipeline —
+cropping, resizing, rendition selection, rejection paths.
+
+- `profile-covers/` — five 2–3 MB PNG originals with 40–180 KB WebP downscales.
+- `backgrounds/` — the retired landing background, same pairing.
+
+Nothing here is imported by the app. Do not import from `fixtures/`; anything
+the app actually ships belongs in `src/assets/`.
+```
+
+- [ ] **Step 5: Update the asset optimizer**
+
+In `scripts/optimizeAssets.ts`, delete these two lines from `TARGETS`:
+
+```ts
+  { path: "app-backgrounds/landing-minimal-sky.png", maxWidth: 1920, quality: 78 },
+```
+
+```ts
+  { path: "story-card-backgrounds", maxWidth: 640, quality: 78 },
+```
+
+`collectSources` does not recurse, so the `story-card-backgrounds` entry covered
+only the five files just moved and would now resolve to an empty set. The
+separate `story-card-backgrounds/story-covers` entry is unaffected and stays.
+
+Then remove these six keys from `scripts/optimizedAssets.json`:
+
+```
+app-backgrounds/landing-minimal-sky.webp
+story-card-backgrounds/motel-lobby.webp
+story-card-backgrounds/neon-sleepover.webp
+story-card-backgrounds/orbit-threads.webp
+story-card-backgrounds/phil-stories.webp
+story-card-backgrounds/void-pop.webp
+```
+
+Leaving stale ledger keys behind is harmless at runtime but makes
+`npm run assets:optimize` report skips for files that no longer exist.
+
+- [ ] **Step 6: Verify the optimizer still runs**
+
+Run: `npm run assets:optimize`
+Expected: completes without error, touching only the remaining targets. No entry for a moved file.
+
+- [ ] **Step 7: Run the full suite and build**
 
 Run: `npm run dev:db && npm test && npm run build`
 Expected: all tests PASS, build succeeds.
 
-- [ ] **Step 5: Browser-check both viewports**
+Then confirm the retired art is genuinely out of the bundle:
+
+```bash
+ls dist/assets | grep -E "motel-lobby|neon-sleepover|orbit-threads|phil-stories|void-pop|landing-minimal-sky" || echo "PASS: retired art is not in the bundle"
+```
+
+Expected: `PASS`. Anything listed means a live import survived.
+
+- [ ] **Step 8: Browser-check both viewports**
 
 Start the dev server and check `http://127.0.0.1:5174/` at 1280×720 and 390×844. Confirm:
 - handles render with no `'s stories` anywhere
@@ -1412,18 +1515,33 @@ Start the dev server and check `http://127.0.0.1:5174/` at 1280×720 and 390×84
 - body text stays legible over the neon
 - the browser console has no errors or warnings
 
-- [ ] **Step 6: Commit**
+Then open a story and confirm the coffee-shop background still paints behind
+the phone — that is the regression Task 3 is most likely to have introduced.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add -A
-git commit -m "chore: drop orphaned profile artwork"
+git commit -m "chore: retire orphaned artwork to fixtures"
 ```
 
 ---
 
 ## Self-Review
 
-**Spec coverage.** Theme tokens → Task 3. Background → Task 4. Profile art → Task 5. Handle-only → Tasks 2, 6, 7. Bio → Tasks 1, 2, 6. Demo accounts → Task 2. Search relocation → Task 6. Account panel → Task 7. Asset deletion → Task 8. Credentials are documentation-only in the spec and need no task.
+**Spec coverage.** Theme tokens → Task 3. Background → Task 4. Profile art → Task 5. Handle-only → Tasks 2, 6, 7. Bio → Tasks 1, 2, 6. Demo accounts → Task 2. Search relocation → Task 6. Account panel → Task 7. Asset retirement → Task 8. Credentials are documentation-only in the spec and need no task.
+
+**Amendment (2026-07-27).** The spec says to delete the profile cover artwork.
+Superseded on request: it is moved to `fixtures/sample-images/` instead, to be
+reused as upload and sizing test material. Nothing needs removing from the
+server or R2 — these were bundled imports, never uploads, and the `images`
+table is empty.
+
+**Regression risk to watch.** Task 3 rewrites `src/index.css` around the
+`.app-background` rules. `.app-background--story` must survive: it paints the
+coffee-shop treatment behind the phone player, which is out of scope for this
+change. An early draft of this plan deleted it along with `--landing`. Task 8
+step 8 checks for it explicitly.
 
 **Deliberately deferred, per the spec's follow-up list:** dropping the `display_name` column, letting an account claim a seeded profile, and theming the phone player.
 
