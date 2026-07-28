@@ -15,7 +15,7 @@ import {
 const ownerSession: PlatformSession = {
   expiresAt: "2026-08-24T12:00:00.000Z",
   user: {
-    displayName: "phil's stories",
+    displayName: "phil",
     id: "user-phil",
     role: "member",
     username: "phil"
@@ -141,7 +141,7 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
         mockSession = {
           expiresAt: "2026-08-24T12:00:00.000Z",
           user: {
-            displayName: body.displayName || `${body.username}'s stories`,
+            displayName: body.displayName || body.username,
             id: `user-${body.username}`,
             role: "member",
             username: body.username
@@ -309,7 +309,7 @@ function openProfileFromList(name: RegExp) {
 
 function openFirstStory() {
   if (!screen.queryByLabelText("Story bento grid")) {
-    openProfileFromList(/Open phil's stories/);
+    openProfileFromList(/Open phil/);
   }
   fireEvent.click(
     within(screen.getByLabelText("Story bento grid")).getByRole("button", {
@@ -397,7 +397,7 @@ describe("App", () => {
     );
     expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
     expect(
-      within(screen.getByLabelText("All profiles")).getByText("phil's stories")
+      within(screen.getByLabelText("All profiles")).getByText("phil")
     ).toBeInTheDocument();
     const featuredDeck = screen.getByRole("group", { name: "Featured profiles" });
     const profileList = screen.getByLabelText("All profiles");
@@ -405,12 +405,12 @@ describe("App", () => {
     expect(featuredDeck).toHaveAttribute("aria-roledescription", "carousel");
     expect(
       within(featuredDeck).getByRole("button", {
-        name: /Open phil's stories/
+        name: /Open phil/
       })
     ).toBeInTheDocument();
     expect(
       within(
-        within(profileList).getByRole("button", { name: /Open phil's stories/ })
+        within(profileList).getByRole("button", { name: /Open phil/ })
       ).getByText("2 stories")
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Story bento grid")).not.toBeInTheDocument();
@@ -427,12 +427,12 @@ describe("App", () => {
     ).toHaveLength(seedProfiles.length);
     expect(
       within(featuredDeck)
-        .getByRole("button", { name: /Open phil's stories/ })
+        .getByRole("button", { name: /Open phil/ })
         .getAttribute("style")
     ).toMatch(/#e11d48|225,\s*29,\s*72/);
     expect(
       within(featuredDeck)
-        .getByRole("button", { name: /Open phil's stories/ })
+        .getByRole("button", { name: /Open phil/ })
         .querySelector(".top-0.h-1")
     ).toBeNull();
     seedProfiles.forEach((profile) => {
@@ -442,11 +442,11 @@ describe("App", () => {
     });
     expect(screen.queryByTestId("phone-shell")).not.toBeInTheDocument();
 
-    openProfileFromList(/Open phil's stories/);
+    openProfileFromList(/Open phil/);
 
-    expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "phil" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "phil's stories" }).parentElement
+      screen.getByRole("heading", { name: "phil" }).parentElement
     ).toHaveClass("text-center");
     expect(screen.queryByRole("searchbox", { name: "Search stories" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Back to home" })).not.toBeInTheDocument();
@@ -514,7 +514,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Back to profile" }));
 
-    expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "phil" })).toBeInTheDocument();
     expect(appShell).toHaveClass("app-background--landing");
     expect(appShell).not.toHaveClass("app-background--story");
   });
@@ -522,11 +522,11 @@ describe("App", () => {
   it("renders a selected profile directly from the URL", async () => {
     mockSession = null;
 
-    await renderAppAtPath("/profiles/user-void");
+    await renderAppAtPath("/profiles/user-demo-04");
 
-    expect(window.location.pathname).toBe("/profiles/user-void");
+    expect(window.location.pathname).toBe("/profiles/user-demo-04");
     expect(screen.getByLabelText("App shell")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "void pop" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "demo-04" })).toBeInTheDocument();
     expect(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
         name: /Read receipts 1 scene/
@@ -537,9 +537,9 @@ describe("App", () => {
   it("renders a selected story directly from the URL", async () => {
     mockSession = null;
 
-    await renderAppAtPath("/stories/story-neon-1");
+    await renderAppAtPath("/stories/story-demo-01-1");
 
-    expect(window.location.pathname).toBe("/stories/story-neon-1");
+    expect(window.location.pathname).toBe("/stories/story-demo-01-1");
     expect(screen.getByLabelText("App shell")).toBeInTheDocument();
     expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Back to profile" })).toBeInTheDocument();
@@ -569,10 +569,10 @@ describe("App", () => {
     render(<App />);
     await flushPlatformEffects();
 
-    openProfileFromList(/Open void pop/);
+    openProfileFromList(/Open demo-04/);
 
-    expect(window.location.pathname).toBe("/profiles/user-void");
-    expect(screen.getByRole("heading", { name: "void pop" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/profiles/user-demo-04");
+    expect(screen.getByRole("heading", { name: "demo-04" })).toBeInTheDocument();
 
     fireEvent.click(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
@@ -581,7 +581,7 @@ describe("App", () => {
     );
     await flushPlatformEffects();
 
-    expect(window.location.pathname).toBe("/stories/story-void-1");
+    expect(window.location.pathname).toBe("/stories/story-demo-04-1");
     expect(screen.getByTestId("phone-shell")).toBeInTheDocument();
   });
 
@@ -591,7 +591,7 @@ describe("App", () => {
     render(<App />);
     await flushPlatformEffects();
 
-    openProfileFromList(/Open void pop/);
+    openProfileFromList(/Open demo-04/);
     fireEvent.click(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
         name: /Read receipts 1 scene/
@@ -599,10 +599,10 @@ describe("App", () => {
     );
     await flushPlatformEffects();
 
-    await popTo("/profiles/user-void");
+    await popTo("/profiles/user-demo-04");
 
-    expect(window.location.pathname).toBe("/profiles/user-void");
-    expect(screen.getByRole("heading", { name: "void pop" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/profiles/user-demo-04");
+    expect(screen.getByRole("heading", { name: "demo-04" })).toBeInTheDocument();
 
     await popTo("/");
 
@@ -622,7 +622,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back to profile" }));
 
     expect(window.location.pathname).toBe("/profiles/user-phil");
-    expect(screen.getByRole("heading", { name: "phil's stories" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "phil" })).toBeInTheDocument();
 
     fireEvent.click(
       within(screen.getByRole("navigation", { name: "Desktop navigation" })).getByRole(
@@ -690,18 +690,18 @@ describe("App", () => {
 
     expect(within(list).getAllByRole("button")).toHaveLength(seedProfiles.length);
     expect(within(list).getAllByRole("button")[0]).toHaveAccessibleName(
-      "Open phil's stories, 2 stories"
+      "Open phil, 2 stories"
     );
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
-      target: { value: "phil's" }
+      target: { value: "phil" }
     });
 
     const philRows = within(list).getAllByRole("button");
 
     expect(philRows).toHaveLength(1);
-    expect(philRows[0]).toHaveAccessibleName("Open phil's stories, 2 stories");
-    expect(screen.queryByRole("button", { name: /Open void pop/ })).not.toBeInTheDocument();
+    expect(philRows[0]).toHaveAccessibleName("Open phil, 2 stories");
+    expect(screen.queryByRole("button", { name: /Open demo-04/ })).not.toBeInTheDocument();
 
     // Searching collapses the featured deck so only the list remains.
     expect(
@@ -709,14 +709,14 @@ describe("App", () => {
     ).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search stories" }), {
-      target: { value: "@void" }
+      target: { value: "@demo-04" }
     });
 
     const handleRows = within(list).getAllByRole("button");
 
     expect(handleRows).toHaveLength(1);
-    expect(handleRows[0]).toHaveAccessibleName("Open void pop, 1 story");
-    expect(screen.queryByRole("button", { name: /Open phil's stories/ })).not.toBeInTheDocument();
+    expect(handleRows[0]).toHaveAccessibleName("Open demo-04, 1 story");
+    expect(screen.queryByRole("button", { name: /Open phil/ })).not.toBeInTheDocument();
   });
 
   it("hides the search field inside a selected profile and keeps its stories visible", async () => {
@@ -735,7 +735,7 @@ describe("App", () => {
 
     render(<App />);
     await flushPlatformEffects();
-    openProfileFromList(/Open phil's stories/);
+    openProfileFromList(/Open phil/);
 
     const storyGrid = screen.getByLabelText("Story bento grid");
 
@@ -755,7 +755,7 @@ describe("App", () => {
     render(<App />);
     await flushPlatformEffects();
 
-    openProfileFromList(/Open neon sleepover/);
+    openProfileFromList(/Open demo-01/);
     fireEvent.click(
       within(screen.getByLabelText("Story bento grid")).getByRole("button", {
         name: /Last seen typing 1 scene/

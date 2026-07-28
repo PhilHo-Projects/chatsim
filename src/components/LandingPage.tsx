@@ -46,25 +46,25 @@ const PROFILE_COVERS: Record<string, ProfileCover> = {
     objectPosition: "50% 52%",
     storyClassName: "h-[24rem]"
   },
-  "user-neon": {
+  "user-demo-01": {
     accentColor: "#0891b2",
     image: neonSleepoverCover,
     objectPosition: "50% 48%",
     storyClassName: "h-72"
   },
-  "user-orbit": {
+  "user-demo-02": {
     accentColor: "#65a30d",
     image: orbitThreadsCover,
     objectPosition: "56% 50%",
     storyClassName: "h-64"
   },
-  "user-motel": {
+  "user-demo-03": {
     accentColor: "#d97706",
     image: motelLobbyCover,
     objectPosition: "54% 58%",
     storyClassName: "h-80"
   },
-  "user-void": {
+  "user-demo-04": {
     accentColor: "#7c3aed",
     image: voidPopCover,
     objectPosition: "48% 50%",
