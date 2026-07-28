@@ -107,7 +107,7 @@ export function AppShell({
 
       <nav
         aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-4 border-t border-slate-800/70 bg-[color:var(--surface)] px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-3 border-t border-slate-800/70 bg-[color:var(--surface)] px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden"
       >
         <button
           type="button"
@@ -132,14 +132,6 @@ export function AppShell({
           className="grid place-items-center rounded-lg text-slate-300 transition hover:bg-slate-800/70"
         >
           <Plus className="h-7 w-7" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          aria-label="Account"
-          onClick={onAccountToggle}
-          className="grid place-items-center rounded-lg text-slate-300 transition hover:bg-slate-800/70"
-        >
-          <UserCircle className="h-7 w-7" aria-hidden="true" />
         </button>
       </nav>
     </div>

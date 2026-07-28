@@ -520,6 +520,19 @@ describe("App", () => {
     expect(triggers[0].parentElement).toBe(panel.parentElement);
   });
 
+  it("keeps a single Account trigger, with the mobile nav limited to Home, Explore, and Create", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+
+    expect(
+      within(screen.getByRole("navigation", { name: "Mobile navigation" }))
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label"))
+    ).toEqual(["Home", "Explore", "Create"]);
+    expect(screen.getAllByRole("button", { name: "Account" })).toHaveLength(1);
+  });
+
   it("registers with a handle and password only", async () => {
     mockSession = null;
     render(<App />);
