@@ -15,7 +15,7 @@
 - Neon tokens are exactly `--neon-1 #ff2d78`, `--neon-2 #22d3ee`, `--neon-3 #a855f7`, `--neon-4 #38bdf8`. Base is `#050507`.
 - Background density is 22 tendrils and 26 nodes.
 - `bio` is `text`, nullable, `char_length(bio) <= 160`. Never `varchar`.
-- Blur is applied to static layers only. Only `transform` and `stroke-dashoffset` may animate. Never animate `filter`, and never put a dash animation inside a blurred layer.
+- Blur is applied to static layers only. **`filter` must never animate**, and a dash animation must never sit inside a blurred layer — either forces a full-viewport re-blur every frame. Animate only compositor-cheap properties: `transform`, `opacity`, `stroke-dashoffset`. (`opacity` is listed explicitly because the node pulse uses it; an earlier wording of this rule named only `transform` and `stroke-dashoffset`, which made the spec's own reference code a literal violation of it.)
 - Generated art may only use the four neon tokens. No free-floating hue.
 - Never reintroduce a wide-blurred "haze" layer over the whole field.
 - Deck mechanics in `LandingPage.tsx` (`getDeckOffset`, `getDeckCardStyle`, `MAX_VISIBLE_OFFSET`, the inline `min(18rem, 62vw)` width, the explicit transition property list) stay as they are. Never switch the card transition to `transition-all`.
