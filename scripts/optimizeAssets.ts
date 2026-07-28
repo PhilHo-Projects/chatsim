@@ -38,13 +38,11 @@ function ledgerKey(filePath: string) {
 const TARGETS: OptimizeTarget[] = [
   // Full-viewport backgrounds painted behind the whole shell.
   { path: "coffee-shop-background.png", maxWidth: 1920, quality: 78 },
-  { path: "app-backgrounds/landing-minimal-sky.png", maxWidth: 1920, quality: 78 },
   // Default speaker avatars: rendered at chat-bubble and preview sizes only.
   { path: "maya-anime-avatar.png", maxWidth: 512, quality: 82 },
   { path: "mystery-speaker-avatar.png", maxWidth: 512, quality: 82 },
   // Masonry covers. The widest rendered column is ~230px on a 1280px desktop
   // and ~180px on a two-column phone, so 640px still covers a 3x device ratio.
-  { path: "story-card-backgrounds", maxWidth: 640, quality: 78 },
   { path: "story-card-backgrounds/story-covers", maxWidth: 640, quality: 78 }
 ];
 

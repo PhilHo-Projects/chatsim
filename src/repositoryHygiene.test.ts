@@ -45,4 +45,35 @@ describe("repository hygiene", () => {
     expect(workflow).toContain("sourceCommit");
     expect(workflow).not.toContain("/api/v1/deployments/");
   });
+
+  it("keeps retired artwork out of the bundle but on disk as fixtures", () => {
+    // [fixture path, the src/assets path it must no longer occupy]
+    const retired: [string, string][] = [
+      ["profile-covers/motel-lobby", "story-card-backgrounds/motel-lobby"],
+      ["profile-covers/neon-sleepover", "story-card-backgrounds/neon-sleepover"],
+      ["profile-covers/orbit-threads", "story-card-backgrounds/orbit-threads"],
+      ["profile-covers/phil-stories", "story-card-backgrounds/phil-stories"],
+      ["profile-covers/void-pop", "story-card-backgrounds/void-pop"],
+      ["backgrounds/landing-minimal-sky", "app-backgrounds/landing-minimal-sky"]
+    ];
+
+    for (const [fixturePath, assetPath] of retired) {
+      // Kept for upload/sizing fixtures, so both formats must still exist ...
+      expect(existsSync(`fixtures/sample-images/${fixturePath}.png`)).toBe(true);
+      expect(existsSync(`fixtures/sample-images/${fixturePath}.webp`)).toBe(true);
+      // ... but never from a path Vite can bundle.
+      expect(existsSync(`src/assets/${assetPath}.png`)).toBe(false);
+      expect(existsSync(`src/assets/${assetPath}.webp`)).toBe(false);
+    }
+
+    const landing = readFileSync("src/components/LandingPage.tsx", "utf8");
+    const css = readFileSync("src/index.css", "utf8");
+
+    expect(landing).not.toContain("story-card-backgrounds/motel-lobby");
+    expect(css).not.toContain("landing-minimal-sky");
+    // Story cover art and the story-route background are out of scope, and
+    // must survive this cleanup.
+    expect(landing).toContain("story-covers/");
+    expect(existsSync("src/assets/coffee-shop-background.webp")).toBe(true);
+  });
 });
