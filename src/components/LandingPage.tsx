@@ -1,6 +1,6 @@
 import philBattlePixelCover from "../assets/story-card-backgrounds/story-covers/phil-battle-pixel.webp";
 import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-covers/phil-ketamine-prison.webp";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Search } from "lucide-react";
 import { buildProfileArt } from "../utils/profileArt";
@@ -55,6 +55,7 @@ function ProfileArtwork({
   handle: string;
 }) {
   const art = buildProfileArt(handle, { compact });
+  const filterId = useId();
 
   return (
     <svg
@@ -64,7 +65,7 @@ function ProfileArtwork({
       viewBox={art.viewBox}
     >
       <rect fill="#08070b" height="400" width="300" x="0" y="0" />
-      <g filter={`url(#profile-soft-${compact ? "c" : "f"})`} opacity="0.8">
+      <g filter={`url(#${filterId})`} opacity="0.8">
         {art.strokes.map((stroke, index) => (
           <path
             key={`glow-${index}`}
@@ -98,7 +99,7 @@ function ProfileArtwork({
         />
       ))}
       <defs>
-        <filter id={`profile-soft-${compact ? "c" : "f"}`}>
+        <filter id={filterId}>
           <feGaussianBlur stdDeviation={compact ? 5 : 7} />
         </filter>
       </defs>
@@ -403,7 +404,7 @@ export function LandingPage({
             const label = sceneCountLabel(story.sceneCount);
             const storyCover = STORY_COVERS[story.storyId];
             const heightClass =
-              index % 3 === 0 ? "h-72" : index % 3 === 1 ? "h-64" : "h-80";
+              index % 3 === 0 ? "h-80" : index % 3 === 1 ? "h-64" : "h-72";
 
             return (
               <button
@@ -429,10 +430,7 @@ export function LandingPage({
                       style={{ objectPosition: storyCover.objectPosition }}
                     />
                   ) : (
-                    <span
-                      className="block h-full w-full"
-                      style={{ background: story.coverColor }}
-                    />
+                    <ProfileArtwork handle={selectedProfile.username} />
                   )}
                 </span>
                 <span

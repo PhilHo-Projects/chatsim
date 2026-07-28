@@ -797,6 +797,82 @@ describe("App", () => {
     expect(within(storyGrid).getByRole("button", { name: /Open Ketamine prison 5 scenes/ })).toBeInTheDocument();
   });
 
+  it("falls back to generated profile art when a story has no curated cover", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+
+    openProfileFromList(/Open @demo-01/);
+
+    const backdrop = screen.getByTestId(
+      "story-card-background-story-demo-01-1"
+    );
+
+    expect(backdrop.querySelector("img")).toBeNull();
+    expect(backdrop.querySelector("svg")).not.toBeNull();
+    expect(backdrop.querySelectorAll("svg path").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the curated cover image for a story that has one", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+
+    openProfileFromList(/Open @phil/);
+
+    const backdrop = screen.getByTestId("story-card-background-story-phil-1");
+    const img = backdrop.querySelector("img");
+
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toContain("phil-ketamine-prison");
+    expect(backdrop.querySelector("svg")).toBeNull();
+  });
+
+  it("gives story cards a three-way height rotation instead of one fixed slot", async () => {
+    mockStories["story-phil-cafe"] = createMockStory(
+      "user-phil",
+      "story-phil-cafe",
+      "Cafe drift",
+      41
+    );
+    mockStories["story-phil-soccer"] = createMockStory(
+      "user-phil",
+      "story-phil-soccer",
+      "Soccer season",
+      42
+    );
+
+    render(<App />);
+    await flushPlatformEffects();
+    openProfileFromList(/Open @phil/);
+
+    const tiles = within(screen.getByLabelText("Story bento grid")).getAllByRole(
+      "button"
+    );
+
+    expect(tiles).toHaveLength(4);
+
+    // The height utility is always the last class in the tile's class list.
+    const heightClasses = tiles.map(
+      (tile) => tile.className.trim().split(/\s+/).pop()
+    );
+
+    expect(new Set(heightClasses).size).toBeGreaterThan(1);
+    expect(heightClasses).toEqual(["h-80", "h-64", "h-72", "h-80"]);
+  });
+
+  it("does not repeat SVG filter ids across ProfileArtwork instances", async () => {
+    mockSession = null;
+    const { container } = render(<App />);
+    await flushPlatformEffects();
+
+    const filters = container.querySelectorAll("filter");
+    const ids = Array.from(filters).map((filter) => filter.getAttribute("id"));
+
+    expect(filters.length).toBeGreaterThan(1);
+    expect(new Set(ids).size).toBe(filters.length);
+  });
+
   it("shows editor controls to admins on stories they do not own", async () => {
     setupApiMock(adminSession);
     render(<App />);
