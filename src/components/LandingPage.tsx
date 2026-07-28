@@ -284,7 +284,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
 
                 setActiveIndex(index);
               }}
-              className="absolute left-1/2 top-0 h-full overflow-hidden rounded-2xl text-left text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-1 ring-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
+              className="absolute left-1/2 top-0 h-full overflow-hidden rounded-2xl text-left text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-1 ring-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)]"
               style={{
                 ...getDeckCardStyle(offset),
                 // Sized here rather than with a breakpoint class so the deck
@@ -333,7 +333,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
             type="button"
             aria-label="Previous featured profile"
             onClick={() => step(-1)}
-            className="absolute left-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:left-4"
+            className="absolute left-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-slate-800/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)] sm:left-4"
           >
             &#8249;
           </button>
@@ -341,7 +341,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
             type="button"
             aria-label="Next featured profile"
             onClick={() => step(1)}
-            className="absolute right-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:right-4"
+            className="absolute right-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-slate-800/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)] sm:right-4"
           >
             &#8250;
           </button>
@@ -355,7 +355,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
                 aria-label={`Feature @${profile.username}`}
                 onClick={() => setActiveIndex(index)}
                 className={
-                  "h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 " +
+                  "h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)] " +
                   (index === activeIndex
                     ? "w-6 bg-slate-100"
                     : "w-1.5 bg-slate-100/25 hover:bg-slate-100/45")
@@ -390,7 +390,7 @@ export function LandingPage({
             @{selectedProfile.username}
           </h2>
           {selectedProfile.bio ? (
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-1.5 text-sm text-[color:var(--muted)]">
               {selectedProfile.bio}
             </p>
           ) : null}
@@ -412,7 +412,7 @@ export function LandingPage({
                 type="button"
                 aria-label={`Open ${story.title} ${label}`}
                 onClick={() => onSelectStory(story.storyId)}
-                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] ring-1 ring-white/12 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${heightClass}`}
+                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] ring-1 ring-white/12 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)] ${heightClass}`}
               >
                 <span
                   aria-hidden="true"
@@ -441,7 +441,7 @@ export function LandingPage({
                   <span className="block font-round text-2xl font-bold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
                     {story.title}
                   </span>
-                  <span className="w-fit rounded-lg bg-white/90 px-2.5 py-1 text-xs font-black uppercase text-slate-950">
+                  <span className="w-fit rounded-full border border-[color:var(--neon-1)] px-2.5 py-1 text-xs font-black uppercase tracking-[0.12em] text-[color:var(--neon-1)]">
                     {label}
                   </span>
                 </span>
@@ -468,7 +468,7 @@ export function LandingPage({
         />
       ) : null}
 
-      <label className="app-glass mx-auto flex h-12 w-full max-w-md items-center gap-3 rounded-xl px-4 text-[color:var(--muted)]">
+      <label className="app-glass mx-auto flex h-12 w-full max-w-md items-center gap-3 rounded-xl px-4 text-[color:var(--muted)] focus-within:ring-2 focus-within:ring-[color:var(--neon-1)]">
         <span className="sr-only">Search profiles</span>
         <Search aria-hidden="true" className="h-5 w-5 shrink-0" />
         <input

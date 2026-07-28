@@ -35,12 +35,12 @@ export function AppShell({
   return (
     <div
       aria-label="App shell"
-      className={`app-background ${backgroundModeClass} relative min-h-screen overflow-hidden text-slate-100`}
+      className={`app-background ${backgroundModeClass} relative min-h-screen overflow-hidden text-[color:var(--text)]`}
     >
       {isStoryListOpen ? <NeonBackground /> : null}
       <nav
         aria-label="Desktop navigation"
-        className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-slate-800/70 bg-[color:var(--surface)] py-5 shadow-[8px_0_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:flex"
+        className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-[color:var(--line)] bg-[color:var(--surface)] py-5 shadow-[8px_0_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:flex"
       >
         <button
           type="button"
@@ -57,7 +57,7 @@ export function AppShell({
             aria-label="Explore"
             title="Explore"
             onClick={onHome}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
+            className="grid h-11 w-11 place-items-center rounded-lg text-[color:var(--muted)] transition hover:bg-slate-800/70"
           >
             <Compass className="h-6 w-6" aria-hidden="true" />
           </button>
@@ -66,21 +66,21 @@ export function AppShell({
             aria-label="Create story"
             title="Create story"
             onClick={onCreateStory}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
+            className="grid h-11 w-11 place-items-center rounded-lg text-[color:var(--muted)] transition hover:bg-slate-800/70"
           >
             <Plus className="h-6 w-6" aria-hidden="true" />
           </button>
         </div>
       </nav>
 
-      <div className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-slate-800/70 bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:pl-24 md:pr-5">
+      <div className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-[color:var(--line)] bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:pl-24 md:pr-5">
         {!isStoryListOpen ? (
           <button
             type="button"
             aria-label="Back to profile"
             title="Back to profile"
             onClick={onActiveProfile}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-[color:var(--muted)] transition hover:bg-slate-800/70"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -107,13 +107,13 @@ export function AppShell({
 
       <nav
         aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-3 border-t border-slate-800/70 bg-[color:var(--surface)] px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-3 border-t border-[color:var(--line)] bg-[color:var(--surface)] px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden"
       >
         <button
           type="button"
           aria-label="Home"
           onClick={onHome}
-          className="grid place-items-center rounded-lg text-slate-100 transition hover:bg-slate-800/70"
+          className="grid place-items-center rounded-lg text-[color:var(--text)] transition hover:bg-slate-800/70"
         >
           <Home className="h-7 w-7" aria-hidden="true" />
         </button>
@@ -121,7 +121,7 @@ export function AppShell({
           type="button"
           aria-label="Explore"
           onClick={onHome}
-          className="grid place-items-center rounded-lg text-slate-300 transition hover:bg-slate-800/70"
+          className="grid place-items-center rounded-lg text-[color:var(--muted)] transition hover:bg-slate-800/70"
         >
           <Search className="h-7 w-7" aria-hidden="true" />
         </button>
@@ -129,7 +129,7 @@ export function AppShell({
           type="button"
           aria-label="Create"
           onClick={onCreateStory}
-          className="grid place-items-center rounded-lg text-slate-300 transition hover:bg-slate-800/70"
+          className="grid place-items-center rounded-lg text-[color:var(--muted)] transition hover:bg-slate-800/70"
         >
           <Plus className="h-7 w-7" aria-hidden="true" />
         </button>

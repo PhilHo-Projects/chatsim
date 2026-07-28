@@ -53,7 +53,7 @@ export function AccountPanel({
             type="button"
             onClick={onCreateStory}
             disabled={isBusy}
-            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-[color:var(--neon-1)] px-4 text-sm font-bold text-[color:var(--base)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-[color:var(--neon-1)] px-4 text-sm font-bold text-[color:var(--base)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[color:var(--muted)]"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             Create story
@@ -62,7 +62,7 @@ export function AccountPanel({
             type="button"
             onClick={onLogout}
             disabled={isBusy}
-            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-white/[0.04] px-4 text-sm font-bold text-[color:var(--text)] ring-1 ring-[color:var(--line)] transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:text-slate-400"
+            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-white/[0.04] px-4 text-sm font-bold text-[color:var(--text)] ring-1 ring-[color:var(--line)] transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:text-[color:var(--muted)]"
           >
             <LogOut className="h-4 w-4" aria-hidden="true" />
             Logout
@@ -122,7 +122,7 @@ export function AccountPanel({
             <button
               type="submit"
               disabled={isBusy}
-              className="flex h-10 items-center justify-center gap-2 rounded-lg bg-[color:var(--neon-1)] px-4 text-sm font-bold text-[color:var(--base)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="flex h-10 items-center justify-center gap-2 rounded-lg bg-[color:var(--neon-1)] px-4 text-sm font-bold text-[color:var(--base)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[color:var(--muted)]"
             >
               {authMode === "register" ? (
                 <UserPlus className="h-4 w-4" aria-hidden="true" />
