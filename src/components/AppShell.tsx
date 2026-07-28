@@ -44,19 +44,10 @@ export function AppShell({
       >
         <button
           type="button"
-          aria-label="Account"
-          title="Account"
-          onClick={onAccountToggle}
-          className="grid h-11 w-11 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
-        >
-          <UserCircle className="h-6 w-6" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
           aria-label="Home"
           title="Home"
           onClick={onHome}
-          className="mt-3 grid h-11 w-11 place-items-center rounded-lg text-rose-400 transition hover:bg-rose-500/10"
+          className="grid h-11 w-11 place-items-center rounded-lg text-rose-400 transition hover:bg-rose-500/10"
         >
           <Home className="h-6 w-6" aria-hidden="true" />
         </button>
@@ -96,6 +87,15 @@ export function AppShell({
         ) : null}
 
         <div className="relative ml-auto flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            aria-label="Account"
+            title="Account"
+            onClick={onAccountToggle}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-[color:var(--text)] transition hover:bg-white/[0.06]"
+          >
+            <UserCircle aria-hidden="true" className="h-5 w-5" />
+          </button>
           {toolbarActions}
           {accountPanel}
         </div>

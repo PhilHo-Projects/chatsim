@@ -248,7 +248,6 @@ export async function login(input: { password: string; username: string }) {
 }
 
 export async function register(input: {
-  displayName: string;
   password: string;
   username: string;
 }) {

@@ -183,7 +183,6 @@ export default function App() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isBusy, setIsBusy] = useState(false);
@@ -611,7 +610,6 @@ export default function App() {
   };
 
   const handleRegister = async (input: {
-    displayName: string;
     password: string;
     username: string;
   }) => {
@@ -637,7 +635,7 @@ export default function App() {
 
     try {
       if (authMode === "register") {
-        await handleRegister({ displayName, password, username });
+        await handleRegister({ password, username });
       } else {
         await handleLogin({ password, username });
       }
@@ -814,14 +812,12 @@ export default function App() {
     <AccountPanel
       accountError={accountError}
       authMode={authMode}
-      displayName={displayName}
       isBusy={isBusy}
       password={password}
       session={session}
       username={username}
       onAuthModeChange={setAuthMode}
       onCreateStory={() => void createStoryFromShell()}
-      onDisplayNameChange={setDisplayName}
       onLogout={() => void logoutFromShell()}
       onPasswordChange={setPassword}
       onSubmit={submitAuth}

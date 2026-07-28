@@ -368,7 +368,7 @@ describe("App", () => {
       within(screen.getByRole("navigation", { name: "Desktop navigation" }))
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label"))
-    ).toEqual(["Account", "Home", "Explore", "Create story"]);
+    ).toEqual(["Home", "Explore", "Create story"]);
     expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toHaveClass(
       "md:hidden"
     );
@@ -383,17 +383,11 @@ describe("App", () => {
       screen.getByRole("heading", { name: "chatsim" }).parentElement
     ).toHaveClass("text-center");
     fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Desktop navigation" })).getByRole(
-        "button",
-        { name: "Account" }
-      )
+      screen.getAllByRole("button", { name: "Account" })[0]
     );
     expect(screen.getByRole("dialog", { name: "Account panel" })).toBeInTheDocument();
     fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Desktop navigation" })).getByRole(
-        "button",
-        { name: "Account" }
-      )
+      screen.getAllByRole("button", { name: "Account" })[0]
     );
     expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
     expect(
@@ -511,6 +505,32 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "@phil" })).toBeInTheDocument();
     expect(appShell).toHaveClass("app-background--landing");
     expect(appShell).not.toHaveClass("app-background--story");
+  });
+
+  it("opens the account panel from the same cluster as its trigger", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+
+    const triggers = screen.getAllByRole("button", { name: "Account" });
+    fireEvent.click(triggers[0]);
+
+    const panel = screen.getByRole("dialog", { name: "Account panel" });
+
+    expect(triggers[0].parentElement).toBe(panel.parentElement);
+  });
+
+  it("registers with a handle and password only", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Account" })[0]);
+
+    const panel = screen.getByRole("dialog", { name: "Account panel" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
+
+    expect(screen.queryByLabelText("Display name")).not.toBeInTheDocument();
   });
 
   it("keeps the neon background on the browsing route and off the story route", async () => {
