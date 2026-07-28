@@ -72,6 +72,7 @@ export type PublicStoryCard = {
 export type PublicProfile = {
   accentColor: string;
   avatarImage: ImageReference | null;
+  bio: string | null;
   displayName: string;
   id: string;
   stories: PublicStoryCard[];
@@ -121,6 +122,7 @@ type StoryStoreOpenOptions = {
 type UserRow = {
   accent_color: string;
   avatar_image_id: string | null;
+  bio: string | null;
   display_name: string;
   id: string;
   password_hash: string | null;
@@ -524,7 +526,12 @@ export class StoryStore {
     const usersResult = await this.pool.query<
       Pick<
         UserRow,
-        "accent_color" | "avatar_image_id" | "display_name" | "id" | "username"
+        | "accent_color"
+        | "avatar_image_id"
+        | "bio"
+        | "display_name"
+        | "id"
+        | "username"
       > &
         ImageJoin
     >(
@@ -532,6 +539,7 @@ export class StoryStore {
          u.id,
          u.username,
          u.display_name,
+         u.bio,
          u.accent_color,
          u.avatar_image_id,
          avatar.id AS image_id,
@@ -557,6 +565,7 @@ export class StoryStore {
     return usersResult.rows.map((user) => ({
       accentColor: user.accent_color,
       avatarImage: this.imageReference(user.image_id, user.image_variants),
+      bio: user.bio,
       displayName: user.display_name,
       id: user.id,
       stories: storiesResult.rows
@@ -717,7 +726,8 @@ export class StoryStore {
     const user: UserRow = {
       accent_color: COVER_COLORS[0],
       avatar_image_id: null,
-      display_name: input.displayName?.trim() || `${username}'s stories`,
+      bio: null,
+      display_name: input.displayName?.trim() || username,
       id: `user-${randomUUID()}`,
       password_hash: password.passwordHash,
       password_salt: password.passwordSalt,
@@ -787,6 +797,7 @@ export class StoryStore {
     const user: UserRow = {
       accent_color: "#0f172a",
       avatar_image_id: null,
+      bio: null,
       display_name: input.displayName.trim() || "Chatsim Admin",
       id: "user-admin",
       password_hash: password.passwordHash,
@@ -948,7 +959,11 @@ export class StoryStore {
 
   async updateCurrentUser(
     userId: string,
-    patch: { avatarImageId?: string | null; displayName?: string }
+    patch: {
+      avatarImageId?: string | null;
+      bio?: string | null;
+      displayName?: string;
+    }
   ) {
     const client = await this.pool.connect();
 
@@ -967,6 +982,7 @@ export class StoryStore {
       const result = await client.query<UserRow>(
         `UPDATE users
          SET display_name = COALESCE($1, display_name),
+             bio = CASE WHEN $6::boolean THEN $7 ELSE bio END,
              avatar_image_id = CASE
                WHEN $2::boolean THEN $3
                ELSE avatar_image_id
@@ -979,7 +995,9 @@ export class StoryStore {
           patch.avatarImageId !== undefined,
           patch.avatarImageId ?? null,
           this.now(),
-          userId
+          userId,
+          patch.bio !== undefined,
+          patch.bio ?? null
         ]
       );
 

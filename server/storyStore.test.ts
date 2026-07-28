@@ -281,6 +281,33 @@ describe("Postgres StoryStore", () => {
     });
   });
 
+  it("stores a bio and defaults display name to the bare username", async () => {
+    const session = await store.register({
+      password: "correct-horse-battery",
+      username: "biotester"
+    });
+
+    expect(session.user.displayName).toBe("biotester");
+
+    await store.updateCurrentUser(session.user.id, { bio: "just here to test" });
+
+    const profiles = await store.getPublicProfiles();
+    const profile = profiles.find((entry) => entry.username === "biotester");
+
+    expect(profile?.bio).toBe("just here to test");
+  });
+
+  it("rejects a bio over 160 characters", async () => {
+    const session = await store.register({
+      password: "correct-horse-battery",
+      username: "biolimit"
+    });
+
+    await expect(
+      store.updateCurrentUser(session.user.id, { bio: "x".repeat(161) })
+    ).rejects.toThrow();
+  });
+
   it("expires sessions and throttles last-seen writes", async () => {
     const started = await store.register({
       displayName: "Clock",

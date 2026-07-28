@@ -69,11 +69,14 @@ export const loginSchema = z.object({
 export const userPatchSchema = z
   .object({
     avatarImageId: identifier.nullable().optional(),
+    bio: z.string().trim().max(160).nullable().optional(),
     displayName: z.string().trim().min(1).max(80).optional()
   })
   .refine(
     (input) =>
-      input.avatarImageId !== undefined || input.displayName !== undefined,
+      input.avatarImageId !== undefined ||
+      input.bio !== undefined ||
+      input.displayName !== undefined,
     "At least one profile field is required."
   );
 
