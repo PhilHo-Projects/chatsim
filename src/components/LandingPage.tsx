@@ -289,7 +289,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
 
                 setActiveIndex(index);
               }}
-              className="absolute left-1/2 top-0 h-full overflow-hidden rounded-2xl text-left text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 dark:ring-white/12"
+              className="absolute left-1/2 top-0 h-full overflow-hidden rounded-2xl text-left text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-1 ring-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
               style={{
                 ...getCoverFallbackStyle(cover.accentColor),
                 ...getDeckCardStyle(offset),
@@ -354,7 +354,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
             type="button"
             aria-label="Previous featured profile"
             onClick={() => step(-1)}
-            className="absolute left-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-lg font-black text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-slate-900/10 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:left-4 dark:bg-slate-900/85 dark:text-slate-50 dark:ring-white/15"
+            className="absolute left-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:left-4"
           >
             &#8249;
           </button>
@@ -362,7 +362,7 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
             type="button"
             aria-label="Next featured profile"
             onClick={() => step(1)}
-            className="absolute right-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-lg font-black text-slate-950 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-slate-900/10 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:right-4 dark:bg-slate-900/85 dark:text-slate-50 dark:ring-white/15"
+            className="absolute right-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:right-4"
           >
             &#8250;
           </button>
@@ -378,8 +378,8 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
                 className={
                   "h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 " +
                   (index === activeIndex
-                    ? "w-6 bg-slate-900 dark:bg-slate-100"
-                    : "w-1.5 bg-slate-900/25 hover:bg-slate-900/45 dark:bg-slate-100/25 dark:hover:bg-slate-100/45")
+                    ? "w-6 bg-slate-100"
+                    : "w-1.5 bg-slate-100/25 hover:bg-slate-100/45")
                 }
               />
             ))}
@@ -408,10 +408,10 @@ export function LandingPage({
     return (
       <section className="mx-auto grid w-full max-w-6xl gap-5">
         <div className="text-center">
-          <h2 className="font-round text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl dark:text-slate-50">
+          <h2 className="font-round text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl">
             {selectedProfile.displayName}
           </h2>
-          <p className="mt-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+          <p className="mt-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             @{selectedProfile.username} · {storyCountLabel(selectedProfile.stories.length)}
           </p>
         </div>
@@ -436,7 +436,7 @@ export function LandingPage({
                 type="button"
                 aria-label={`Open ${story.title} ${label}`}
                 onClick={() => onSelectStory(story.storyId)}
-                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/10 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 dark:ring-white/12 ${heightClass}`}
+                className={`group relative mb-4 grid w-full break-inside-avoid overflow-hidden rounded-lg text-left text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)] ring-1 ring-white/12 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${heightClass}`}
                 style={getCoverFallbackStyle(selectedCover.accentColor)}
               >
                 <span
@@ -484,7 +484,7 @@ export function LandingPage({
   return (
     <section className="mx-auto grid w-full max-w-5xl gap-8 pb-24">
       <div className="text-center">
-        <h2 className="font-round text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl dark:text-slate-50">
+        <h2 className="font-round text-5xl font-semibold tracking-tight text-slate-50 sm:text-6xl">
           chatsim
         </h2>
       </div>
@@ -497,27 +497,27 @@ export function LandingPage({
       ) : null}
 
       <div aria-label="All profiles" className="w-full">
-        <ul className="grid divide-y divide-slate-900/10 border-y border-slate-900/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="grid divide-y divide-white/10 border-y border-white/10">
           {visibleProfiles.map((profile) => (
             <li key={profile.id}>
               <button
                 type="button"
                 aria-label={`Open ${profile.displayName}, ${storyCountLabel(profile.stories.length)}`}
                 onClick={() => onSelectProfile(profile.id)}
-                className="group flex w-full items-center gap-3 px-1 py-3 text-left transition hover:bg-slate-900/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 dark:hover:bg-white/[0.05]"
+                className="group flex w-full items-center gap-3 px-1 py-3 text-left transition hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
               >
                 <span
                   aria-hidden="true"
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ background: getProfileCover(profile).accentColor }}
                 />
-                <span className="min-w-0 truncate font-round text-base font-bold text-slate-950 group-hover:underline dark:text-slate-50">
+                <span className="min-w-0 truncate font-round text-base font-bold text-slate-50 group-hover:underline">
                   {profile.displayName}
                 </span>
-                <span className="min-w-0 truncate text-sm font-semibold text-slate-400 dark:text-slate-500">
+                <span className="min-w-0 truncate text-sm font-semibold text-slate-500">
                   @{profile.username}
                 </span>
-                <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                   {storyCountLabel(profile.stories.length)}
                 </span>
               </button>

@@ -3,15 +3,11 @@ import {
   ChevronLeft,
   Compass,
   Home,
-  Moon,
   Plus,
   Search,
-  Sun,
   UserCircle
 } from "lucide-react";
 import type { PlatformProfile } from "../data/platformSeed";
-
-type Theme = "light" | "dark";
 
 type AppShellProps = {
   accountPanel: ReactNode;
@@ -20,14 +16,12 @@ type AppShellProps = {
   isStoryListOpen: boolean;
   searchQuery: string;
   selectedProfile: PlatformProfile | null;
-  theme?: Theme;
   toolbarActions: ReactNode;
   onAccountToggle: () => void;
   onActiveProfile: () => void;
   onCreateStory: () => void;
   onHome: () => void;
   onSearchQueryChange: (value: string) => void;
-  onToggleTheme?: () => void;
 };
 
 export function AppShell({
@@ -37,18 +31,13 @@ export function AppShell({
   isStoryListOpen,
   searchQuery,
   selectedProfile,
-  theme = "light",
   toolbarActions,
   onAccountToggle,
   onActiveProfile,
   onCreateStory,
   onHome,
-  onSearchQueryChange,
-  onToggleTheme
+  onSearchQueryChange
 }: AppShellProps) {
-  const isDark = theme === "dark";
-  const themeToggleLabel = isDark ? "Switch to light mode" : "Switch to dark mode";
-  const ThemeIcon = isDark ? Sun : Moon;
   const isHomeBrowsing = isStoryListOpen && !selectedProfile;
   const topBarHeightClass = isHomeBrowsing ? "min-h-[72px]" : "min-h-14";
   const mainHeightClass = isHomeBrowsing
@@ -58,18 +47,18 @@ export function AppShell({
   return (
     <div
       aria-label="App shell"
-      className={`app-background ${backgroundModeClass} relative min-h-screen overflow-hidden text-slate-950 dark:text-slate-100`}
+      className={`app-background ${backgroundModeClass} relative min-h-screen overflow-hidden text-slate-100`}
     >
       <nav
         aria-label="Desktop navigation"
-        className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-slate-200/80 bg-white/95 py-5 shadow-[8px_0_28px_rgba(15,23,42,0.05)] backdrop-blur-xl md:flex dark:border-slate-800/70 dark:bg-slate-950/85 dark:shadow-[8px_0_28px_rgba(0,0,0,0.4)]"
+        className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-slate-800/70 bg-[color:var(--surface)] py-5 shadow-[8px_0_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:flex"
       >
         <button
           type="button"
           aria-label="Account"
           title="Account"
           onClick={onAccountToggle}
-          className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+          className="grid h-11 w-11 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
         >
           <UserCircle className="h-6 w-6" aria-hidden="true" />
         </button>
@@ -78,7 +67,7 @@ export function AppShell({
           aria-label="Home"
           title="Home"
           onClick={onHome}
-          className="mt-3 grid h-11 w-11 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+          className="mt-3 grid h-11 w-11 place-items-center rounded-lg text-rose-400 transition hover:bg-rose-500/10"
         >
           <Home className="h-6 w-6" aria-hidden="true" />
         </button>
@@ -88,7 +77,7 @@ export function AppShell({
             aria-label="Explore"
             title="Explore"
             onClick={onHome}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+            className="grid h-11 w-11 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
           >
             <Compass className="h-6 w-6" aria-hidden="true" />
           </button>
@@ -97,38 +86,28 @@ export function AppShell({
             aria-label="Create story"
             title="Create story"
             onClick={onCreateStory}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+            className="grid h-11 w-11 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
           >
             <Plus className="h-6 w-6" aria-hidden="true" />
           </button>
         </div>
-        <button
-          type="button"
-          aria-label="Toggle theme"
-          title={themeToggleLabel}
-          aria-pressed={isDark}
-          onClick={onToggleTheme}
-          className="mt-auto grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
-        >
-          <ThemeIcon className="h-6 w-6" aria-hidden="true" />
-        </button>
       </nav>
 
-      <div className={`sticky top-0 z-20 flex ${topBarHeightClass} items-center gap-2 border-b border-slate-200/80 bg-white/95 px-3 shadow-[0_8px_28px_rgba(15,23,42,0.05)] backdrop-blur-xl md:pl-24 md:pr-5 dark:border-slate-800/70 dark:bg-slate-950/85 dark:shadow-[0_8px_28px_rgba(0,0,0,0.4)]`}>
+      <div className={`sticky top-0 z-20 flex ${topBarHeightClass} items-center gap-2 border-b border-slate-800/70 bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:pl-24 md:pr-5`}>
         {!isStoryListOpen ? (
           <button
             type="button"
             aria-label="Back to profile"
             title="Back to profile"
             onClick={onActiveProfile}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-200 transition hover:bg-slate-800/70"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
         ) : null}
 
         {isHomeBrowsing ? (
-          <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-lg bg-slate-100 text-slate-600 ring-1 ring-slate-200 transition focus-within:bg-white focus-within:ring-slate-300 dark:bg-slate-800/60 dark:text-slate-300 dark:ring-slate-700 dark:focus-within:bg-slate-800 dark:focus-within:ring-slate-600">
+          <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-lg bg-slate-800/60 text-slate-300 ring-1 ring-slate-700 transition focus-within:bg-slate-800 focus-within:ring-slate-600">
             <span className="sr-only">Search stories</span>
             <Search className="ml-4 h-5 w-5 shrink-0" aria-hidden="true" />
             <input
@@ -136,7 +115,7 @@ export function AppShell({
               type="search"
               value={searchQuery}
               onChange={(event) => onSearchQueryChange(event.target.value)}
-              className="h-full min-w-0 flex-1 bg-transparent px-3 text-base font-semibold text-slate-900 outline-none placeholder:text-slate-500 dark:text-slate-100 dark:placeholder:text-slate-400"
+              className="h-full min-w-0 flex-1 bg-transparent px-3 text-base font-semibold text-slate-100 outline-none placeholder:text-slate-400"
               placeholder="Search"
             />
           </label>
@@ -145,16 +124,6 @@ export function AppShell({
         )}
 
         <div className="relative ml-auto flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            aria-label="Toggle theme"
-            title={themeToggleLabel}
-            aria-pressed={isDark}
-            onClick={onToggleTheme}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100 md:hidden dark:text-slate-200 dark:hover:bg-slate-800/70"
-          >
-            <ThemeIcon className="h-5 w-5" aria-hidden="true" />
-          </button>
           {toolbarActions}
           {accountPanel}
         </div>
@@ -166,13 +135,13 @@ export function AppShell({
 
       <nav
         aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-4 border-t border-slate-200 bg-white/95 px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden dark:border-slate-800/70 dark:bg-slate-950/85 dark:shadow-[0_-8px_28px_rgba(0,0,0,0.45)]"
+        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-4 border-t border-slate-800/70 bg-[color:var(--surface)] px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden"
       >
         <button
           type="button"
           aria-label="Home"
           onClick={onHome}
-          className="grid place-items-center rounded-lg text-slate-900 transition hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800/70"
+          className="grid place-items-center rounded-lg text-slate-100 transition hover:bg-slate-800/70"
         >
           <Home className="h-7 w-7" aria-hidden="true" />
         </button>
@@ -180,7 +149,7 @@ export function AppShell({
           type="button"
           aria-label="Explore"
           onClick={onHome}
-          className="grid place-items-center rounded-lg text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/70"
+          className="grid place-items-center rounded-lg text-slate-300 transition hover:bg-slate-800/70"
         >
           <Search className="h-7 w-7" aria-hidden="true" />
         </button>
@@ -188,7 +157,7 @@ export function AppShell({
           type="button"
           aria-label="Create"
           onClick={onCreateStory}
-          className="grid place-items-center rounded-lg text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/70"
+          className="grid place-items-center rounded-lg text-slate-300 transition hover:bg-slate-800/70"
         >
           <Plus className="h-7 w-7" aria-hidden="true" />
         </button>
@@ -196,7 +165,7 @@ export function AppShell({
           type="button"
           aria-label="Account"
           onClick={onAccountToggle}
-          className="grid place-items-center rounded-lg text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/70"
+          className="grid place-items-center rounded-lg text-slate-300 transition hover:bg-slate-800/70"
         >
           <UserCircle className="h-7 w-7" aria-hidden="true" />
         </button>

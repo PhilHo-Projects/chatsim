@@ -368,7 +368,7 @@ describe("App", () => {
       within(screen.getByRole("navigation", { name: "Desktop navigation" }))
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label"))
-    ).toEqual(["Account", "Home", "Explore", "Create story", "Toggle theme"]);
+    ).toEqual(["Account", "Home", "Explore", "Create story"]);
     expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toHaveClass(
       "md:hidden"
     );
