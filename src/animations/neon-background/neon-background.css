@@ -18,12 +18,34 @@
 
 .neon-bg__edge--left {
   left: 0;
-  animation: neon-edge-drift-left 34s ease-in-out infinite alternate;
 }
 
 .neon-bg__edge--right {
   right: 0;
-  animation: neon-edge-drift-right 41s ease-in-out infinite alternate;
+}
+
+.neon-bg__edge--left-near {
+  animation: neon-edge-left-near 18s ease-in-out infinite alternate;
+}
+
+.neon-bg__edge--left-mid {
+  animation: neon-edge-left-mid 25s ease-in-out infinite alternate;
+}
+
+.neon-bg__edge--left-far {
+  animation: neon-edge-left-far 32s ease-in-out infinite alternate;
+}
+
+.neon-bg__edge--right-near {
+  animation: neon-edge-right-near 21s ease-in-out infinite alternate;
+}
+
+.neon-bg__edge--right-mid {
+  animation: neon-edge-right-mid 27s ease-in-out infinite alternate;
+}
+
+.neon-bg__edge--right-far {
+  animation: neon-edge-right-far 30s ease-in-out infinite alternate;
 }
 
 .neon-bg__spark {
@@ -34,26 +56,72 @@
   animation-name: neon-spark-breathe;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
+  will-change: opacity, transform;
 }
 
-@keyframes neon-edge-drift-left {
-  from { transform: translate3d(-1.2%, -0.8%, 0) scale(1.01) rotate(-0.25deg); }
-  to { transform: translate3d(1.4%, 0.9%, 0) scale(1.025) rotate(0.45deg); }
+@keyframes neon-edge-left-near {
+  from {
+    transform: translate3d(-8px, -5px, 0) scale(1.015) rotate(-0.3deg);
+  }
+  to {
+    transform: translate3d(8px, 6px, 0) scale(1.025) rotate(0.45deg);
+  }
 }
 
-@keyframes neon-edge-drift-right {
-  from { transform: translate3d(1.1%, -0.7%, 0) scale(1.02) rotate(0.35deg); }
-  to { transform: translate3d(-1.3%, 0.8%, 0) scale(1.01) rotate(-0.4deg); }
+@keyframes neon-edge-left-mid {
+  from {
+    transform: translate3d(-4px, 5px, 0) scale(1.01) rotate(0.2deg);
+  }
+  to {
+    transform: translate3d(5px, -4px, 0) scale(1.02) rotate(-0.35deg);
+  }
+}
+
+@keyframes neon-edge-left-far {
+  from {
+    transform: translate3d(-2px, -4px, 0) scale(1.005) rotate(-0.15deg);
+  }
+  to {
+    transform: translate3d(4px, 3px, 0) scale(1.015) rotate(0.25deg);
+  }
+}
+
+@keyframes neon-edge-right-near {
+  from {
+    transform: translate3d(8px, -5px, 0) scale(1.02) rotate(0.35deg);
+  }
+  to {
+    transform: translate3d(-8px, 6px, 0) scale(1.01) rotate(-0.45deg);
+  }
+}
+
+@keyframes neon-edge-right-mid {
+  from {
+    transform: translate3d(4px, 5px, 0) scale(1.01) rotate(-0.25deg);
+  }
+  to {
+    transform: translate3d(-5px, -4px, 0) scale(1.02) rotate(0.3deg);
+  }
+}
+
+@keyframes neon-edge-right-far {
+  from {
+    transform: translate3d(2px, -4px, 0) scale(1.005) rotate(0.15deg);
+  }
+  to {
+    transform: translate3d(-4px, 3px, 0) scale(1.015) rotate(-0.25deg);
+  }
 }
 
 @keyframes neon-spark-breathe {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.12;
-    transform: scale(0.78);
+    transform: translate3d(-1px, 2px, 0) scale(0.78);
   }
   50% {
     opacity: 0.82;
-    transform: scale(1);
+    transform: translate3d(2px, -1px, 0) scale(1);
   }
 }
 

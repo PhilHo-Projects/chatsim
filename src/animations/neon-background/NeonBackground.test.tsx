@@ -3,11 +3,14 @@ import { describe, expect, it } from "vitest";
 import { NeonBackground } from "./NeonBackground";
 
 describe("lightweight neon background", () => {
-  it("renders five hairline tendrils on each edge and eight sparks", () => {
+  it("renders three parallax layers per edge with ten tendrils and eight sparks", () => {
     const { container } = render(<NeonBackground />);
 
+    expect(container.querySelectorAll(".neon-bg__edge--left")).toHaveLength(3);
+    expect(container.querySelectorAll(".neon-bg__edge--right")).toHaveLength(3);
     expect(container.querySelectorAll(".neon-bg__edge--left path")).toHaveLength(5);
     expect(container.querySelectorAll(".neon-bg__edge--right path")).toHaveLength(5);
+    expect(container.querySelectorAll(".neon-bg path")).toHaveLength(10);
     expect(container.querySelectorAll(".neon-bg__spark")).toHaveLength(8);
   });
 

@@ -7,6 +7,11 @@ type Tendril = {
   width: number;
 };
 
+type TendrilLayer = {
+  className: string;
+  tendrils: readonly Tendril[];
+};
+
 type Spark = {
   color: string;
   delay: string;
@@ -81,6 +86,33 @@ const RIGHT_TENDRILS: readonly Tendril[] = [
     d: "M172-26 C286 84 92 176 190 304 S270 474 114 566 S70 756 214 930",
     opacity: 0.22,
     width: 0.46
+  }
+];
+
+const EDGE_LAYERS: readonly TendrilLayer[] = [
+  {
+    className: "neon-bg__edge--left neon-bg__edge--left-near",
+    tendrils: LEFT_TENDRILS.slice(0, 2)
+  },
+  {
+    className: "neon-bg__edge--left neon-bg__edge--left-mid",
+    tendrils: LEFT_TENDRILS.slice(2, 4)
+  },
+  {
+    className: "neon-bg__edge--left neon-bg__edge--left-far",
+    tendrils: LEFT_TENDRILS.slice(4)
+  },
+  {
+    className: "neon-bg__edge--right neon-bg__edge--right-near",
+    tendrils: RIGHT_TENDRILS.slice(0, 2)
+  },
+  {
+    className: "neon-bg__edge--right neon-bg__edge--right-mid",
+    tendrils: RIGHT_TENDRILS.slice(2, 4)
+  },
+  {
+    className: "neon-bg__edge--right neon-bg__edge--right-far",
+    tendrils: RIGHT_TENDRILS.slice(4)
   }
 ];
 
@@ -191,14 +223,13 @@ function EdgeTendrils({
 export function NeonBackground() {
   return (
     <div aria-hidden="true" className="neon-bg">
-      <EdgeTendrils
-        className="neon-bg__edge--left"
-        tendrils={LEFT_TENDRILS}
-      />
-      <EdgeTendrils
-        className="neon-bg__edge--right"
-        tendrils={RIGHT_TENDRILS}
-      />
+      {EDGE_LAYERS.map((layer) => (
+        <EdgeTendrils
+          key={layer.className}
+          className={layer.className}
+          tendrils={layer.tendrils}
+        />
+      ))}
       {SPARKS.map((spark) => (
         <span
           key={spark.id}

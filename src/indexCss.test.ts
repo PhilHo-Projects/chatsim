@@ -47,8 +47,7 @@ describe("app theme tokens", () => {
     expect(neonCss).not.toContain("mix-blend-mode");
     expect(neonCss).not.toContain("stroke-dashoffset");
     expect(neonCss).not.toContain("neon-flow");
-    expect(neonCss).toContain("@keyframes neon-edge-drift-left");
-    expect(neonCss).toContain("@keyframes neon-edge-drift-right");
+    expect(neonCss.match(/@keyframes neon-edge-/g)).toHaveLength(6);
     expect(neonCss).toContain("@keyframes neon-spark-breathe");
   });
 
