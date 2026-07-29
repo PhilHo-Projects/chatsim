@@ -45,10 +45,20 @@
 
 - [ ] **Step 1: Change the CSS ownership test so the old layout fails**
 
-Update `src/indexCss.test.ts` to read the new feature styles and assert that
-`src/index.css` contains none of the feature keyframes:
+Update `src/indexCss.test.ts` to assert the new files exist before reading them,
+then assert that `src/index.css` contains none of the feature keyframes:
 
 ```ts
+const featureStylePaths = [
+  "src/animations/conversation/conversation-motion.css",
+  "src/animations/battle/battle-motion.css",
+  "src/animations/neon-background/neon-background.css"
+];
+
+for (const path of featureStylePaths) {
+  expect(existsSync(path), `${path} should exist`).toBe(true);
+}
+
 const globalCss = readFileSync("src/index.css", "utf8");
 const conversationCss = readFileSync(
   "src/animations/conversation/conversation-motion.css",
@@ -275,13 +285,17 @@ Expected: FAIL because the component does not exist.
 
 - [ ] **Step 6: Implement the lab and scoped playback controls**
 
-Use a container ref and synchronize only descendant animations:
+Use a container ref, feature-detect the browser API, and synchronize only
+descendant animations:
 
 ```ts
-const animations =
-  labRef.current?.getAnimations({ subtree: true }) ?? [];
+const container = labRef.current;
 
-for (const animation of animations) {
+if (!container?.getAnimations) {
+  return;
+}
+
+for (const animation of container.getAnimations({ subtree: true })) {
   animation.playbackRate = playbackRate;
   if (isPaused) {
     animation.pause();
