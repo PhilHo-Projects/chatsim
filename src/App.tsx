@@ -60,7 +60,6 @@ function toStoryCard(record: PlatformStoryRecord): PlatformStoryCard {
   return {
     coverColor: record.coverColor,
     coverImage: record.coverImage ?? null,
-    coverImageId: record.coverImageId ?? null,
     ownerId: record.ownerId,
     sceneCount: record.storyboard.scenes.length,
     storyId: record.id,

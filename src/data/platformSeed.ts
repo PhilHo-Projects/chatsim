@@ -79,7 +79,6 @@ function toStoryCard(story: PlatformStoryRecord): PlatformStoryCard {
   return {
     coverColor: story.coverColor,
     coverImage: story.coverImage ?? null,
-    coverImageId: story.coverImageId ?? null,
     ownerId: story.ownerId,
     presentationMode: story.storyboard.presentationMode,
     sceneCount: story.storyboard.scenes.length,
