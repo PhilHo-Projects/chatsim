@@ -50,6 +50,7 @@ function clone<T>(value: T): T {
 function toStoryCard(story: PlatformStoryRecord) {
   return {
     coverColor: story.coverColor,
+    coverImage: story.coverImage ?? null,
     ownerId: story.ownerId,
     sceneCount: story.storyboard.scenes.length,
     storyId: story.id,
@@ -737,14 +738,32 @@ describe("App", () => {
 
     expect(cards).toHaveLength(seedProfiles.length);
 
-    // Every featured profile paints its own distinct generated artwork.
-    const artworks = seedProfiles.map(
-      (profile) =>
-        screen.getByTestId(`profile-card-background-${profile.id}`).innerHTML
+    const expectedPresets = [
+      "sitting",
+      "waving",
+      "leaning",
+      "walking",
+      "floating"
+    ];
+
+    seedProfiles.forEach((profile, index) => {
+      const cardArt = screen.getByTestId(
+        `profile-card-background-${profile.id}`
+      );
+
+      expect(
+        cardArt.querySelector(
+          `[data-avatar-preset="${expectedPresets[index]}"]`
+        )
+      ).not.toBeNull();
+    });
+
+    const directory = screen.getByLabelText("All profiles");
+    const compactAvatars = directory.querySelectorAll(
+      '[data-avatar-variant="compact"]'
     );
 
-    expect(artworks.every(Boolean)).toBe(true);
-    expect(new Set(artworks).size).toBe(seedProfiles.length);
+    expect(compactAvatars).toHaveLength(seedProfiles.length);
 
     // Every card moves with compositor-friendly transform and opacity only.
     for (const card of cards) {
@@ -939,6 +958,39 @@ describe("App", () => {
     expect(backdrop.querySelector("svg")).toBeNull();
   });
 
+  it("uses an uploaded card variant only inside the selected profile", async () => {
+    mockSession = null;
+    mockStories["story-demo-01-1"].coverImage = {
+      id: "image-demo-cover",
+      variants: {
+        card: "https://media.example/demo-card.webp",
+        full: "https://media.example/demo-full.webp",
+        thumb: "https://media.example/demo-thumb.webp"
+      }
+    };
+
+    render(<App />);
+    await flushPlatformEffects();
+
+    expect(
+      screen
+        .getByTestId("profile-card-background-user-demo-01")
+        .querySelector('img[src*="demo-card"]')
+    ).toBeNull();
+
+    openProfileFromList(/Open @demo-01/);
+
+    const backdrop = screen.getByTestId(
+      "story-card-background-story-demo-01-1"
+    );
+
+    expect(backdrop.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://media.example/demo-card.webp"
+    );
+    expect(backdrop.querySelector("svg")).toBeNull();
+  });
+
   it("gives story cards a three-way height rotation instead of one fixed slot", async () => {
     mockStories["story-phil-cafe"] = createMockStory(
       "user-phil",
@@ -972,15 +1024,14 @@ describe("App", () => {
     expect(heightClasses).toEqual(["h-80", "h-64", "h-72", "h-80"]);
   });
 
-  it("renders generated profile art without SVG filters", async () => {
+  it("renders profile avatars without filters or filament depth", async () => {
     mockSession = null;
     const { container } = render(<App />);
     await flushPlatformEffects();
 
     expect(container.querySelector("filter, feGaussianBlur")).toBeNull();
-    expect(
-      container.querySelectorAll(".profile-art__depth path").length
-    ).toBeGreaterThan(1);
+    expect(container.querySelectorAll("[data-avatar-preset]")).toHaveLength(10);
+    expect(container.querySelector(".profile-art__depth")).toBeNull();
   });
 
   it("shows editor controls to admins on stories they do not own", async () => {

@@ -3,6 +3,8 @@ import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-cove
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Search } from "lucide-react";
+import { ProfileAvatar } from "../profile-avatars/ProfileAvatar";
+import { getProfileAvatarPresetId } from "../profile-avatars/profileAvatarPresets";
 import { buildProfileArt } from "../utils/profileArt";
 import type { PlatformProfile } from "../data/platformSeed";
 
@@ -47,7 +49,7 @@ function storyCountLabel(count: number) {
   return `${count} ${count === 1 ? "story" : "stories"}`;
 }
 
-function ProfileArtwork({
+function StoryFallbackArtwork({
   compact = false,
   handle
 }: {
@@ -295,7 +297,9 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
                 data-testid={`profile-card-background-${profile.id}`}
                 className="absolute inset-0"
               >
-                <ProfileArtwork handle={profile.username} />
+                <ProfileAvatar
+                  presetId={getProfileAvatarPresetId(profile.id)}
+                />
               </span>
               <span
                 aria-hidden="true"
@@ -394,7 +398,11 @@ export function LandingPage({
         >
           {selectedProfile.stories.map((story, index) => {
             const label = sceneCountLabel(story.sceneCount);
-            const storyCover = STORY_COVERS[story.storyId];
+            const uploadedCover = story.coverImage?.variants.card;
+            const curatedCover = STORY_COVERS[story.storyId];
+            const storyCover = uploadedCover
+              ? { image: uploadedCover, objectPosition: "50% 50%" }
+              : curatedCover;
             const heightClass =
               index % 3 === 0 ? "h-80" : index % 3 === 1 ? "h-64" : "h-72";
 
@@ -422,7 +430,7 @@ export function LandingPage({
                       style={{ objectPosition: storyCover.objectPosition }}
                     />
                   ) : (
-                    <ProfileArtwork handle={story.storyId} />
+                    <StoryFallbackArtwork handle={story.storyId} />
                   )}
                 </span>
                 <span
@@ -484,7 +492,10 @@ export function LandingPage({
                 className="group flex w-full items-center gap-3 py-3 text-left transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)]"
               >
                 <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[color:var(--line)]">
-                  <ProfileArtwork compact handle={profile.username} />
+                  <ProfileAvatar
+                    compact
+                    presetId={getProfileAvatarPresetId(profile.id)}
+                  />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-round text-base font-bold text-[color:var(--text)] group-hover:underline">
