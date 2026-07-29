@@ -1,6 +1,6 @@
 import philBattlePixelCover from "../assets/story-card-backgrounds/story-covers/phil-battle-pixel.webp";
 import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-covers/phil-ketamine-prison.webp";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Search } from "lucide-react";
 import { buildProfileArt } from "../utils/profileArt";
@@ -55,7 +55,6 @@ function ProfileArtwork({
   handle: string;
 }) {
   const art = buildProfileArt(handle, { compact });
-  const filterId = useId();
 
   return (
     <svg
@@ -65,16 +64,16 @@ function ProfileArtwork({
       viewBox={art.viewBox}
     >
       <rect fill="#08070b" height="400" width="300" x="0" y="0" />
-      <g filter={`url(#${filterId})`} opacity="0.8">
+      <g className="profile-art__depth">
         {art.strokes.map((stroke, index) => (
           <path
-            key={`glow-${index}`}
+            key={`depth-${index}`}
             d={stroke.d}
             fill="none"
-            opacity={stroke.opacity}
+            opacity={stroke.opacity * 0.18}
             stroke={stroke.color}
             strokeLinecap="round"
-            strokeWidth={stroke.width}
+            strokeWidth={stroke.width * (compact ? 1.5 : 2.4)}
           />
         ))}
       </g>
@@ -98,11 +97,6 @@ function ProfileArtwork({
           r={node.r}
         />
       ))}
-      <defs>
-        <filter id={filterId}>
-          <feGaussianBlur stdDeviation={compact ? 5 : 7} />
-        </filter>
-      </defs>
     </svg>
   );
 }
@@ -159,11 +153,9 @@ function getDeckCardStyle(offset: number): CSSProperties {
   const slide = offset * 56;
   const scale = distance === 0 ? 1 : distance === 1 ? 0.84 : 0.7;
   const tilt = offset === 0 ? 0 : offset > 0 ? -18 : 18;
-  const blur = distance === 0 ? 0 : distance === 1 ? 2.5 : 5;
   const fade = distance === 0 ? 1 : distance === 1 ? 0.72 : 0.38;
 
   return {
-    filter: distance === 0 ? undefined : `blur(${blur}px)`,
     opacity: fade,
     transform:
       `translate(-50%, 0) translateX(${slide}%) ` +
@@ -290,12 +282,12 @@ function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
                 // Sized here rather than with a breakpoint class so the deck
                 // scales smoothly with the viewport instead of jumping at 640px.
                 width: "min(18rem, 62vw)",
-                // Only the properties the deck actually animates. `transition-all`
-                // would also animate width on every viewport change and filter on
-                // every step, which is expensive across five blurred cards.
+                // Width is intentionally excluded so viewport changes cannot
+                // animate the measured card size. Transform and opacity remain
+                // compositor-friendly.
                 transition: prefersReducedMotion
                   ? "none"
-                  : "transform 500ms ease-out, opacity 500ms ease-out, filter 500ms ease-out"
+                  : "transform 500ms ease-out, opacity 500ms ease-out"
               }}
             >
               <span

@@ -720,20 +720,21 @@ describe("App", () => {
     expect(artworks.every(Boolean)).toBe(true);
     expect(new Set(artworks).size).toBe(seedProfiles.length);
 
-    // The centred card is unblurred; its neighbours are pushed back.
-    const centred = cards[0];
-    const neighbour = cards[1];
+    // Every card moves with compositor-friendly transform and opacity only.
+    for (const card of cards) {
+      expect(card.style.filter).toBe("");
+      expect(card.style.transition).toBe(
+        "transform 500ms ease-out, opacity 500ms ease-out"
+      );
+    }
 
-    expect(centred.getAttribute("style")).not.toMatch(/blur/);
-    expect(neighbour.getAttribute("style")).toMatch(/blur/);
-
-    // Advancing moves the next profile into the centre.
     fireEvent.click(
       within(deck).getByRole("button", { name: "Next featured profile" })
     );
 
-    expect(cards[1].getAttribute("style")).not.toMatch(/blur/);
-    expect(cards[0].getAttribute("style")).toMatch(/blur/);
+    for (const card of cards) {
+      expect(card.style.filter).toBe("");
+    }
 
     // Clicking the centred card opens that profile.
     fireEvent.click(cards[1]);
@@ -945,16 +946,15 @@ describe("App", () => {
     expect(heightClasses).toEqual(["h-80", "h-64", "h-72", "h-80"]);
   });
 
-  it("does not repeat SVG filter ids across ProfileArtwork instances", async () => {
+  it("renders generated profile art without SVG filters", async () => {
     mockSession = null;
     const { container } = render(<App />);
     await flushPlatformEffects();
 
-    const filters = container.querySelectorAll("filter");
-    const ids = Array.from(filters).map((filter) => filter.getAttribute("id"));
-
-    expect(filters.length).toBeGreaterThan(1);
-    expect(new Set(ids).size).toBe(filters.length);
+    expect(container.querySelector("filter, feGaussianBlur")).toBeNull();
+    expect(
+      container.querySelectorAll(".profile-art__depth path").length
+    ).toBeGreaterThan(1);
   });
 
   it("shows editor controls to admins on stories they do not own", async () => {
