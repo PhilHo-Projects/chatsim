@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SquarePen, X } from "lucide-react";
+import { MotionLab } from "./animations/motion-lab/MotionLab";
 import {
   createStory as createRemoteStory,
   deleteStory as deleteRemoteStory,
@@ -759,6 +760,11 @@ export default function App() {
   const backgroundModeClass = isStoryListOpen
     ? "app-background--landing"
     : "app-background--story";
+
+  if (route.name === "motionLab") {
+    return <MotionLab onBack={() => navigate({ name: "home" })} />;
+  }
+
   const goToNextScene = () => {
     if (nextStoryScene) {
       selectScene(nextStoryScene.id);

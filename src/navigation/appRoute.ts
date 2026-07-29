@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export type AppRoute =
   | { name: "home" }
+  | { name: "motionLab" }
   | { name: "profile"; profileId: string }
   | { name: "story"; storyId: string };
 
@@ -75,6 +76,10 @@ export function parseAppRoute(
     return { name: "home" };
   }
 
+  if (parts.length === 1 && parts[0] === "motion-lab") {
+    return { name: "motionLab" };
+  }
+
   if (parts.length === 2 && parts[0] === "profiles") {
     const profileId = decodePathPart(parts[1]);
 
@@ -100,6 +105,10 @@ export function formatAppRoute(route: AppRoute, basePath = DEFAULT_BASE_PATH) {
 
   if (route.name === "story") {
     return addBasePath(`/stories/${encodeURIComponent(route.storyId)}`, basePath);
+  }
+
+  if (route.name === "motionLab") {
+    return addBasePath("/motion-lab", basePath);
   }
 
   return addBasePath("/", basePath);

@@ -27,6 +27,17 @@ describe("app route helpers", () => {
     );
   });
 
+  it("parses and formats the unlinked motion lab route", () => {
+    expect(parseAppRoute("/motion-lab")).toEqual({ name: "motionLab" });
+    expect(formatAppRoute({ name: "motionLab" })).toBe("/motion-lab");
+    expect(parseAppRoute("/chatsim/motion-lab", "/chatsim/")).toEqual({
+      name: "motionLab"
+    });
+    expect(formatAppRoute({ name: "motionLab" }, "/chatsim/")).toBe(
+      "/chatsim/motion-lab"
+    );
+  });
+
   it("parses and formats routes under a deployment base path", () => {
     expect(parseAppRoute("/chatsim/", "/chatsim/")).toEqual({ name: "home" });
     expect(parseAppRoute("/chatsim/profiles/user-phil", "/chatsim/")).toEqual({

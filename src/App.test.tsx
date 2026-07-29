@@ -354,6 +354,15 @@ describe("App", () => {
     vi.useRealTimers();
   });
 
+  it("opens the unlinked motion lab without the browsing directory", async () => {
+    await renderAppAtPath("/motion-lab");
+
+    expect(
+      screen.getByRole("heading", { name: "Motion lab" })
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("All profiles")).not.toBeInTheDocument();
+  });
+
   it("starts in a persistent browsing shell with a featured deck and profile list", async () => {
     mockSession = null;
     render(<App />);
