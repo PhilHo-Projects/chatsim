@@ -51,6 +51,28 @@ describe("app theme tokens", () => {
     expect(neonCss).toContain("@keyframes neon-spark-breathe");
   });
 
+  it("gives the edge layers a perceptible lower-anchored seaweed sway", () => {
+    const neonCss = readFileSync(
+      "src/animations/neon-background/neon-background.css",
+      "utf8"
+    );
+
+    expect(neonCss).toContain("--neon-left-near-inward: 32px");
+    expect(neonCss).toContain("--neon-right-near-inward: -32px");
+    expect(neonCss).toContain("--neon-left-near-inward: 18px");
+    expect(neonCss).toContain("--neon-right-near-inward: -18px");
+    expect(neonCss).toContain("transform-origin: left 88%");
+    expect(neonCss).toContain("transform-origin: right 88%");
+
+    const edgeDurations = [
+      ...neonCss.matchAll(/animation:\s*neon-edge-[\w-]+\s+(\d+)s/g)
+    ].map((match) => Number(match[1]));
+
+    expect(edgeDurations).toHaveLength(6);
+    expect(Math.max(...edgeDurations)).toBeLessThanOrEqual(24);
+    expect(Math.min(...edgeDurations)).toBeLessThanOrEqual(13);
+  });
+
   it("uses opaque browsing surfaces without live backdrop blur", () => {
     const css = readFileSync("src/index.css", "utf8");
     const appGlass = css.match(/\.app-glass\s*\{([^}]*)\}/)?.[1] ?? "";

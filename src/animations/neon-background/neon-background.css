@@ -1,4 +1,16 @@
 .neon-bg {
+  --neon-left-near-rest: -8px;
+  --neon-left-near-inward: 32px;
+  --neon-left-mid-rest: -5px;
+  --neon-left-mid-inward: 22px;
+  --neon-left-far-rest: -3px;
+  --neon-left-far-inward: 13px;
+  --neon-right-near-rest: 8px;
+  --neon-right-near-inward: -32px;
+  --neon-right-mid-rest: 5px;
+  --neon-right-mid-inward: -22px;
+  --neon-right-far-rest: 3px;
+  --neon-right-far-inward: -13px;
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -12,40 +24,53 @@
   display: block;
   width: clamp(5.5rem, 24vw, 22rem);
   height: 104%;
-  transform-origin: center;
   will-change: transform;
 }
 
 .neon-bg__edge--left {
   left: 0;
+  transform-origin: left 88%;
 }
 
 .neon-bg__edge--right {
   right: 0;
+  transform-origin: right 88%;
 }
 
 .neon-bg__edge--left-near {
-  animation: neon-edge-left-near 18s ease-in-out infinite alternate;
+  animation: neon-edge-left-near 12s cubic-bezier(0.45, 0.05, 0.55, 0.95)
+    infinite;
+  animation-delay: -3.7s;
 }
 
 .neon-bg__edge--left-mid {
-  animation: neon-edge-left-mid 25s ease-in-out infinite alternate;
+  animation: neon-edge-left-mid 16s cubic-bezier(0.45, 0.05, 0.55, 0.95)
+    infinite;
+  animation-delay: -10.2s;
 }
 
 .neon-bg__edge--left-far {
-  animation: neon-edge-left-far 32s ease-in-out infinite alternate;
+  animation: neon-edge-left-far 21s cubic-bezier(0.45, 0.05, 0.55, 0.95)
+    infinite;
+  animation-delay: -15.4s;
 }
 
 .neon-bg__edge--right-near {
-  animation: neon-edge-right-near 21s ease-in-out infinite alternate;
+  animation: neon-edge-right-near 13s cubic-bezier(0.45, 0.05, 0.55, 0.95)
+    infinite;
+  animation-delay: -8.6s;
 }
 
 .neon-bg__edge--right-mid {
-  animation: neon-edge-right-mid 27s ease-in-out infinite alternate;
+  animation: neon-edge-right-mid 17s cubic-bezier(0.45, 0.05, 0.55, 0.95)
+    infinite;
+  animation-delay: -2.9s;
 }
 
 .neon-bg__edge--right-far {
-  animation: neon-edge-right-far 30s ease-in-out infinite alternate;
+  animation: neon-edge-right-far 23s cubic-bezier(0.45, 0.05, 0.55, 0.95)
+    infinite;
+  animation-delay: -17.3s;
 }
 
 .neon-bg__spark {
@@ -60,56 +85,98 @@
 }
 
 @keyframes neon-edge-left-near {
-  from {
-    transform: translate3d(-8px, -5px, 0) scale(1.015) rotate(-0.3deg);
+  0%,
+  100% {
+    transform:
+      translate3d(var(--neon-left-near-rest), 7px, 0)
+      scale(1.015)
+      rotate(-0.8deg);
   }
-  to {
-    transform: translate3d(8px, 6px, 0) scale(1.025) rotate(0.45deg);
+  48% {
+    transform:
+      translate3d(var(--neon-left-near-inward), -8px, 0)
+      scale(1.025)
+      rotate(0.95deg);
   }
 }
 
 @keyframes neon-edge-left-mid {
-  from {
-    transform: translate3d(-4px, 5px, 0) scale(1.01) rotate(0.2deg);
+  0%,
+  100% {
+    transform:
+      translate3d(var(--neon-left-mid-rest), -4px, 0)
+      scale(1.01)
+      rotate(0.42deg);
   }
-  to {
-    transform: translate3d(5px, -4px, 0) scale(1.02) rotate(-0.35deg);
+  54% {
+    transform:
+      translate3d(var(--neon-left-mid-inward), 6px, 0)
+      scale(1.02)
+      rotate(-0.68deg);
   }
 }
 
 @keyframes neon-edge-left-far {
-  from {
-    transform: translate3d(-2px, -4px, 0) scale(1.005) rotate(-0.15deg);
+  0%,
+  100% {
+    transform:
+      translate3d(var(--neon-left-far-rest), 3px, 0)
+      scale(1.005)
+      rotate(-0.24deg);
   }
-  to {
-    transform: translate3d(4px, 3px, 0) scale(1.015) rotate(0.25deg);
+  52% {
+    transform:
+      translate3d(var(--neon-left-far-inward), -4px, 0)
+      scale(1.015)
+      rotate(0.4deg);
   }
 }
 
 @keyframes neon-edge-right-near {
-  from {
-    transform: translate3d(8px, -5px, 0) scale(1.02) rotate(0.35deg);
+  0%,
+  100% {
+    transform:
+      translate3d(var(--neon-right-near-rest), -7px, 0)
+      scale(1.02)
+      rotate(0.78deg);
   }
-  to {
-    transform: translate3d(-8px, 6px, 0) scale(1.01) rotate(-0.45deg);
+  55% {
+    transform:
+      translate3d(var(--neon-right-near-inward), 8px, 0)
+      scale(1.01)
+      rotate(-0.95deg);
   }
 }
 
 @keyframes neon-edge-right-mid {
-  from {
-    transform: translate3d(4px, 5px, 0) scale(1.01) rotate(-0.25deg);
+  0%,
+  100% {
+    transform:
+      translate3d(var(--neon-right-mid-rest), 5px, 0)
+      scale(1.01)
+      rotate(-0.42deg);
   }
-  to {
-    transform: translate3d(-5px, -4px, 0) scale(1.02) rotate(0.3deg);
+  46% {
+    transform:
+      translate3d(var(--neon-right-mid-inward), -6px, 0)
+      scale(1.02)
+      rotate(0.66deg);
   }
 }
 
 @keyframes neon-edge-right-far {
-  from {
-    transform: translate3d(2px, -4px, 0) scale(1.005) rotate(0.15deg);
+  0%,
+  100% {
+    transform:
+      translate3d(var(--neon-right-far-rest), -3px, 0)
+      scale(1.005)
+      rotate(0.22deg);
   }
-  to {
-    transform: translate3d(-4px, 3px, 0) scale(1.015) rotate(-0.25deg);
+  58% {
+    transform:
+      translate3d(var(--neon-right-far-inward), 4px, 0)
+      scale(1.015)
+      rotate(-0.4deg);
   }
 }
 
@@ -122,6 +189,17 @@
   50% {
     opacity: 0.82;
     transform: translate3d(2px, -1px, 0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .neon-bg {
+    --neon-left-near-inward: 18px;
+    --neon-left-mid-inward: 12px;
+    --neon-left-far-inward: 8px;
+    --neon-right-near-inward: -18px;
+    --neon-right-mid-inward: -12px;
+    --neon-right-far-inward: -8px;
   }
 }
 
