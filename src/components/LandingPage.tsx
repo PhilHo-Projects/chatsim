@@ -474,7 +474,7 @@ export function LandingPage({
       </label>
 
       <div aria-label="All profiles" className="app-glass w-full rounded-2xl px-4">
-        <ul className="grid divide-y divide-[color:var(--line)]">
+        <ul className="grid min-w-0 grid-cols-1 divide-y divide-[color:var(--line)]">
           {visibleProfiles.map((profile) => (
             <li key={profile.id}>
               <button

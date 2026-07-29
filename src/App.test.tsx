@@ -416,8 +416,10 @@ describe("App", () => {
     ).toBeInTheDocument();
     const featuredDeck = screen.getByRole("group", { name: "Featured profiles" });
     const profileList = screen.getByLabelText("All profiles");
+    const profileRows = profileList.querySelector("ul");
 
     expect(featuredDeck).toHaveAttribute("aria-roledescription", "carousel");
+    expect(profileRows).toHaveClass("grid-cols-1", "min-w-0");
     expect(
       within(featuredDeck).getByRole("button", {
         name: /Open @phil/
