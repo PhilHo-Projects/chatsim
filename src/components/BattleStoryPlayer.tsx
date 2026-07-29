@@ -1,3 +1,4 @@
+import "../animations/battle/battle-motion.css";
 import type {
   ConversationConfig,
   ConversationMessage

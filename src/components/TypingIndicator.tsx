@@ -1,3 +1,4 @@
+import "../animations/conversation/conversation-motion.css";
 import { Avatar } from "./Avatar";
 
 type TypingIndicatorProps = {

@@ -1,3 +1,5 @@
+import "./neon-background.css";
+
 type Tendril = {
   color: string;
   d: string;

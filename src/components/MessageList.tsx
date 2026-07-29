@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import "../animations/conversation/conversation-motion.css";
 import type { ConversationMessage } from "../data/conversation";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";

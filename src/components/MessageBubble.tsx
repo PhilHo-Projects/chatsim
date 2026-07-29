@@ -1,4 +1,5 @@
 import type { ConversationMessage } from "../data/conversation";
+import "../animations/conversation/conversation-motion.css";
 import { Avatar } from "./Avatar";
 
 type MessageBubbleProps = {

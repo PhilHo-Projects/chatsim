@@ -7,7 +7,7 @@ import {
   Search,
   UserCircle
 } from "lucide-react";
-import { NeonBackground } from "./NeonBackground";
+import { NeonBackground } from "../animations/neon-background/NeonBackground";
 
 type AppShellProps = {
   accountPanel: ReactNode;

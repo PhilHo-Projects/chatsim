@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Play, RotateCcw, Square } from "lucide-react";
+import "../animations/conversation/conversation-motion.css";
 import type { ConversationConfig } from "../data/conversationConfig";
 import { useScriptedConversation } from "../hooks/useScriptedConversation";
 

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("app theme tokens", () => {
@@ -19,12 +19,29 @@ describe("app theme tokens", () => {
     expect(css).not.toContain("landing-minimal-sky.webp");
   });
 
-  it("keeps the edge background filter-free and compositor-only", () => {
-    const css = readFileSync("src/index.css", "utf8");
-    const neonCss = css.slice(
-      css.indexOf("/* --- Lightweight edge tendrils --- */")
-    );
+  it("keeps feature motion in focused stylesheets", () => {
+    const featureStylePaths = [
+      "src/animations/conversation/conversation-motion.css",
+      "src/animations/battle/battle-motion.css",
+      "src/animations/neon-background/neon-background.css"
+    ];
 
+    for (const path of featureStylePaths) {
+      expect(existsSync(path), `${path} should exist`).toBe(true);
+    }
+
+    const globalCss = readFileSync("src/index.css", "utf8");
+    const conversationCss = readFileSync(featureStylePaths[0], "utf8");
+    const battleCss = readFileSync(featureStylePaths[1], "utf8");
+    const neonCss = readFileSync(featureStylePaths[2], "utf8");
+
+    expect(globalCss).not.toMatch(
+      /@keyframes (bubble-in|typing-dot|battle-bob|battle-blink|neon-)/
+    );
+    expect(conversationCss).toContain("@keyframes bubble-in");
+    expect(conversationCss).toContain("@keyframes typing-dot");
+    expect(battleCss).toContain("@keyframes battle-bob");
+    expect(battleCss).toContain("@keyframes battle-blink");
     expect(neonCss).not.toContain("filter:");
     expect(neonCss).not.toContain("backdrop-filter");
     expect(neonCss).not.toContain("mix-blend-mode");
