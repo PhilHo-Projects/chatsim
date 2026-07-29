@@ -18,4 +18,20 @@ describe("app theme tokens", () => {
     expect(css).not.toContain("@custom-variant dark");
     expect(css).not.toContain("landing-minimal-sky.webp");
   });
+
+  it("keeps the edge background filter-free and compositor-only", () => {
+    const css = readFileSync("src/index.css", "utf8");
+    const neonCss = css.slice(
+      css.indexOf("/* --- Lightweight edge tendrils --- */")
+    );
+
+    expect(neonCss).not.toContain("filter:");
+    expect(neonCss).not.toContain("backdrop-filter");
+    expect(neonCss).not.toContain("mix-blend-mode");
+    expect(neonCss).not.toContain("stroke-dashoffset");
+    expect(neonCss).not.toContain("neon-flow");
+    expect(neonCss).toContain("@keyframes neon-edge-drift-left");
+    expect(neonCss).toContain("@keyframes neon-edge-drift-right");
+    expect(neonCss).toContain("@keyframes neon-spark-breathe");
+  });
 });
