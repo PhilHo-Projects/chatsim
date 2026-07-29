@@ -34,4 +34,13 @@ describe("app theme tokens", () => {
     expect(neonCss).toContain("@keyframes neon-edge-drift-right");
     expect(neonCss).toContain("@keyframes neon-spark-breathe");
   });
+
+  it("uses opaque browsing surfaces without live backdrop blur", () => {
+    const css = readFileSync("src/index.css", "utf8");
+    const appGlass = css.match(/\.app-glass\s*\{([^}]*)\}/)?.[1] ?? "";
+
+    expect(css).toContain("--surface: rgba(10, 9, 13, 0.92)");
+    expect(css).not.toContain("backdrop-filter");
+    expect(appGlass).toContain("background: var(--surface)");
+  });
 });

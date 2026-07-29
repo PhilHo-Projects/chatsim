@@ -35,12 +35,12 @@ export function AppShell({
   return (
     <div
       aria-label="App shell"
-      className={`app-background ${backgroundModeClass} relative min-h-screen overflow-hidden text-[color:var(--text)]`}
+      className={`app-background ${backgroundModeClass} relative min-h-screen overflow-x-clip text-[color:var(--text)]`}
     >
       {isStoryListOpen ? <NeonBackground /> : null}
       <nav
         aria-label="Desktop navigation"
-        className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-[color:var(--line)] bg-[color:var(--surface)] py-5 shadow-[8px_0_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:flex"
+        className="fixed inset-y-0 left-0 z-30 hidden w-20 flex-col items-center border-r border-[color:var(--line)] bg-[color:var(--surface)] py-5 shadow-[8px_0_28px_rgba(0,0,0,0.4)] md:flex"
       >
         <button
           type="button"
@@ -73,7 +73,7 @@ export function AppShell({
         </div>
       </nav>
 
-      <div className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-[color:var(--line)] bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl md:pl-24 md:pr-5">
+      <div className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-[color:var(--line)] bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] md:pl-24 md:pr-5">
         {!isStoryListOpen ? (
           <button
             type="button"
@@ -107,7 +107,7 @@ export function AppShell({
 
       <nav
         aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-3 border-t border-[color:var(--line)] bg-[color:var(--surface)] px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid h-20 grid-cols-3 border-t border-[color:var(--line)] bg-[color:var(--surface)] px-5 pb-3 pt-2 shadow-[0_-8px_28px_rgba(0,0,0,0.45)] md:hidden"
       >
         <button
           type="button"

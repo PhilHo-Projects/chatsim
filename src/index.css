@@ -15,7 +15,7 @@
   --neon-4: #38bdf8;
   --neon-warm: #f2a766;
   --base: #050507;
-  --surface: rgba(10, 9, 13, 0.62);
+  --surface: rgba(10, 9, 13, 0.92);
   --line: rgba(255, 255, 255, 0.09);
   --text: #f6eef4;
   --muted: #9a8d99;
@@ -50,11 +50,9 @@ body {
   min-height: 100dvh;
 }
 
-/* Glass substrate. At 22 tendrils the neon cuts through body text, so any
-   panel carrying prose sits on this rather than directly on the field. */
+/* Opaque enough for text without a live backdrop blur. */
 .app-glass {
   background: var(--surface);
-  backdrop-filter: blur(20px) saturate(1.1);
   border: 1px solid var(--line);
 }
 

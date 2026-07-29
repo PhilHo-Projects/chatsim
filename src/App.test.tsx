@@ -378,6 +378,21 @@ describe("App", () => {
 
     expect(appShell).toHaveClass("app-background", "app-background--landing");
     expect(appShell).not.toHaveClass("app-background--story");
+    expect(appShell).toHaveClass("overflow-x-clip");
+    expect(appShell).not.toHaveClass("overflow-hidden");
+
+    const desktopNav = screen.getByRole("navigation", {
+      name: "Desktop navigation"
+    });
+    const mobileNav = screen.getByRole("navigation", {
+      name: "Mobile navigation"
+    });
+    const topBar = appShell?.querySelector(".sticky.top-0");
+
+    expect(desktopNav).not.toHaveClass("backdrop-blur-xl");
+    expect(mobileNav).not.toHaveClass("backdrop-blur-xl");
+    expect(topBar).not.toBeNull();
+    expect(topBar).not.toHaveClass("backdrop-blur-xl");
     expect(screen.queryByText("choose a story")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
     expect(
