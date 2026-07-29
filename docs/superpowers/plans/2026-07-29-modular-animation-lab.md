@@ -291,19 +291,28 @@ descendant animations:
 ```ts
 const container = labRef.current;
 
-if (!container?.getAnimations) {
+if (!container) {
   return;
 }
 
-for (const animation of container.getAnimations({ subtree: true })) {
-  animation.playbackRate = playbackRate;
-  if (isPaused) {
-    animation.pause();
-  } else {
-    animation.play();
+if (container.getAnimations) {
+  for (const animation of container.getAnimations({ subtree: true })) {
+    animation.playbackRate = playbackRate;
+    if (isPaused) {
+      animation.pause();
+    } else {
+      animation.play();
+    }
   }
+
+  return;
 }
 ```
+
+When `getAnimations()` is unavailable, query only the lab's known animated
+sample selectors. Cache each element's original inline duration and play state,
+scale parseable `ms`/`s` duration lists, apply `paused` or `running`, and restore
+the original inline values when the lab unmounts.
 
 Render the real `NeonBackground`, one bubble/typing sample using conversation
 keyframes, and one pixel/bob/blink sample using battle keyframes. Style the lab

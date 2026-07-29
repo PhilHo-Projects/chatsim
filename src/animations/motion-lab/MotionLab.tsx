@@ -9,30 +9,121 @@ type MotionLabProps = {
   onBack: () => void;
 };
 
+type FallbackAnimationElement = HTMLElement | SVGElement;
+
+type FallbackAnimationStyle = {
+  baseDuration: string;
+  originalDuration: string;
+  originalPlayState: string;
+};
+
 const PLAYBACK_RATES = [0.5, 1, 2] as const;
+const FALLBACK_ANIMATION_SELECTOR = [
+  ".neon-bg__edge",
+  ".neon-bg__spark",
+  ".motion-lab__bubble",
+  ".motion-lab__typing span",
+  ".motion-lab__battle-sprite",
+  ".motion-lab__battle-sample i"
+].join(", ");
+
+function scaleAnimationDurations(value: string, playbackRate: number) {
+  return value
+    .split(",")
+    .map((duration) => {
+      const trimmedDuration = duration.trim();
+      const match = trimmedDuration.match(/^(-?\d*\.?\d+)(ms|s)$/);
+
+      if (!match) {
+        return trimmedDuration;
+      }
+
+      const scaledValue = Number(
+        (Number(match[1]) / playbackRate).toFixed(3)
+      );
+
+      return `${scaledValue}${match[2]}`;
+    })
+    .join(", ");
+}
+
+function isScalableAnimationDuration(value: string) {
+  return value
+    .split(",")
+    .every((duration) => /^-?\d*\.?\d+(ms|s)$/.test(duration.trim()));
+}
 
 export function MotionLab({ onBack }: MotionLabProps) {
   const labRef = useRef<HTMLElement>(null);
+  const fallbackStylesRef = useRef(
+    new Map<FallbackAnimationElement, FallbackAnimationStyle>()
+  );
   const [isPaused, setIsPaused] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
 
   useEffect(() => {
     const container = labRef.current;
 
-    if (!container?.getAnimations) {
+    if (!container) {
       return;
     }
 
-    for (const animation of container.getAnimations({ subtree: true })) {
-      animation.playbackRate = playbackRate;
+    if (container.getAnimations) {
+      for (const animation of container.getAnimations({ subtree: true })) {
+        animation.playbackRate = playbackRate;
 
-      if (isPaused) {
-        animation.pause();
-      } else {
-        animation.play();
+        if (isPaused) {
+          animation.pause();
+        } else {
+          animation.play();
+        }
+      }
+
+      return;
+    }
+
+    const animatedElements =
+      container.querySelectorAll<FallbackAnimationElement>(
+        FALLBACK_ANIMATION_SELECTOR
+      );
+
+    for (const element of animatedElements) {
+      const computedDuration = getComputedStyle(element).animationDuration;
+      const scalableDuration = isScalableAnimationDuration(computedDuration)
+        ? computedDuration
+        : "";
+      const existingStyle = fallbackStylesRef.current.get(element);
+      const fallbackStyle = existingStyle ?? {
+        baseDuration: scalableDuration,
+        originalDuration: element.style.animationDuration,
+        originalPlayState: element.style.animationPlayState
+      };
+
+      if (!fallbackStyle.baseDuration && scalableDuration) {
+        fallbackStyle.baseDuration = scalableDuration;
+      }
+
+      fallbackStylesRef.current.set(element, fallbackStyle);
+      element.style.animationPlayState = isPaused ? "paused" : "running";
+
+      if (fallbackStyle.baseDuration) {
+        element.style.animationDuration = scaleAnimationDurations(
+          fallbackStyle.baseDuration,
+          playbackRate
+        );
       }
     }
   }, [isPaused, playbackRate]);
+
+  useEffect(
+    () => () => {
+      for (const [element, style] of fallbackStylesRef.current) {
+        element.style.animationDuration = style.originalDuration;
+        element.style.animationPlayState = style.originalPlayState;
+      }
+    },
+    []
+  );
 
   return (
     <main className="motion-lab" ref={labRef}>

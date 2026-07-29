@@ -52,4 +52,22 @@ describe("motion lab", () => {
     );
     expect(animation.playbackRate).toBe(2);
   });
+
+  it("falls back to scoped CSS controls without the Web Animations API", () => {
+    const { container } = render(<MotionLab onBack={() => undefined} />);
+    const firstLayer = container.querySelector<SVGElement>(
+      ".neon-bg__edge--left-near"
+    );
+
+    expect(firstLayer).not.toBeNull();
+    firstLayer!.style.animationDuration = "18s";
+
+    fireEvent.click(screen.getByRole("button", { name: "Pause animations" }));
+    expect(firstLayer?.style.animationPlayState).toBe("paused");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Set animation speed to 2x" })
+    );
+    expect(firstLayer?.style.animationDuration).toBe("9s");
+  });
 });

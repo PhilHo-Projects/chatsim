@@ -91,16 +91,19 @@ It contains:
 - a module label and a short note describing what properties animate;
 - global lab controls for play/pause and `0.5x`, `1x`, or `2x` playback.
 
-Playback controls act only on animations inside the lab container through the
-Web Animations API. They do not mutate application preferences, CSS files, or
-production route state. A “Back to app” control returns to `/`.
+Playback controls act only on animations inside the lab container. They prefer
+the Web Animations API and fall back to scoped inline animation duration and
+play-state overrides when that API is unavailable. Fallback styles are restored
+when the lab unmounts. The controls do not mutate application preferences, CSS
+files, or production route state. A “Back to app” control returns to `/`.
 
 The route is parsed and formatted by the existing app route helper. Unknown
 routes continue to fall back to home.
 
 ## Error and Accessibility Behavior
 
-- If the browser exposes no animations yet, lab controls remain safe no-ops.
+- If the browser does not expose the Web Animations API, the lab uses its
+  scoped CSS fallback; an unparseable duration remains unchanged.
 - The lab controls use native buttons with visible focus treatment and pressed
   state where applicable.
 - The decorative neon background remains `aria-hidden`.
