@@ -152,6 +152,32 @@ describe("database migrations", () => {
     expect(await areMigrationsCurrent(pool)).toBe(true);
   });
 
+  it("treats LF and CRLF migration checksums as equivalent", async () => {
+    const lfChecksum =
+      "71e10c09d9bb83fb7d3ffa25183536dda2baceecef73a4b922d89598fb3dbe6e";
+    const crlfChecksum =
+      "bcccb1cd05aaf184ae37af67cdae1743566f901d93d3a104ee35f415befa4117";
+
+    await pool.query(
+      "UPDATE schema_migrations SET checksum = $1 WHERE name = '007_user_bio.sql'",
+      [lfChecksum]
+    );
+    expect(await areMigrationsCurrent(pool)).toBe(true);
+    await expect(runMigrations(pool)).resolves.toBeUndefined();
+
+    await pool.query(
+      "UPDATE schema_migrations SET checksum = $1 WHERE name = '007_user_bio.sql'",
+      [crlfChecksum]
+    );
+    expect(await areMigrationsCurrent(pool)).toBe(true);
+    await expect(runMigrations(pool)).resolves.toBeUndefined();
+
+    const canonical = await pool.query<{ checksum: string }>(
+      "SELECT checksum FROM schema_migrations WHERE name = '007_user_bio.sql'"
+    );
+    expect(canonical.rows).toEqual([{ checksum: lfChecksum }]);
+  });
+
   it("detects an edited migration through its stored checksum", async () => {
     const original = await pool.query<{ checksum: string }>(
       "SELECT checksum FROM schema_migrations WHERE name = '001_initial.sql'"

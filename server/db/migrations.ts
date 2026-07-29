@@ -16,13 +16,23 @@ async function listMigrationNames() {
     .sort();
 }
 
+function hashSql(sql: string) {
+  return createHash("sha256").update(sql).digest("hex");
+}
+
 async function loadMigrations() {
   const migrations = [];
 
   for (const name of await listMigrationNames()) {
     const sql = await readFile(join(migrationsDirectory, name), "utf8");
+    const lfSql = sql.replace(/\r\n?/g, "\n");
+    const checksum = hashSql(lfSql);
     migrations.push({
-      checksum: createHash("sha256").update(sql).digest("hex"),
+      checksum,
+      compatibleChecksums: new Set([
+        checksum,
+        hashSql(lfSql.replace(/\n/g, "\r\n"))
+      ]),
       name,
       sql
     });
@@ -46,7 +56,8 @@ export async function areMigrationsCurrent(pool: Pool) {
       appliedResult.rows.every(
         (row, index) =>
           row.name === expected[index].name &&
-          row.checksum === expected[index].checksum
+          row.checksum !== null &&
+          expected[index].compatibleChecksums.has(row.checksum)
       )
     );
   } catch {
@@ -92,13 +103,16 @@ export async function runMigrations(pool: Pool) {
         throw error;
       });
     const expectedByName = new Map(
-      migrations.map((migration) => [migration.name, migration.checksum])
+      migrations.map((migration) => [
+        migration.name,
+        migration.compatibleChecksums
+      ])
     );
 
     for (const row of existingChecksums.rows) {
       if (
         row.checksum &&
-        row.checksum !== expectedByName.get(row.name)
+        !expectedByName.get(row.name)?.has(row.checksum)
       ) {
         throw new Error(`Applied migration ${row.name} has changed.`);
       }
@@ -129,7 +143,7 @@ export async function runMigrations(pool: Pool) {
       await client.query(
         `UPDATE schema_migrations
          SET checksum = $1
-         WHERE name = $2 AND checksum IS NULL`,
+         WHERE name = $2 AND checksum IS DISTINCT FROM $1`,
         [migration.checksum, migration.name]
       );
     }
