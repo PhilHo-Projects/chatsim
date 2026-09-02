@@ -218,6 +218,24 @@ describe("Postgres StoryStore", () => {
       password: "real-person-password-2026",
       username: "realperson"
     });
+    await pool.query(
+      `INSERT INTO auth_user (
+         id, name, email, "emailVerified", username, role, "approvalStatus"
+       )
+       VALUES (
+         'auth-linked', 'linkedcreator', 'linked@example.com', TRUE,
+         'linkedcreator', 'user', 'approved'
+       )`
+    );
+    await pool.query(
+      `INSERT INTO users (
+         id, username, display_name, role, accent_color, auth_user_id
+       )
+       VALUES (
+         'user-linked', 'linkedcreator', 'linkedcreator', 'member', '#22d3ee',
+         'auth-linked'
+       )`
+    );
 
     await store.seed();
 
@@ -228,6 +246,7 @@ describe("Postgres StoryStore", () => {
 
     expect(remainingIds).not.toContain("user-retired");
     expect(remainingIds).toContain(realAccount.user.id);
+    expect(remainingIds).toContain("user-linked");
     expect(remainingIds).toContain("user-phil");
     expect(
       await pool.query("SELECT id FROM stories WHERE id = 'story-retired'")
@@ -426,18 +445,31 @@ describe("Postgres StoryStore", () => {
     await expect(
       store.updateStory(other.user.id, story.id, { title: "Stolen" })
     ).rejects.toMatchObject({ statusCode: 403 });
+    await pool.query("UPDATE users SET role = 'admin' WHERE id = $1", [
+      other.user.id
+    ]);
+    await expect(
+      store.updateStory(other.user.id, story.id, {
+        title: "Legacy role escalation"
+      })
+    ).rejects.toMatchObject({ statusCode: 403 });
 
     const ownerUpdate = await store.updateStory(owner.user.id, story.id, {
       title: "Owner update"
     });
-    const adminUpdate = await store.updateStory(admin.user.id, story.id, {
+    const adminActor = {
+      authUserId: "auth-admin",
+      profileId: admin.user.id,
+      role: "admin" as const
+    };
+    const adminUpdate = await store.updateStory(adminActor, story.id, {
       title: "Admin update"
     });
 
     expect(ownerUpdate.title).toBe("Owner update");
     expect(adminUpdate.title).toBe("Admin update");
 
-    await store.deleteStory(admin.user.id, story.id);
+    await store.deleteStory(adminActor, story.id);
     expect(await store.getStory(story.id)).toBeNull();
   });
 
@@ -473,7 +505,11 @@ describe("Postgres StoryStore", () => {
       title: "Owner media"
     });
 
-    const updated = await store.updateStory(admin.user.id, story.id, {
+    const updated = await store.updateStory({
+      authUserId: "auth-admin",
+      profileId: admin.user.id,
+      role: "admin"
+    }, story.id, {
       coverImageId: story.coverImageId,
       storyboard: story.storyboard,
       title: "Admin kept media"

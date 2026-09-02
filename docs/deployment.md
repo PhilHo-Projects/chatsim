@@ -1,5 +1,46 @@
 # Chatsim Production Operations
 
+## Better Auth rollout (not yet deployed)
+
+The creator-account foundation is implemented additively. Better Auth owns
+identities, credentials, sessions, email verification, approval state, bans,
+and the restricted admin role. Rows in `users` remain creator profiles and the
+stable ownership boundary for stories and media. Seeded profiles have a null
+`auth_user_id` and never become login identities.
+
+Production must receive these scoped Coolify variables before this version is
+started:
+
+- `BETTER_AUTH_SECRET`: a new random value of at least 32 characters.
+- `BETTER_AUTH_URL=https://chatsim.philippeho.dev`.
+- `AUTH_REGISTRATION_MODE=closed` for the initial stability window.
+- `RESEND_API_KEY`: restricted to transactional sending.
+- `AUTH_EMAIL_FROM`: a sender on a verified Resend subdomain.
+- `ADMIN_BOOTSTRAP_EMAIL`: the credentialed administrator's email address.
+
+The rollout order is intentionally manual:
+
+1. Verify a fresh database backup and restore it into an isolated database.
+2. Verify the Resend sending subdomain, then add the six variables above to
+   Coolify without printing their values.
+3. Deploy with registration `closed`. Startup must apply migration 008 before
+   serving traffic.
+4. Temporarily add `ADMIN_BOOTSTRAP_USERNAME` and
+   `ADMIN_BOOTSTRAP_PASSWORD`, run `npm run db:bootstrap-admin` once, rerun it
+   to prove idempotency, then remove both values. The command links
+   `user-admin`, verifies and approves the identity, hashes the credential via
+   Better Auth, and creates no browser session.
+5. Verify admin sign-in, password recovery, story/media authorization, logout,
+   `/api/health`, backup execution, and the isolated rollback restore. The
+   first `/api/me` response expires the legacy `chatsim_session` cookie.
+6. Keep registration closed during the stability window. Then set it to
+   `approval` and exercise verification, approval, rejection, disablement, and
+   session revocation. Use `open` only after those checks pass.
+
+Do not drop or rewrite legacy auth columns or the legacy `sessions` table in
+this rollout. The new runtime neither authenticates from nor cleans that table;
+it remains rollback data until a separate reviewed cleanup migration.
+
 ## Current rollout state
 
 The production backend is a parallel greenfield deployment. It does not replace
@@ -35,9 +76,10 @@ is documented in the repository.
 
 ## Runtime data
 
-Postgres is the authority for users, hashed sessions, image metadata, stories,
-storyboards, and upload audit events. The application container is stateless and
-has no app-data mount.
+Postgres is the authority for Better Auth identities and sessions, creator
+profiles, image metadata, stories, storyboards, abuse limits, and audit events.
+The application container is stateless and has no app-data mount. Resend is an
+asynchronous transactional dependency and is never called by the health check.
 
 Public seed content lives once in `src/data/platformSeed.json`. Showcase users
 have no password hashes and cannot authenticate. `npm run db:seed` may be
@@ -90,18 +132,17 @@ The standalone API is `npm run dev:api`; its default container/production port
 is `3000`. `GET /api/health` checks Postgres connectivity and migration
 readiness.
 
-Production sets `TRUST_PROXY=true` because the container is reachable only
-through Coolify/Traefik's private Docker network. The API accepts
-`X-Forwarded-For` only from private/loopback peers and uses the rightmost valid
-address, preventing a client-supplied leftmost value from bypassing IP limits.
-Do not publish port 3000 directly while this setting is enabled.
+Production keeps port 3000 private because the container is reachable only
+through Coolify/Traefik's Docker network. Authentication trusts only Traefik's
+sanitized `X-Real-IP`; Better Auth ignores `X-Forwarded-For`. Do not publish the
+application port directly.
 
-Rate limiting is intentionally in-process for the current single application
-replica. Each limiter bounds tracked identities at 10,000 and fails closed at
-capacity. Replace it with a shared limiter before adding replicas or promoting
-the service to sustained high public traffic. Image completion is limited to
-one active Sharp pipeline per application instance for the current shared
-4 GiB host.
+Authentication rate limits are stored in Postgres. Sign-in failures are limited
+to five per hashed identifier and client IP per 15 minutes; signups are limited
+to three per IP per hour; verification and reset requests are limited to three
+per hashed identifier and IP per hour. Plaintext identifiers are not stored in
+the limiter. Image completion remains limited to one active Sharp pipeline per
+application instance for the current shared 4 GiB host.
 
 ## Database migrations, seed, and backup
 
@@ -117,10 +158,10 @@ npm run db:seed
 npm run db:bootstrap-admin
 ```
 
-The one-time bootstrap command requires
-`ADMIN_BOOTSTRAP_USERNAME`, `ADMIN_BOOTSTRAP_PASSWORD`, and optionally
-`ADMIN_BOOTSTRAP_DISPLAY_NAME`. Remove those values from Coolify immediately
-after a successful bootstrap.
+The one-time bootstrap command requires `ADMIN_BOOTSTRAP_EMAIL` through the
+validated auth configuration plus `ADMIN_BOOTSTRAP_USERNAME` and
+`ADMIN_BOOTSTRAP_PASSWORD`. Remove the username and password from Coolify
+immediately after a successful, repeated/idempotent bootstrap.
 
 Verified backup executions:
 
@@ -242,6 +283,9 @@ restore destructively over the live Postgres resource.
 
 ## Future auth
 
-The schema reserves nullable email and OIDC identity fields, but Google/OIDC is
-not implemented. Password registration remains open under the documented rate
-limits and password policy.
+Google login is deliberately deferred. Better Auth remains the identity
+authority, so adding it later should be provider configuration plus
+account-linking tests rather than another creator-profile or story migration.
+TOTP, email/username changes, account deletion, impersonation, arbitrary admin
+password setting, and role escalation are also out of scope. The admin surface
+can only approve, reject, disable, enable, list, and revoke sessions.

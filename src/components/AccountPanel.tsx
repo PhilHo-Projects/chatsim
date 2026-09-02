@@ -1,18 +1,22 @@
 import type { FormEvent } from "react";
 import { LogIn, LogOut, Plus, UserPlus } from "lucide-react";
 import type { PlatformSession } from "../data/platformSeed";
+import type { RegistrationMode } from "../api/storyApi";
 
 export type AuthMode = "login" | "register";
 
 type AccountPanelProps = {
   accountError: string;
   authMode: AuthMode;
+  email: string;
   isBusy: boolean;
   password: string;
+  registrationMode: RegistrationMode;
   session: PlatformSession | null;
   username: string;
   onAuthModeChange: (mode: AuthMode) => void;
   onCreateStory: () => void;
+  onEmailChange: (value: string) => void;
   onLogout: () => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -22,12 +26,15 @@ type AccountPanelProps = {
 export function AccountPanel({
   accountError,
   authMode,
+  email,
   isBusy,
   password,
+  registrationMode,
   session,
   username,
   onAuthModeChange,
   onCreateStory,
+  onEmailChange,
   onLogout,
   onPasswordChange,
   onSubmit,
@@ -58,6 +65,20 @@ export function AccountPanel({
             <Plus className="h-4 w-4" aria-hidden="true" />
             Create story
           </button>
+          <a
+            href="/account"
+            className="flex h-10 items-center justify-center rounded-lg bg-white/[0.04] px-4 text-sm font-bold text-[color:var(--text)] ring-1 ring-[color:var(--line)] transition hover:bg-white/[0.08]"
+          >
+            Account &amp; password
+          </a>
+          {session.user.role === "admin" ? (
+            <a
+              href="/admin/accounts"
+              className="flex h-10 items-center justify-center rounded-lg bg-white/[0.04] px-4 text-sm font-bold text-[color:var(--text)] ring-1 ring-[color:var(--line)] transition hover:bg-white/[0.08]"
+            >
+              Manage accounts
+            </a>
+          ) : null}
           <button
             type="button"
             onClick={onLogout}
@@ -70,7 +91,11 @@ export function AccountPanel({
         </>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-1 rounded-lg bg-white/[0.06] p-1">
+          <div
+            className={`grid gap-1 rounded-lg bg-white/[0.06] p-1 ${
+              registrationMode === "closed" ? "grid-cols-1" : "grid-cols-2"
+            }`}
+          >
             <button
               type="button"
               onClick={() => onAuthModeChange("login")}
@@ -82,32 +107,53 @@ export function AccountPanel({
             >
               Login
             </button>
-            <button
-              type="button"
-              onClick={() => onAuthModeChange("register")}
-              className={`h-9 rounded-lg text-sm font-bold transition ${
-                authMode === "register"
-                  ? "bg-white/[0.12] text-[color:var(--text)] shadow-sm"
-                  : "text-[color:var(--muted)] hover:text-[color:var(--text)]"
-              }`}
-            >
-              Create
-            </button>
+            {registrationMode !== "closed" ? (
+              <button
+                type="button"
+                onClick={() => onAuthModeChange("register")}
+                className={`h-9 rounded-lg text-sm font-bold transition ${
+                  authMode === "register"
+                    ? "bg-white/[0.12] text-[color:var(--text)] shadow-sm"
+                    : "text-[color:var(--muted)] hover:text-[color:var(--text)]"
+                }`}
+              >
+                Create
+              </button>
+            ) : null}
           </div>
           <form className="grid gap-3" onSubmit={onSubmit}>
             <label className="text-xs font-bold uppercase text-[color:var(--muted)]">
-              Username
+              {authMode === "register" ? "Username" : "Username or email"}
               <input
-                aria-label="Username"
+                aria-label={
+                  authMode === "register" ? "Username" : "Username or email"
+                }
+                autoComplete="username"
                 value={username}
                 onChange={(event) => onUsernameChange(event.target.value)}
                 className="mt-1 h-10 w-full rounded-lg border border-[color:var(--line)] bg-white/[0.04] px-3 text-sm font-semibold normal-case text-[color:var(--text)] outline-none transition focus:ring-2 focus:ring-[color:var(--neon-1)]"
               />
             </label>
+            {authMode === "register" ? (
+              <label className="text-xs font-bold uppercase text-[color:var(--muted)]">
+                Email
+                <input
+                  aria-label="Email"
+                  autoComplete="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => onEmailChange(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-[color:var(--line)] bg-white/[0.04] px-3 text-sm font-semibold normal-case text-[color:var(--text)] outline-none transition focus:ring-2 focus:ring-[color:var(--neon-1)]"
+                />
+              </label>
+            ) : null}
             <label className="text-xs font-bold uppercase text-[color:var(--muted)]">
               Password
               <input
                 aria-label="Password"
+                autoComplete={
+                  authMode === "register" ? "new-password" : "current-password"
+                }
                 type="password"
                 value={password}
                 onChange={(event) => onPasswordChange(event.target.value)}

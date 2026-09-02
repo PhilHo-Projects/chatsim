@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type AppRoute =
+  | { name: "account" }
+  | { name: "adminAccounts" }
   | { name: "home" }
   | { name: "motionLab" }
   | { name: "profile"; profileId: string }
@@ -80,6 +82,18 @@ export function parseAppRoute(
     return { name: "motionLab" };
   }
 
+  if (parts.length === 1 && parts[0] === "account") {
+    return { name: "account" };
+  }
+
+  if (
+    parts.length === 2 &&
+    parts[0] === "admin" &&
+    parts[1] === "accounts"
+  ) {
+    return { name: "adminAccounts" };
+  }
+
   if (parts.length === 2 && parts[0] === "profiles") {
     const profileId = decodePathPart(parts[1]);
 
@@ -96,6 +110,14 @@ export function parseAppRoute(
 }
 
 export function formatAppRoute(route: AppRoute, basePath = DEFAULT_BASE_PATH) {
+  if (route.name === "account") {
+    return addBasePath("/account", basePath);
+  }
+
+  if (route.name === "adminAccounts") {
+    return addBasePath("/admin/accounts", basePath);
+  }
+
   if (route.name === "profile") {
     return addBasePath(
       `/profiles/${encodeURIComponent(route.profileId)}`,

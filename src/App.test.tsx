@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import App from "./App";
 import {
   createBlankStoryboard,
@@ -129,42 +129,71 @@ function setupApiMock(session: PlatformSession | null = ownerSession) {
         return jsonResponse({ profiles: getProfilesFromStories() });
       }
 
-      if (method === "GET" && url.pathname === "/api/auth/session") {
-        return jsonResponse({ session: mockSession });
+      if (method === "GET" && url.pathname === "/api/me") {
+        return jsonResponse({
+          account: mockSession
+            ? {
+                approvalStatus: "approved",
+                disabled: false,
+                email: `${mockSession.user.username}@example.com`,
+                emailVerified: true,
+                id: `auth-${mockSession.user.username}`,
+                role: mockSession.user.role === "admin" ? "admin" : "user",
+                username: mockSession.user.username
+              }
+            : null,
+          profile: mockSession
+            ? {
+                accentColor: "#22d3ee",
+                bio: null,
+                displayName: mockSession.user.displayName,
+                id: mockSession.user.id,
+                username: mockSession.user.username
+              }
+            : null,
+          registrationMode: "open",
+          session: mockSession ? { expiresAt: mockSession.expiresAt } : null
+        });
       }
 
-      if (method === "POST" && url.pathname === "/api/auth/login") {
+      if (method === "GET" && url.pathname === "/api/admin/accounts") {
+        return jsonResponse({ accounts: [] });
+      }
+
+      if (
+        method === "POST" &&
+        ["/api/auth/sign-in/email", "/api/auth/sign-in/username"].includes(
+          url.pathname
+        )
+      ) {
         mockSession = ownerSession;
-        return jsonResponse({ session: mockSession });
-      }
-
-      if (method === "POST" && url.pathname === "/api/auth/register") {
-        mockSession = {
-          expiresAt: "2026-08-24T12:00:00.000Z",
+        return jsonResponse({
+          redirect: false,
+          token: null,
           user: {
-            displayName: body.displayName || body.username,
-            id: `user-${body.username}`,
-            role: "member",
-            username: body.username
+            email: "phil@example.com",
+            emailVerified: true,
+            id: "auth-phil",
+            name: "phil"
           }
-        };
-        mockProfiles = [
-          ...mockProfiles,
-          {
-            accentColor: "#f472b6",
-            bio: null,
-            displayName: mockSession.user.displayName,
-            id: mockSession.user.id,
-            stories: [],
-            username: mockSession.user.username
-          }
-        ];
-        return jsonResponse({ session: mockSession }, 201);
+        });
       }
 
-      if (method === "POST" && url.pathname === "/api/auth/logout") {
+      if (method === "POST" && url.pathname === "/api/auth/sign-up/email") {
+        return jsonResponse({
+          token: null,
+          user: {
+            email: body.email,
+            emailVerified: false,
+            id: `auth-${body.username}`,
+            name: body.username
+          }
+        });
+      }
+
+      if (method === "POST" && url.pathname === "/api/auth/sign-out") {
         mockSession = null;
-        return jsonResponse({ ok: true });
+        return jsonResponse({ success: true });
       }
 
       const permissionsMatch = url.pathname.match(
@@ -582,7 +611,7 @@ describe("App", () => {
     expect(screen.getAllByRole("button", { name: "Account" })).toHaveLength(1);
   });
 
-  it("registers with a handle and password only", async () => {
+  it("registers with a handle, email, and password but no display name", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
@@ -593,6 +622,79 @@ describe("App", () => {
     fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
 
     expect(screen.queryByLabelText("Display name")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+  });
+
+  it("creates an unusable Better Auth identity and asks for verification", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+    fireEvent.click(screen.getAllByRole("button", { name: "Account" })[0]);
+    const panel = screen.getByRole("dialog", { name: "Account panel" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Create" }));
+    fireEvent.change(within(panel).getByLabelText("Username"), {
+      target: { value: "new_creator" }
+    });
+    fireEvent.change(within(panel).getByLabelText("Email"), {
+      target: { value: "creator@example.com" }
+    });
+    fireEvent.change(within(panel).getByLabelText("Password"), {
+      target: { value: "creator-password-2026" }
+    });
+    fireEvent.submit(within(panel).getByRole("button", { name: "Create account" }).closest("form")!);
+    await flushQueuedStorySaves();
+
+    expect(mockSession).toBeNull();
+    expect(within(panel).getByText(/check your email to verify/i)).toBeInTheDocument();
+    const request = vi.mocked(fetch).mock.calls.find(([input]) =>
+      String(input).endsWith("/api/auth/sign-up/email")
+    );
+    expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
+      email: "creator@example.com",
+      username: "new_creator"
+    });
+  });
+
+  it("signs in through Better Auth with one username-or-email field", async () => {
+    mockSession = null;
+    render(<App />);
+    await flushPlatformEffects();
+    fireEvent.click(screen.getAllByRole("button", { name: "Account" })[0]);
+    const panel = screen.getByRole("dialog", { name: "Account panel" });
+
+    fireEvent.change(within(panel).getByLabelText("Username or email"), {
+      target: { value: "phil" }
+    });
+    fireEvent.change(within(panel).getByLabelText("Password"), {
+      target: { value: "phil-password-2026" }
+    });
+    fireEvent.submit(
+      within(panel).getAllByRole("button", { name: "Login" })[1].closest("form")!
+    );
+    await flushQueuedStorySaves();
+
+    expect(mockSession).toEqual(ownerSession);
+    expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
+  });
+
+  it("renders account recovery at its route", async () => {
+    mockSession = null;
+    await renderAppAtPath("/account");
+
+    expect(
+      screen.getByRole("heading", { name: "Account & password" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send reset link" })).toBeInTheDocument();
+  });
+
+  it("gates the account administration route with the Better Auth role", async () => {
+    await renderAppAtPath("/admin/accounts");
+    expect(screen.getByRole("heading", { name: "Admin access required" })).toBeInTheDocument();
+
+    cleanup();
+    setupApiMock(adminSession);
+    await renderAppAtPath("/admin/accounts");
+    expect(screen.getByRole("heading", { name: "Creator accounts" })).toBeInTheDocument();
   });
 
   it("keeps the neon background on the browsing route and off the story route", async () => {

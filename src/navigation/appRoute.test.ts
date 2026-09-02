@@ -38,6 +38,17 @@ describe("app route helpers", () => {
     );
   });
 
+  it("parses and formats account management routes", () => {
+    expect(parseAppRoute("/account")).toEqual({ name: "account" });
+    expect(formatAppRoute({ name: "account" })).toBe("/account");
+    expect(parseAppRoute("/admin/accounts")).toEqual({
+      name: "adminAccounts"
+    });
+    expect(formatAppRoute({ name: "adminAccounts" })).toBe(
+      "/admin/accounts"
+    );
+  });
+
   it("parses and formats routes under a deployment base path", () => {
     expect(parseAppRoute("/chatsim/", "/chatsim/")).toEqual({ name: "home" });
     expect(parseAppRoute("/chatsim/profiles/user-phil", "/chatsim/")).toEqual({

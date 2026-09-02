@@ -1,6 +1,8 @@
 import { runMigrations } from "./migrations";
 import { createDatabasePool } from "./pool";
 import { StoryStore } from "../storyStore";
+import { bootstrapBetterAuthAdmin } from "../auth/bootstrap";
+import { readAuthRuntimeConfig } from "../auth/config";
 
 const LOCAL_DATABASE_URL =
   "postgresql://chatsim_dev:chatsim_dev@127.0.0.1:54339/chatsim_dev";
@@ -23,6 +25,7 @@ async function main() {
 
   const pool = createDatabasePool(databaseUrl);
   const store = await StoryStore.open({
+    cleanupLegacySessions: false,
     pool,
     startCleanup: false
   });
@@ -36,8 +39,6 @@ async function main() {
     if (command === "bootstrap-admin") {
       const username = process.env.ADMIN_BOOTSTRAP_USERNAME?.trim();
       const password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
-      const displayName =
-        process.env.ADMIN_BOOTSTRAP_DISPLAY_NAME?.trim() || "Chatsim Admin";
 
       if (!username || !password) {
         throw new Error(
@@ -45,7 +46,12 @@ async function main() {
         );
       }
 
-      await store.bootstrapAdmin({ displayName, password, username });
+      const authConfig = readAuthRuntimeConfig();
+      await bootstrapBetterAuthAdmin(pool, {
+        email: authConfig.adminBootstrapEmail,
+        password,
+        username
+      });
       return;
     }
 

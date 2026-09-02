@@ -4,8 +4,9 @@ import { MotionLab } from "./animations/motion-lab/MotionLab";
 import {
   createStory as createRemoteStory,
   deleteStory as deleteRemoteStory,
+  currentAccountSession,
+  fetchCurrentAccount,
   fetchProfiles,
-  fetchSession,
   fetchStory,
   fetchStoryPermissions,
   login,
@@ -13,8 +14,11 @@ import {
   register,
   updateStory as updateRemoteStory
 } from "./api/storyApi";
+import type { CurrentAccount, RegistrationMode } from "./api/storyApi";
 import { AnimatedComposer } from "./components/AnimatedComposer";
 import { AccountPanel, type AuthMode } from "./components/AccountPanel";
+import { AccountPage } from "./components/AccountPage";
+import { AdminAccountsPage } from "./components/AdminAccountsPage";
 import { AppShell } from "./components/AppShell";
 import { BattleStoryPlayer } from "./components/BattleStoryPlayer";
 import { ChatHeader } from "./components/ChatHeader";
@@ -165,6 +169,12 @@ export default function App() {
   const storySaveVersionRef = useRef(0);
   const [profiles, setProfiles] = useState<PlatformProfile[]>(seedProfiles);
   const [session, setSession] = useState<PlatformSession | null>(null);
+  const [currentAccount, setCurrentAccount] = useState<CurrentAccount>({
+    account: null,
+    profile: null,
+    registrationMode: "closed",
+    session: null
+  });
   const [hasHydratedPlatform, setHasHydratedPlatform] = useState(false);
   const [storyRecordsById, setStoryRecordsById] = useState<
     Record<string, PlatformStoryRecord>
@@ -185,7 +195,10 @@ export default function App() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [registrationMode, setRegistrationMode] =
+    useState<RegistrationMode>("closed");
   const [searchQuery, setSearchQuery] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
@@ -227,9 +240,9 @@ export default function App() {
     let isCancelled = false;
 
     async function hydratePlatform() {
-      const [profilesResult, sessionResult] = await Promise.allSettled([
+      const [profilesResult, accountResult] = await Promise.allSettled([
         fetchProfiles(),
-        fetchSession()
+        fetchCurrentAccount()
       ]);
 
       if (isCancelled) {
@@ -240,8 +253,13 @@ export default function App() {
         setProfiles(profilesResult.value);
       }
 
-      if (sessionResult.status === "fulfilled") {
-        setSession(sessionResult.value);
+      if (accountResult.status === "fulfilled") {
+        setCurrentAccount(accountResult.value);
+        setSession(currentAccountSession(accountResult.value));
+        setRegistrationMode(accountResult.value.registrationMode);
+        if (accountResult.value.registrationMode === "closed") {
+          setAuthMode("login");
+        }
       }
 
       setHasHydratedPlatform(true);
@@ -604,26 +622,34 @@ export default function App() {
     setIsEditorOpen(false);
   };
 
-  const handleLogin = async (input: { password: string; username: string }) => {
-    const nextSession = await login(input);
-    setSession(nextSession);
+  const handleLogin = async (input: { identifier: string; password: string }) => {
+    const current = await login(input);
+    setCurrentAccount(current);
+    setSession(currentAccountSession(current));
+    setRegistrationMode(current.registrationMode);
     const nextProfiles = await fetchProfiles();
     setProfiles(nextProfiles);
   };
 
   const handleRegister = async (input: {
+    email: string;
     password: string;
     username: string;
   }) => {
-    const nextSession = await register(input);
-    setSession(nextSession);
-    const nextProfiles = await fetchProfiles();
-    setProfiles(nextProfiles);
+    await register(input);
+    setAccountError(
+      registrationMode === "approval"
+        ? "Check your email to verify the account. After that, an admin will review it."
+        : "Check your email to verify the account before signing in."
+    );
   };
 
   const handleLogout = async () => {
     await logout();
-    setSession(null);
+    const current = await fetchCurrentAccount();
+    setCurrentAccount(current);
+    setSession(currentAccountSession(current));
+    setRegistrationMode(current.registrationMode);
     setIsEditorOpen(false);
     setIsStorybookOpen(false);
     const nextProfiles = await fetchProfiles();
@@ -637,9 +663,11 @@ export default function App() {
 
     try {
       if (authMode === "register") {
-        await handleRegister({ password, username });
+        await handleRegister({ email, password, username });
+        setPassword("");
+        return;
       } else {
-        await handleLogin({ password, username });
+        await handleLogin({ identifier: username, password });
       }
 
       setPassword("");
@@ -766,6 +794,52 @@ export default function App() {
     return <MotionLab onBack={() => navigate({ name: "home" })} />;
   }
 
+  if (route.name === "account") {
+    const accountQuery = new URLSearchParams(window.location.search);
+
+    return (
+      <AccountPage
+        approvalComplete={accountQuery.get("approved") === "1"}
+        currentAccount={currentAccount}
+        onBack={() => navigate({ name: "home" })}
+        resetToken={accountQuery.get("token")}
+        verificationComplete={accountQuery.get("verified") === "1"}
+      />
+    );
+  }
+
+  if (route.name === "adminAccounts") {
+    if (!hasHydratedPlatform) {
+      return (
+        <main className="app-background app-background--landing grid min-h-dvh place-items-center text-sm font-bold text-[color:var(--muted)]">
+          Loading account access…
+        </main>
+      );
+    }
+
+    if (!currentAccount.session || currentAccount.account?.role !== "admin") {
+      return (
+        <main className="app-background app-background--landing grid min-h-dvh place-items-center px-4 text-[color:var(--text)]">
+          <section className="app-glass grid w-full max-w-md gap-4 rounded-2xl p-6 text-center shadow-2xl">
+            <h1 className="text-2xl font-black">Admin access required</h1>
+            <p className="text-sm text-[color:var(--muted)]">
+              Account moderation is available only to the restricted Chatsim admin.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate({ name: "home" })}
+              className="h-11 rounded-lg bg-[color:var(--neon-1)] px-4 text-sm font-black text-[color:var(--base)]"
+            >
+              Back to stories
+            </button>
+          </section>
+        </main>
+      );
+    }
+
+    return <AdminAccountsPage onBack={() => navigate({ name: "home" })} />;
+  }
+
   const goToNextScene = () => {
     if (nextStoryScene) {
       selectScene(nextStoryScene.id);
@@ -821,11 +895,14 @@ export default function App() {
       authMode={authMode}
       isBusy={isBusy}
       password={password}
+      email={email}
+      registrationMode={registrationMode}
       session={session}
       username={username}
       onAuthModeChange={setAuthMode}
       onCreateStory={() => void createStoryFromShell()}
       onLogout={() => void logoutFromShell()}
+      onEmailChange={setEmail}
       onPasswordChange={setPassword}
       onSubmit={submitAuth}
       onUsernameChange={setUsername}
