@@ -81,8 +81,53 @@ describe("database migrations", () => {
          AND t.relname = 'users'
          AND c.conname = 'users_bio_check'`
     );
+    const authUserColumns = await pool.query<{
+      column_name: string;
+      data_type: string;
+      is_nullable: "YES" | "NO";
+    }>(
+      `SELECT column_name, data_type, is_nullable
+       FROM information_schema.columns
+       WHERE table_schema = 'migrations_test' AND table_name = 'auth_user'
+       ORDER BY ordinal_position`
+    );
+    const authConstraints = await pool.query<{
+      constraint_name: string;
+      definition: string;
+    }>(
+      `SELECT c.conname AS constraint_name, pg_get_constraintdef(c.oid) AS definition
+       FROM pg_constraint c
+       JOIN pg_class t ON t.oid = c.conrelid
+       JOIN pg_namespace n ON n.oid = t.relnamespace
+       WHERE n.nspname = 'migrations_test' AND t.relname = 'auth_user'
+       ORDER BY c.conname`
+    );
+    const authUserLink = await pool.query<{
+      column_name: string;
+      is_nullable: "YES" | "NO";
+    }>(
+      `SELECT column_name, is_nullable
+       FROM information_schema.columns
+       WHERE table_schema = 'migrations_test'
+         AND table_name = 'users'
+         AND column_name = 'auth_user_id'`
+    );
+    const authUserLinkIndexes = await pool.query<{ indexdef: string }>(
+      `SELECT indexdef
+       FROM pg_indexes
+       WHERE schemaname = 'migrations_test'
+         AND tablename = 'users'
+         AND indexname = 'users_auth_user_id_uidx'`
+    );
 
     expect(tables.rows.map((row) => row.table_name)).toEqual([
+      "auth_abuse_limit",
+      "auth_account",
+      "auth_account_action_audit",
+      "auth_rate_limit",
+      "auth_session",
+      "auth_user",
+      "auth_verification",
       "images",
       "schema_migrations",
       "sessions",
@@ -138,6 +183,45 @@ describe("database migrations", () => {
     ]);
     expect(usersBioConstraint.rows).toHaveLength(1);
     expect(usersBioConstraint.rows[0].definition).toContain("160");
+    expect(authUserColumns.rows).toEqual(
+      expect.arrayContaining([
+        { column_name: "id", data_type: "text", is_nullable: "NO" },
+        { column_name: "email", data_type: "text", is_nullable: "NO" },
+        {
+          column_name: "emailVerified",
+          data_type: "boolean",
+          is_nullable: "NO"
+        },
+        { column_name: "username", data_type: "text", is_nullable: "NO" },
+        { column_name: "role", data_type: "text", is_nullable: "NO" },
+        {
+          column_name: "approvalStatus",
+          data_type: "text",
+          is_nullable: "NO"
+        }
+      ])
+    );
+    expect(authConstraints.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          constraint_name: "auth_user_username_check",
+          definition: expect.stringContaining("[a-z0-9_-]{3,32}")
+        }),
+        expect.objectContaining({
+          constraint_name: "auth_user_role_check",
+          definition: expect.stringContaining("admin")
+        }),
+        expect.objectContaining({
+          constraint_name: "auth_user_approval_status_check",
+          definition: expect.stringContaining("rejected")
+        })
+      ])
+    );
+    expect(authUserLink.rows).toEqual([
+      { column_name: "auth_user_id", is_nullable: "YES" }
+    ]);
+    expect(authUserLinkIndexes.rows).toHaveLength(1);
+    expect(authUserLinkIndexes.rows[0].indexdef).toContain("UNIQUE");
   });
 
   it("is idempotent and records each migration once", async () => {
@@ -148,7 +232,7 @@ describe("database migrations", () => {
       "SELECT COUNT(*)::text AS count FROM schema_migrations"
     );
 
-    expect(result.rows).toEqual([{ count: "7" }]);
+    expect(result.rows).toEqual([{ count: "8" }]);
     expect(await areMigrationsCurrent(pool)).toBe(true);
   });
 

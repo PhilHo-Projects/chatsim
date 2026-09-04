@@ -569,11 +569,11 @@ describe("story API validation and authorization", () => {
     expect(completed.status).toBe(200);
     expect(deleted.status).toBe(200);
     expect(media.createUpload).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
         kind: "avatar",
         mimeType: "image/png",
-        sizeBytes: 100,
-        userId: expect.any(String)
+        sizeBytes: 100
       })
     );
     expect(media.completeUpload).toHaveBeenCalledWith(

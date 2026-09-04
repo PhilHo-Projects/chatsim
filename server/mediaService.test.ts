@@ -546,7 +546,14 @@ describe("MediaService", () => {
     storage.upload(stagingKey, source, "image/webp");
     await media.completeUpload(ownerId, created.image.id);
 
-    await media.deleteImage(adminId, created.image.id);
+    await media.deleteImage(
+      {
+        authUserId: "auth-admin",
+        profileId: adminId,
+        role: "admin"
+      },
+      created.image.id
+    );
 
     const image = await pool.query<{ status: string }>(
       "SELECT status FROM images WHERE id = $1",

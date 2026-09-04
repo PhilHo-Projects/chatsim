@@ -8,6 +8,7 @@ import {
 import { promisify } from "node:util";
 import type { Pool, PoolClient } from "pg";
 import canonicalSeed from "../src/data/platformSeed.json";
+import type { AuthenticatedActor } from "./auth/accountContext";
 import { areMigrationsCurrent, runMigrations } from "./db/migrations";
 import { createDatabasePool } from "./db/pool";
 import { HttpError } from "./httpError";
@@ -112,6 +113,7 @@ export type StoryFeedCard = {
 };
 
 type StoryStoreOpenOptions = {
+  cleanupLegacySessions?: boolean;
   now?: () => Date;
   pool?: Pool;
   publicMediaBaseUrl?: string;
@@ -166,6 +168,16 @@ const COMMON_PASSWORDS = new Set([
   "qwertyqwerty"
 ]);
 const DUMMY_PASSWORD_SALT = "0".repeat(PASSWORD_SALT_BYTES * 2);
+
+type ActorInput = AuthenticatedActor | string;
+
+function actorProfileId(actor: ActorInput) {
+  return typeof actor === "string" ? actor : actor.profileId;
+}
+
+function actorRole(actor: ActorInput) {
+  return typeof actor === "string" ? "user" : actor.role;
+}
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -364,7 +376,10 @@ export class StoryStore {
     ).replace(/\/+$/, "");
     this.ownsPool = ownsPool;
 
-    if (options.startCleanup !== false) {
+    if (
+      options.cleanupLegacySessions !== false &&
+      options.startCleanup !== false
+    ) {
       this.cleanupTimer = setInterval(() => {
         void this.cleanupExpiredSessions();
       }, SESSION_CLEANUP_INTERVAL_MS);
@@ -381,18 +396,8 @@ export class StoryStore {
     }
 
     const store = new StoryStore(pool, options, ownsPool);
-    await store.cleanupExpiredSessions();
-
-    if (
-      process.env.ADMIN_BOOTSTRAP_USERNAME &&
-      process.env.ADMIN_BOOTSTRAP_PASSWORD
-    ) {
-      await store.bootstrapAdmin({
-        displayName:
-          process.env.ADMIN_BOOTSTRAP_DISPLAY_NAME ?? "Chatsim Admin",
-        password: process.env.ADMIN_BOOTSTRAP_PASSWORD,
-        username: process.env.ADMIN_BOOTSTRAP_USERNAME
-      });
+    if (options.cleanupLegacySessions !== false) {
+      await store.cleanupExpiredSessions();
     }
 
     return store;
@@ -442,7 +447,8 @@ export class StoryStore {
                created_at = EXCLUDED.created_at,
                updated_at = EXCLUDED.updated_at
            WHERE users.password_hash IS NULL
-             AND users.auth_provider IS NULL`,
+             AND users.auth_provider IS NULL
+             AND users.auth_user_id IS NULL`,
           [
             user.id,
             user.username,
@@ -496,6 +502,7 @@ export class StoryStore {
         SELECT id FROM users
         WHERE password_hash IS NULL
           AND auth_provider IS NULL
+          AND auth_user_id IS NULL
           AND NOT (id = ANY($1::text[]))
       `;
 
@@ -511,6 +518,7 @@ export class StoryStore {
         `DELETE FROM users
          WHERE password_hash IS NULL
            AND auth_provider IS NULL
+           AND auth_user_id IS NULL
            AND NOT (id = ANY($1::text[]))`,
         [seededUserIds]
       );
@@ -692,19 +700,18 @@ export class StoryStore {
     return story;
   }
 
-  async getStoryPermissions(userId: string | null, storyId: string) {
-    if (!userId) {
+  async getStoryPermissions(actor: ActorInput | null, storyId: string) {
+    if (!actor) {
       return { canDelete: false, canEdit: false };
     }
 
-    const result = await this.pool.query<{ allowed: boolean }>(
-      `SELECT (s.owner_id = $1 OR u.role = 'admin') AS allowed
-       FROM stories s
-       JOIN users u ON u.id = $1
-       WHERE s.id = $2`,
-      [userId, storyId]
+    const result = await this.pool.query<{ owner_id: string }>(
+      "SELECT owner_id FROM stories WHERE id = $1",
+      [storyId]
     );
-    const allowed = result.rows[0]?.allowed ?? false;
+    const allowed =
+      result.rows[0]?.owner_id === actorProfileId(actor) ||
+      actorRole(actor) === "admin";
 
     return { canDelete: allowed, canEdit: allowed };
   }
@@ -960,13 +967,14 @@ export class StoryStore {
   }
 
   async updateCurrentUser(
-    userId: string,
+    actor: ActorInput,
     patch: {
       avatarImageId?: string | null;
       bio?: string | null;
       displayName?: string;
     }
   ) {
+    const userId = actorProfileId(actor);
     const client = await this.pool.connect();
 
     try {
@@ -1017,7 +1025,8 @@ export class StoryStore {
     }
   }
 
-  async createStory(ownerId: string, patch: StoryPatch = {}) {
+  async createStory(actor: ActorInput, patch: StoryPatch = {}) {
+    const ownerId = actorProfileId(actor);
     await this.assertUser(ownerId);
     const client = await this.pool.connect();
     let id = "";
@@ -1077,11 +1086,11 @@ export class StoryStore {
   }
 
   async updateStory(
-    userId: string,
+    actor: ActorInput,
     storyId: string,
     patch: StoryPatch
   ) {
-    const initial = await this.findEditableStory(userId, storyId);
+    const initial = await this.findEditableStory(actor, storyId);
     const client = await this.pool.connect();
     let title = "";
 
@@ -1089,7 +1098,7 @@ export class StoryStore {
       await client.query("BEGIN");
       await this.validateStoryImageReferences(client, initial.ownerId, patch);
       const current = await this.findEditableStory(
-        userId,
+        actor,
         storyId,
         client,
         true
@@ -1152,8 +1161,8 @@ export class StoryStore {
     return updated;
   }
 
-  async deleteStory(userId: string, storyId: string) {
-    await this.findEditableStory(userId, storyId);
+  async deleteStory(actor: ActorInput, storyId: string) {
+    await this.findEditableStory(actor, storyId);
     await this.pool.query("DELETE FROM stories WHERE id = $1", [storyId]);
   }
 
@@ -1315,26 +1324,20 @@ export class StoryStore {
   }
 
   private async findEditableStory(
-    userId: string,
+    actor: ActorInput,
     storyId: string,
     queryable: Pick<Pool, "query"> = this.pool,
     forUpdate = false
   ) {
-    const result = await queryable.query<
-      StoryRow & {
-        requester_role: UserRole;
-      }
-    >(
+    const result = await queryable.query<StoryRow>(
       `SELECT
          s.*,
-         requester.role AS requester_role,
          NULL::text AS image_id,
          NULL::jsonb AS image_variants
        FROM stories s
-       JOIN users requester ON requester.id = $1
-       WHERE s.id = $2
+       WHERE s.id = $1
        ${forUpdate ? "FOR UPDATE OF s" : ""}`,
-      [userId, storyId]
+      [storyId]
     );
     const row = result.rows[0];
 
@@ -1342,7 +1345,10 @@ export class StoryStore {
       throw new HttpError("Story not found.", 404, "NOT_FOUND");
     }
 
-    if (row.owner_id !== userId && row.requester_role !== "admin") {
+    if (
+      row.owner_id !== actorProfileId(actor) &&
+      actorRole(actor) !== "admin"
+    ) {
       throw new HttpError(
         "Only the story owner can change this story.",
         403,

@@ -1,5 +1,29 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type {
+  IncomingMessage,
+  OutgoingHttpHeaders,
+  ServerResponse
+} from "node:http";
 import { isIP } from "node:net";
+import { fromNodeHeaders } from "better-auth/node";
+import type { Pool } from "pg";
+import {
+  resolveAuthenticatedActor,
+  type AuthenticatedActor,
+  type CurrentAccountResolution
+} from "./auth/accountContext";
+import {
+  AccountLifecycleError,
+  approveAccount,
+  listAccounts,
+  rejectAccount,
+  revokeAccountSessions,
+  setAccountDisabled
+} from "./auth/accounts";
+import type { AuthRuntimeConfig } from "./auth/config";
+import {
+  queueApprovalEmail,
+  type TransactionalEmailSender
+} from "./auth/email";
 import { HttpError } from "./httpError";
 import {
   createMediaServiceFromEnvironment,
@@ -29,7 +53,18 @@ const JSON_HEADERS = {
 };
 
 type ApiHandlerOptions = {
-  media?: Promise<MediaService> | MediaService;
+  authConfig?: AuthRuntimeConfig;
+  currentAccount?: (
+    headers: Headers,
+    options?: { disableRefresh?: boolean }
+  ) => Promise<CurrentAccountResolution>;
+  healthCheck?: () => Promise<{
+    auth: "ok";
+    database: "ok" | "unavailable";
+  }>;
+  media?: Promise<MediaService> | MediaService | null;
+  pool?: Pool;
+  sender?: TransactionalEmailSender;
   store?: Promise<StoryStore> | StoryStore;
   trustProxy?: boolean;
 };
@@ -62,16 +97,20 @@ function parseCookies(header: string | undefined) {
   return cookies;
 }
 
-function cookieSecurityAttribute() {
-  return process.env.NODE_ENV === "production" ? "; Secure" : "";
+function cookieSecurityAttribute(
+  secure = process.env.NODE_ENV === "production"
+) {
+  return secure ? "; Secure" : "";
 }
 
 function sessionCookie(token: string) {
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}${cookieSecurityAttribute()}`;
 }
 
-function clearSessionCookie() {
-  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${cookieSecurityAttribute()}`;
+function clearSessionCookie(
+  secure = process.env.NODE_ENV === "production"
+) {
+  return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${cookieSecurityAttribute(secure)}`;
 }
 
 function publicSession(session: StartedSession): SessionPayload {
@@ -85,13 +124,50 @@ function sendJson(
   response: ServerResponse,
   statusCode: number,
   payload: unknown,
-  extraHeaders: Record<string, string> = {}
+  extraHeaders: OutgoingHttpHeaders = {}
 ) {
   response.writeHead(statusCode, {
     ...JSON_HEADERS,
     ...extraHeaders
   });
   response.end(JSON.stringify(payload));
+}
+
+function forwardedAuthHeaders(headers: Headers): OutgoingHttpHeaders {
+  const outgoing: OutgoingHttpHeaders = {};
+
+  headers.forEach((value, name) => {
+    if (name.toLowerCase() !== "set-cookie") {
+      outgoing[name] = value;
+    }
+  });
+
+  const setCookies = (
+    headers as Headers & { getSetCookie?: () => string[] }
+  ).getSetCookie?.() ?? [];
+
+  if (setCookies.length > 0) {
+    outgoing["Set-Cookie"] = setCookies;
+  } else {
+    const setCookie = headers.get("set-cookie");
+
+    if (setCookie) {
+      outgoing["Set-Cookie"] = setCookie;
+    }
+  }
+
+  return outgoing;
+}
+
+function appendSetCookie(headers: OutgoingHttpHeaders, cookie: string) {
+  const existing = headers["Set-Cookie"] ?? headers["set-cookie"];
+  delete headers["set-cookie"];
+
+  headers["Set-Cookie"] = Array.isArray(existing)
+    ? [...existing, cookie]
+    : existing
+      ? [String(existing), cookie]
+      : [cookie];
 }
 
 async function readJsonBody(request: IncomingMessage) {
@@ -161,8 +237,23 @@ function envFlag(value: string | undefined) {
   return value === "1" || value?.toLowerCase() === "true";
 }
 
-function getClientIp(request: IncomingMessage, trustProxy: boolean) {
+function getClientIp(
+  request: IncomingMessage,
+  trustProxy: boolean,
+  trustSanitizedRealIp = false
+) {
   const remoteAddress = request.socket.remoteAddress ?? "unknown";
+
+  if (trustSanitizedRealIp && isPrivateProxyAddress(remoteAddress)) {
+    const realIp = request.headers["x-real-ip"];
+    const candidate = Array.isArray(realIp) ? "" : realIp?.trim();
+
+    if (candidate && isIP(candidate)) {
+      return candidate;
+    }
+
+    return isIP(remoteAddress) ? remoteAddress : "0.0.0.0";
+  }
 
   if (trustProxy && isPrivateProxyAddress(remoteAddress)) {
     const forwardedFor = request.headers["x-forwarded-for"];
@@ -247,6 +338,14 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
     return defaultStore;
   };
   const getMedia = () => {
+    if (options.media === null) {
+      throw new HttpError(
+        "Image uploads are temporarily unavailable.",
+        503,
+        "SERVICE_UNAVAILABLE"
+      );
+    }
+
     if (options.media) {
       return Promise.resolve(options.media);
     }
@@ -264,6 +363,60 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       });
     return defaultMedia;
   };
+  const getCurrentAccount = (
+    request: IncomingMessage,
+    accountOptions?: { disableRefresh?: boolean }
+  ) => options.currentAccount?.(
+    fromNodeHeaders(request.headers),
+    accountOptions
+  );
+  const getOptionalActor = async (
+    request: IncomingMessage
+  ): Promise<AuthenticatedActor | string | null> => {
+    if (options.currentAccount) {
+      const resolved = await getCurrentAccount(request, {
+        disableRefresh: true
+      });
+      return resolved
+        ? resolveAuthenticatedActor(resolved.currentAccount)
+        : null;
+    }
+
+    const session = await (await getStore()).getSession(getSessionToken(request));
+    return session?.user.id ?? null;
+  };
+  const requireActor = async (
+    request: IncomingMessage,
+    message: string
+  ): Promise<AuthenticatedActor | string> => {
+    const actor = await getOptionalActor(request);
+
+    if (!actor) {
+      throw new HttpError(message, 401, "UNAUTHENTICATED");
+    }
+
+    return actor;
+  };
+  const requireAdminActor = async (request: IncomingMessage) => {
+    const actor = await requireActor(request, "Sign in as an admin.");
+
+    if (typeof actor === "string" || actor.role !== "admin") {
+      throw new HttpError("Admin access is required.", 403, "FORBIDDEN");
+    }
+
+    return actor;
+  };
+  const assertTrustedOrigin = (request: IncomingMessage) => {
+    if (!options.authConfig || request.method === "GET" || request.method === "HEAD") {
+      return;
+    }
+
+    const origin = request.headers.origin;
+
+    if (!origin || !options.authConfig.trustedOrigins.includes(origin)) {
+      throw new HttpError("Request origin is not allowed.", 403, "FORBIDDEN");
+    }
+  };
 
   return async function handleApiRequest(
     request: IncomingMessage,
@@ -278,22 +431,123 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
     try {
       if (request.method === "GET" && url.pathname === "/api/health") {
         let healthy = false;
+        let authHealthy = Boolean(options.healthCheck);
 
         try {
-          healthy = await (await getStore()).healthCheck();
+          if (options.healthCheck) {
+            const health = await options.healthCheck();
+            healthy = health.database === "ok";
+            authHealthy = health.auth === "ok";
+          } else {
+            healthy = await (await getStore()).healthCheck();
+          }
         } catch {
           healthy = false;
+          authHealthy = false;
         }
 
         sendJson(response, healthy ? 200 : 503, {
           status: healthy ? "ok" : "unavailable",
           database: healthy ? "ok" : "unavailable",
+          ...(options.healthCheck
+            ? { auth: authHealthy ? "ok" : "unavailable" }
+            : {}),
           sourceCommit: process.env.SOURCE_COMMIT?.trim() || null
         });
         return true;
       }
 
       const store = await getStore();
+
+      if (options.currentAccount) {
+        assertTrustedOrigin(request);
+      }
+
+      if (
+        options.currentAccount &&
+        request.method === "GET" &&
+        url.pathname === "/api/me"
+      ) {
+        const resolved = await getCurrentAccount(request);
+        const responseHeaders = forwardedAuthHeaders(resolved!.headers);
+
+        if (options.authConfig?.environment === "production") {
+          appendSetCookie(responseHeaders, clearSessionCookie(true));
+        }
+
+        sendJson(response, 200, resolved!.currentAccount, responseHeaders);
+        return true;
+      }
+
+      if (
+        options.pool &&
+        request.method === "GET" &&
+        url.pathname === "/api/admin/accounts"
+      ) {
+        await requireAdminActor(request);
+        const rawStatus = url.searchParams.get("status");
+
+        if (
+          rawStatus !== null &&
+          !["approved", "pending", "rejected"].includes(rawStatus)
+        ) {
+          throw new HttpError("Invalid account status.", 400, "BAD_REQUEST");
+        }
+
+        sendJson(response, 200, {
+          accounts: await listAccounts(
+            options.pool,
+            (rawStatus ?? undefined) as
+              | "approved"
+              | "pending"
+              | "rejected"
+              | undefined
+          )
+        });
+        return true;
+      }
+
+      const adminActionMatch = url.pathname.match(
+        /^\/api\/admin\/accounts\/([^/]+)\/(approve|reject|disable|enable|revoke-sessions)$/
+      );
+
+      if (options.pool && request.method === "POST" && adminActionMatch) {
+        const actor = await requireAdminActor(request);
+        const input = {
+          actorAuthUserId: actor.authUserId,
+          targetAuthUserId: adminActionMatch[1]
+        };
+        const action = adminActionMatch[2];
+
+        if (action === "approve") {
+          const approved = await approveAccount(options.pool, input);
+
+          if (options.sender && options.authConfig) {
+            queueApprovalEmail(options.sender, {
+              accountUrl: `${options.authConfig.baseUrl}/account?approved=1`,
+              authUserId: approved.authUserId,
+              to: approved.email
+            });
+          }
+
+          sendJson(response, 200, { account: approved });
+          return true;
+        }
+
+        if (action === "reject") {
+          await rejectAccount(options.pool, input);
+        } else if (action === "disable" || action === "enable") {
+          await setAccountDisabled(options.pool, {
+            ...input,
+            disabled: action === "disable"
+          });
+        } else {
+          await revokeAccountSessions(options.pool, input);
+        }
+
+        sendJson(response, 200, { ok: true });
+        return true;
+      }
 
       if (request.method === "GET" && url.pathname === "/api/profiles") {
         sendJson(response, 200, {
@@ -407,34 +661,23 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       }
 
       if (request.method === "PATCH" && url.pathname === "/api/users/me") {
-        const session = await store.getSession(getSessionToken(request));
-
-        if (!session) {
-          throw new HttpError(
-            "Sign in to update your profile.",
-            401,
-            "UNAUTHENTICATED"
-          );
-        }
+        const actor = await requireActor(
+          request,
+          "Sign in to update your profile."
+        );
 
         const input = parseInput(userPatchSchema, await readJsonBody(request));
-        const user = await store.updateCurrentUser(session.user.id, input);
+        const user = await store.updateCurrentUser(actor, input);
         sendJson(response, 200, { user });
         return true;
       }
 
       if (request.method === "POST" && url.pathname === "/api/uploads") {
-        const session = await store.getSession(getSessionToken(request));
+        const actor = await requireActor(request, "Sign in to upload images.");
+        const profileId =
+          typeof actor === "string" ? actor : actor.profileId;
 
-        if (!session) {
-          throw new HttpError(
-            "Sign in to upload images.",
-            401,
-            "UNAUTHENTICATED"
-          );
-        }
-
-        const uploadLimit = uploadUserLimiter.consume(session.user.id);
+        const uploadLimit = uploadUserLimiter.consume(profileId);
 
         if (!uploadLimit.allowed) {
           throwRateLimit(uploadLimit.retryAfterSeconds);
@@ -445,11 +688,14 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
           await readJsonBody(request)
         );
         const media = await getMedia();
-        const result = await media.createUpload({
+        const result = await media.createUpload(actor, {
           ...input,
-          ipAddress: getClientIp(request, trustProxy),
-          userAgent: request.headers["user-agent"],
-          userId: session.user.id
+          ipAddress: getClientIp(
+            request,
+            trustProxy,
+            Boolean(options.currentAccount)
+          ),
+          userAgent: request.headers["user-agent"]
         });
         sendJson(response, 201, result);
         return true;
@@ -460,22 +706,21 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       );
 
       if (request.method === "POST" && uploadCompleteMatch) {
-        const session = await store.getSession(getSessionToken(request));
-
-        if (!session) {
-          throw new HttpError(
-            "Sign in to complete uploads.",
-            401,
-            "UNAUTHENTICATED"
-          );
-        }
+        const actor = await requireActor(
+          request,
+          "Sign in to complete uploads."
+        );
 
         const media = await getMedia();
         const result = await media.completeUpload(
-          session.user.id,
+          actor,
           uploadCompleteMatch[1],
           {
-            ipAddress: getClientIp(request, trustProxy),
+            ipAddress: getClientIp(
+              request,
+              trustProxy,
+              Boolean(options.currentAccount)
+            ),
             userAgent: request.headers["user-agent"]
           }
         );
@@ -486,19 +731,15 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       const imageMatch = url.pathname.match(/^\/api\/images\/([^/]+)$/);
 
       if (request.method === "DELETE" && imageMatch) {
-        const session = await store.getSession(getSessionToken(request));
-
-        if (!session) {
-          throw new HttpError(
-            "Sign in to delete images.",
-            401,
-            "UNAUTHENTICATED"
-          );
-        }
+        const actor = await requireActor(request, "Sign in to delete images.");
 
         const media = await getMedia();
-        await media.deleteImage(session.user.id, imageMatch[1], {
-          ipAddress: getClientIp(request, trustProxy),
+        await media.deleteImage(actor, imageMatch[1], {
+          ipAddress: getClientIp(
+            request,
+            trustProxy,
+            Boolean(options.currentAccount)
+          ),
           userAgent: request.headers["user-agent"]
         });
         sendJson(response, 200, { ok: true });
@@ -521,12 +762,12 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       );
 
       if (request.method === "GET" && permissionsMatch) {
-        const session = await store.getSession(getSessionToken(request));
+        const actor = await getOptionalActor(request);
         sendJson(
           response,
           200,
           await store.getStoryPermissions(
-            session?.user.id ?? null,
+            actor,
             permissionsMatch[1]
           )
         );
@@ -542,12 +783,16 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
           throw new HttpError("Story not found.", 404, "NOT_FOUND");
         }
 
-        const session = await store.getSession(getSessionToken(request));
+        const actor = await getOptionalActor(request);
+        const profileId =
+          actor && typeof actor !== "string" ? actor.profileId : actor;
+        const role =
+          actor && typeof actor !== "string" ? actor.role : "user";
 
         if (
           story.visibility !== "public" &&
-          story.ownerId !== session?.user.id &&
-          session?.user.role !== "admin"
+          story.ownerId !== profileId &&
+          role !== "admin"
         ) {
           throw new HttpError("Story is private.", 403, "FORBIDDEN");
         }
@@ -557,43 +802,27 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       }
 
       if (request.method === "POST" && url.pathname === "/api/stories") {
-        const session = await store.getSession(getSessionToken(request));
-
-        if (!session) {
-          throw new HttpError(
-            "Sign in to create stories.",
-            401,
-            "UNAUTHENTICATED"
-          );
-        }
+        const actor = await requireActor(request, "Sign in to create stories.");
 
         const body = parseInput(
           storyPatchSchema,
           await readJsonBody(request)
         ) as StoryPatch;
-        const story = await store.createStory(session.user.id, body);
+        const story = await store.createStory(actor, body);
 
         sendJson(response, 201, { story });
         return true;
       }
 
       if (storyMatch && request.method === "PUT") {
-        const session = await store.getSession(getSessionToken(request));
-
-        if (!session) {
-          throw new HttpError(
-            "Sign in to edit stories.",
-            401,
-            "UNAUTHENTICATED"
-          );
-        }
+        const actor = await requireActor(request, "Sign in to edit stories.");
 
         const body = parseInput(
           storyPatchSchema,
           await readJsonBody(request)
         ) as StoryPatch;
         const story = await store.updateStory(
-          session.user.id,
+          actor,
           storyMatch[1],
           body
         );
@@ -603,24 +832,22 @@ export function createApiHandler(options: ApiHandlerOptions = {}) {
       }
 
       if (storyMatch && request.method === "DELETE") {
-        const session = await store.getSession(getSessionToken(request));
+        const actor = await requireActor(request, "Sign in to delete stories.");
 
-        if (!session) {
-          throw new HttpError(
-            "Sign in to delete stories.",
-            401,
-            "UNAUTHENTICATED"
-          );
-        }
-
-        await store.deleteStory(session.user.id, storyMatch[1]);
+        await store.deleteStory(actor, storyMatch[1]);
         sendJson(response, 200, { ok: true });
         return true;
       }
 
       throw new HttpError("API route not found.", 404, "NOT_FOUND");
     } catch (error) {
-      if (error instanceof HttpError) {
+      if (error instanceof AccountLifecycleError) {
+        sendJson(
+          response,
+          error.code === "NOT_FOUND" ? 404 : 409,
+          { error: error.message, code: error.code }
+        );
+      } else if (error instanceof HttpError) {
         sendJson(
           response,
           error.statusCode,

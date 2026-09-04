@@ -5,6 +5,7 @@ import {
   type Stats
 } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { toNodeHandler } from "better-auth/node";
 import {
   basename,
   extname,
@@ -15,10 +16,12 @@ import {
 } from "node:path";
 import { createApiHandler } from "./api";
 import { StoryStore } from "./storyStore";
+import type { ApplicationRuntime } from "./runtime";
 
 type RequestHandlerOptions = {
   basePath?: string;
   distDir?: string;
+  runtime?: ApplicationRuntime;
   store?: Promise<StoryStore> | StoryStore;
 };
 
@@ -268,7 +271,23 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
   const basePath = normalizeBasePath(options.basePath);
   const distDir = resolve(options.distDir ?? join(process.cwd(), "dist"));
   const indexFile = join(distDir, "index.html");
-  const handleApiRequest = createApiHandler({ store: options.store });
+  const runtime = options.runtime;
+  const handleAuthRequest = runtime
+    ? toNodeHandler(runtime.authWebHandler)
+    : null;
+  const handleApiRequest = createApiHandler(
+    runtime
+      ? {
+          currentAccount: runtime.currentAccount,
+          healthCheck: runtime.healthCheck,
+          media: runtime.media,
+          authConfig: runtime.authConfig,
+          pool: runtime.pool,
+          sender: runtime.sender,
+          store: runtime.store
+        }
+      : { store: options.store }
+  );
 
   return async function handleRequest(
     request: IncomingMessage,
@@ -289,6 +308,13 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
     }
 
     if (pathUnderBase.startsWith("/api")) {
+      if (handleAuthRequest && pathUnderBase.startsWith("/api/auth/")) {
+        await withStrippedRequestUrl(request, pathUnderBase, () =>
+          handleAuthRequest(request, response)
+        );
+        return;
+      }
+
       const handled = await withStrippedRequestUrl(request, pathUnderBase, () =>
         handleApiRequest(request, response)
       );

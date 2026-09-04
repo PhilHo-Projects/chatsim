@@ -59,11 +59,23 @@ jobs:
 
       - name: Smoke-test Docker runtime
         env:
+          ADMIN_BOOTSTRAP_EMAIL: admin@example.test
+          AUTH_EMAIL_FROM: Chatsim <accounts@example.test>
+          AUTH_REGISTRATION_MODE: closed
+          BETTER_AUTH_SECRET: ci-only-better-auth-secret-at-least-32-characters
+          BETTER_AUTH_URL: https://chatsim.example.test
           DATABASE_URL: postgresql://chatsim_test:chatsim_test@host.docker.internal:5432/chatsim_test
+          RESEND_API_KEY: re_ci_not_used_by_health_check
         run: |
           docker run --detach --name chatsim-ci-runtime \
             --add-host host.docker.internal:host-gateway \
+            --env ADMIN_BOOTSTRAP_EMAIL \
+            --env AUTH_EMAIL_FROM \
+            --env AUTH_REGISTRATION_MODE \
+            --env BETTER_AUTH_SECRET \
+            --env BETTER_AUTH_URL \
             --env DATABASE_URL \
+            --env RESEND_API_KEY \
             --publish 3000:3000 \
             chatsim-ci
           trap 'docker logs chatsim-ci-runtime; docker rm --force chatsim-ci-runtime' EXIT

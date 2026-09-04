@@ -192,53 +192,75 @@ Unchanged response:
 
 ## Auth
 
-### `GET /api/auth/session`
+Better Auth 1.7.2 owns `/api/auth/*` and is mounted before application body
+parsing. Clients use the official React client plus the username plugin rather
+than constructing these requests manually. Email verification is mandatory and
+passwords are 12-128 characters with the Chatsim common-password blocklist.
+
+Sign-in accepts one UI identifier and calls Better Auth's email or username
+endpoint as appropriate. Registration behavior comes from
+`AUTH_REGISTRATION_MODE`: `closed` rejects, `approval` waits for verified-email
+admin approval, and `open` provisions a creator profile after verification.
+
+### `GET /api/me`
 
 ```ts
-type SessionResponse = {
-  session: Session | null;
-};
-```
-
-The opaque token exists only in the `HttpOnly` cookie.
-
-### `POST /api/auth/register`
-
-```ts
-type RegisterRequest = {
+type CreatorProfile = {
+  id: string;
   username: string;
   displayName: string;
-  password: string;
+  bio: string | null;
+  accentColor: string;
 };
 
-type RegisterResponse = {
-  session: Session;
-};
-```
-
-Passwords must be 12-128 characters and must not be a known weak password.
-
-### `POST /api/auth/login`
-
-```ts
-type LoginRequest = {
-  username: string;
-  password: string;
-};
-
-type LoginResponse = {
-  session: Session;
+type CurrentAccount = {
+  session: { expiresAt: string } | null;
+  account: {
+    id: string;
+    email: string;
+    emailVerified: boolean;
+    username: string;
+    role: "admin" | "user";
+    approvalStatus: "pending" | "approved" | "rejected";
+    disabled: boolean;
+  } | null;
+  profile: CreatorProfile | null;
+  registrationMode: "closed" | "approval" | "open";
 };
 ```
 
-Invalid credentials use one generic error. Login and registration can return
-`429` with `Retry-After`.
+The opaque token exists only in Better Auth's `HttpOnly` cookie. Protected
+application endpoints internally resolve an actor containing the Better Auth
+identity ID, creator profile ID, and Better Auth role. Story/media ownership
+uses the profile ID; the legacy `users.role` column grants no authority.
 
-### `POST /api/auth/logout`
+### Better Auth account endpoints
 
-```json
-{ "ok": true }
-```
+The enabled client flows are:
+
+- email signup with immutable normalized username;
+- username or email sign-in;
+- email verification and resend;
+- password-reset request and completion;
+- authenticated password change; and
+- logout.
+
+Duplicate email, verification, and reset requests return generic user-facing
+responses. Persistent rate limits use HMAC-hashed identifiers and sanitized
+client IPs. Tokens and plaintext identifiers are never written to audit logs.
+
+### Restricted account administration
+
+`GET /api/admin/accounts` lists accounts and accepts an optional
+`status=approved|pending|rejected` filter.
+
+`POST /api/admin/accounts/:authUserId/:action` accepts only `approve`,
+`reject`, `disable`, `enable`, or `revoke-sessions`. Rejection, disablement, and
+revocation delete affected sessions immediately. Approval provisions the
+creator profile idempotently and queues an approval email.
+
+Better Auth's built-in create-user, delete-user, impersonation, password
+setting, profile mutation, and role-setting admin endpoints are denied.
 
 ### `PATCH /api/users/me`
 

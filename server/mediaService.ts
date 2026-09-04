@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import sharp, { type Metadata } from "sharp";
+import type { AuthenticatedActor } from "./auth/accountContext";
 import { createDatabasePool } from "./db/pool";
 import { HttpError } from "./httpError";
-import type { ImageVariants, UserRole } from "./storyStore";
+import type { ImageVariants } from "./storyStore";
 import type { ObjectStorage } from "./objectStorage";
 import { createR2ObjectStorageFromEnvironment } from "./objectStorage";
 
@@ -27,6 +28,16 @@ type UploadIdentity = {
   userId: string;
 };
 
+type ActorInput = AuthenticatedActor | string;
+
+function actorProfileId(actor: ActorInput) {
+  return typeof actor === "string" ? actor : actor.profileId;
+}
+
+function actorRole(actor: ActorInput) {
+  return typeof actor === "string" ? "user" : actor.role;
+}
+
 type ImageRow = {
   height: number | null;
   id: string;
@@ -35,7 +46,6 @@ type ImageRow = {
   object_key: string;
   owner_id: string;
   processing_token: string | null;
-  requester_role: UserRole;
   size_bytes: string;
   status:
     | "pending"
@@ -110,13 +120,32 @@ export class MediaService {
     this.cleanupTimer.unref();
   }
 
+  close() {
+    clearInterval(this.cleanupTimer);
+  }
+
   async createUpload(
-    input: UploadIdentity & {
+    actorOrInput: ActorInput | (UploadIdentity & {
+      kind: ImageKind;
+      mimeType: string;
+      sizeBytes: number;
+    }),
+    requestedUpload?: Omit<UploadIdentity, "userId"> & {
       kind: ImageKind;
       mimeType: string;
       sizeBytes: number;
     }
   ) {
+    const input = requestedUpload
+      ? {
+          ...requestedUpload,
+          userId: actorProfileId(actorOrInput as ActorInput)
+        }
+      : (actorOrInput as UploadIdentity & {
+          kind: ImageKind;
+          mimeType: string;
+          sizeBytes: number;
+        });
     if (!ALLOWED_MIME_TYPES.has(input.mimeType)) {
       throw new HttpError(
         "Only static JPEG, PNG, and WebP images are supported.",
@@ -223,7 +252,6 @@ export class MediaService {
           object_key: stagingKey,
           owner_id: input.userId,
           processing_token: null,
-          requester_role: "member",
           size_bytes: String(input.sizeBytes),
           status: "pending",
           updated_at: now,
@@ -273,11 +301,11 @@ export class MediaService {
   }
 
   async completeUpload(
-    userId: string,
+    actor: ActorInput,
     imageId: string,
     identity: Omit<UploadIdentity, "userId"> = {}
   ) {
-    const image = await this.authorizedImage(userId, imageId);
+    const image = await this.authorizedImage(actor, imageId);
 
     if (image.status === "ready") {
       return { image: this.publicImage(image) };
@@ -295,14 +323,14 @@ export class MediaService {
     this.activeCompletions += 1;
 
     try {
-      return await this.processUpload(userId, image, identity);
+      return await this.processUpload(actor, image, identity);
     } finally {
       this.activeCompletions -= 1;
     }
   }
 
   private async processUpload(
-    userId: string,
+    actor: ActorInput,
     image: ImageRow,
     identity: Omit<UploadIdentity, "userId">
   ) {
@@ -329,7 +357,7 @@ export class MediaService {
     );
 
     if (claimed.rowCount !== 1) {
-      const current = await this.authorizedImage(userId, image.id);
+      const current = await this.authorizedImage(actor, image.id);
 
       if (current.status === "ready") {
         return { image: this.publicImage(current) };
@@ -397,8 +425,8 @@ export class MediaService {
                updated_at = $7
            WHERE id = $8
              AND status = 'processing'
-             AND processing_token = $10
-           RETURNING *, $9::text AS requester_role`,
+             AND processing_token = $9
+           RETURNING *`,
           [
             originalKey,
             source.mimeType,
@@ -408,7 +436,6 @@ export class MediaService {
             JSON.stringify(storedVariants),
             this.now(),
             image.id,
-            image.requester_role,
             processingToken
           ]
         );
@@ -426,7 +453,7 @@ export class MediaService {
           ...identity,
           imageId: image.id,
           objectKey: originalKey,
-          userId
+          userId: actorProfileId(actor)
         });
         await client.query("COMMIT");
         await this.options.storage
@@ -453,7 +480,7 @@ export class MediaService {
       ]);
       const rejected = await this.rejectImage(
         image.id,
-        { ...identity, userId },
+        { ...identity, userId: actorProfileId(actor) },
         image.object_key,
         processingToken
       );
@@ -477,11 +504,11 @@ export class MediaService {
   }
 
   async deleteImage(
-    userId: string,
+    actor: ActorInput,
     imageId: string,
     identity: Omit<UploadIdentity, "userId"> = {}
   ) {
-    const image = await this.authorizedImage(userId, imageId);
+    const image = await this.authorizedImage(actor, imageId);
 
     if (image.status === "deleted") {
       return;
@@ -577,7 +604,7 @@ export class MediaService {
           ...identity,
           imageId,
           objectKey: deletionObjectKey,
-          userId
+          userId: actorProfileId(actor)
         });
       }
 
@@ -723,13 +750,10 @@ export class MediaService {
     return results;
   }
 
-  private async authorizedImage(userId: string, imageId: string) {
+  private async authorizedImage(actor: ActorInput, imageId: string) {
     const result = await this.options.pool.query<ImageRow>(
-      `SELECT i.*, requester.role AS requester_role
-       FROM images i
-       JOIN users requester ON requester.id = $1
-       WHERE i.id = $2`,
-      [userId, imageId]
+      "SELECT * FROM images WHERE id = $1",
+      [imageId]
     );
     const image = result.rows[0];
 
@@ -737,7 +761,10 @@ export class MediaService {
       throw new HttpError("Image not found.", 404, "NOT_FOUND");
     }
 
-    if (image.owner_id !== userId && image.requester_role !== "admin") {
+    if (
+      image.owner_id !== actorProfileId(actor) &&
+      actorRole(actor) !== "admin"
+    ) {
       throw new HttpError(
         "Image belongs to another user.",
         403,
@@ -909,7 +936,9 @@ export class MediaService {
   }
 }
 
-export function createMediaServiceFromEnvironment() {
+export function createMediaServiceFromEnvironment(
+  pool: Pool = createDatabasePool()
+) {
   const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.trim();
 
   if (!publicBaseUrl) {
@@ -917,7 +946,7 @@ export function createMediaServiceFromEnvironment() {
   }
 
   return new MediaService({
-    pool: createDatabasePool(),
+    pool,
     publicBaseUrl,
     storage: createR2ObjectStorageFromEnvironment()
   });

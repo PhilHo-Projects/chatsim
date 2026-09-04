@@ -8,6 +8,40 @@ import type {
   PlatformSession,
   PlatformStoryRecord
 } from "../data/platformSeed";
+import {
+  authClient,
+  authErrorMessage,
+  signInWithIdentifier
+} from "../auth/authClient";
+
+export type RegistrationMode = "closed" | "approval" | "open";
+
+export type CurrentAccount = {
+  session: { expiresAt: string } | null;
+  account: {
+    approvalStatus: "pending" | "approved" | "rejected";
+    disabled: boolean;
+    email: string;
+    emailVerified: boolean;
+    id: string;
+    role: "admin" | "user";
+    username: string;
+  } | null;
+  profile: {
+    accentColor: string;
+    bio: string | null;
+    displayName: string;
+    id: string;
+    username: string;
+  } | null;
+  registrationMode: RegistrationMode;
+};
+
+export type AdminAccount = NonNullable<CurrentAccount["account"]> & {
+  createdAt: string;
+  profile: CurrentAccount["profile"];
+  sessionCount: number;
+};
 
 type ApiStoryRecord = Omit<PlatformStoryRecord, "storyboard"> & {
   storyboard: Storyboard;
@@ -110,12 +144,30 @@ export async function fetchProfiles() {
   return payload.profiles;
 }
 
-export async function fetchSession() {
-  const payload = await requestJson<{ session: PlatformSession | null }>(
-    "/api/auth/session"
-  );
+export function currentAccountSession(
+  current: CurrentAccount
+): PlatformSession | null {
+  if (!current.session || !current.account || !current.profile) {
+    return null;
+  }
 
-  return payload.session;
+  return {
+    expiresAt: current.session.expiresAt,
+    user: {
+      displayName: current.profile.displayName,
+      id: current.profile.id,
+      role: current.account.role === "admin" ? "admin" : "member",
+      username: current.profile.username
+    }
+  };
+}
+
+export async function fetchCurrentAccount() {
+  return requestJson<CurrentAccount>("/api/me");
+}
+
+export async function fetchSession() {
+  return currentAccountSession(await fetchCurrentAccount());
 }
 
 export async function fetchStory(storyId: string) {
@@ -236,35 +288,107 @@ export async function deleteImage(imageId: string) {
   );
 }
 
-export async function login(input: { password: string; username: string }) {
-  const payload = await requestJson<{ session: PlatformSession }>(
-    "/api/auth/login",
-    {
-      body: JSON.stringify(input),
-      method: "POST"
-    }
-  );
-
-  return payload.session;
+export async function login(input: { identifier: string; password: string }) {
+  await signInWithIdentifier(authClient, input);
+  return fetchCurrentAccount();
 }
 
 export async function register(input: {
+  email: string;
   password: string;
   username: string;
 }) {
-  const payload = await requestJson<{ session: PlatformSession }>(
-    "/api/auth/register",
-    {
-      body: JSON.stringify(input),
-      method: "POST"
-    }
-  );
+  const result = await authClient.signUp.email({
+    callbackURL: `${window.location.origin}${getApiPath("/account?verified=1")}`,
+    email: input.email.trim().toLowerCase(),
+    name: input.username.trim().toLowerCase(),
+    password: input.password,
+    username: input.username.trim().toLowerCase()
+  });
 
-  return payload.session;
+  if (result.error) {
+    throw new Error(
+      authErrorMessage(result.error.code, "Could not create the account.")
+    );
+  }
 }
 
 export async function logout() {
-  await requestJson<{ ok: true }>("/api/auth/logout", { method: "POST" });
+  const result = await authClient.signOut();
+
+  if (result.error) {
+    throw new Error("Could not sign out.");
+  }
+}
+
+export async function requestVerificationEmail(email: string) {
+  const result = await authClient.sendVerificationEmail({
+    callbackURL: `${window.location.origin}${getApiPath("/account?verified=1")}`,
+    email: email.trim().toLowerCase()
+  });
+
+  if (result.error) {
+    throw new Error(
+      authErrorMessage(result.error.code, "Could not send verification email.")
+    );
+  }
+}
+
+export async function requestPasswordReset(email: string) {
+  const result = await authClient.requestPasswordReset({
+    email: email.trim().toLowerCase(),
+    redirectTo: `${window.location.origin}${getApiPath("/account")}`
+  });
+
+  if (result.error) {
+    throw new Error("Could not request a password reset.");
+  }
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  const result = await authClient.resetPassword({ newPassword, token });
+
+  if (result.error) {
+    throw new Error(
+      authErrorMessage(result.error.code, "Could not reset the password.")
+    );
+  }
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+) {
+  const result = await authClient.changePassword({
+    currentPassword,
+    newPassword,
+    revokeOtherSessions: true
+  });
+
+  if (result.error) {
+    throw new Error(
+      authErrorMessage(result.error.code, "Could not change the password.")
+    );
+  }
+}
+
+export async function fetchAdminAccounts(
+  status?: "approved" | "pending" | "rejected"
+) {
+  const query = status ? `?status=${status}` : "";
+  return requestJson<{ accounts: AdminAccount[] }>(
+    `/api/admin/accounts${query}`
+  );
+}
+
+export async function performAdminAccountAction(
+  authUserId: string,
+  action: "approve" | "reject" | "disable" | "enable" | "revoke-sessions"
+) {
+  return requestJson<{ ok?: true }>(
+    `/api/admin/accounts/${encodeURIComponent(authUserId)}/${action}`,
+    { body: "{}", method: "POST" }
+  );
 }
 
 export async function createStory(input: Partial<PlatformStoryRecord> = {}) {
