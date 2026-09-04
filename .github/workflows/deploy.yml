@@ -102,6 +102,7 @@ jobs:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
         run: |
           response="$(curl --fail --silent --show-error \
+            --request POST \
             --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
             "${COOLIFY_WEBHOOK}")"
           deployment_uuid="$(jq -er 'if type == "array" then .[0].deployment_uuid else (.deployment_uuid // .deployments[0].deployment_uuid) end' <<<"${response}")"
