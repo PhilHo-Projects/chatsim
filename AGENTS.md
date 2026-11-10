@@ -4,7 +4,7 @@ Compact handoff for future agents working in this repo.
 
 ## What This Is
 - Vite + React + TypeScript + Tailwind app for scripted texting stories.
-- Current experience: a browsing shell with an auto-advancing featured profile deck over a plain profile list, a glassy phone chat player, and a full-screen settings/script editor for owners/admins.
+- Current experience: a browsing shell with two featured stories above a searchable profile directory, phone and battle players, and full-screen script editors for owners/admins.
 - A small Node HTTP API is mounted into the Vite dev server and also runnable separately for local story/profile/auth persistence.
 - Keep the proper app structure. Do not collapse this into one HTML file.
 
@@ -19,7 +19,7 @@ Compact handoff for future agents working in this repo.
 - User usually previews: `http://127.0.0.1:5174/`
 
 ## Routes
-- `/`: featured profile deck plus the full profile list.
+- `/`: featured stories plus the profile directory.
 - `/profiles/:profileId`: selected profile story grid.
 - `/stories/:storyId`: phone story player.
 
@@ -96,19 +96,10 @@ Important naming:
 - Full deployment and rollback details are in `docs/deployment.md`.
 
 ## Landing Page
-- The explore view is `FeaturedDeck` (a coverflow of up to `MAX_FEATURED_PROFILES`
-  profiles) above a plain, image-free profile list. The list is the directory; the
-  deck is a highlight reel.
-- Deck cards are absolutely positioned and placed by signed offset from the active
-  index (`getDeckOffset` wraps circularly, `getDeckCardStyle` maps offset to
-  translate/scale/rotateY/blur/opacity). Cards past `MAX_VISIBLE_OFFSET` are not painted.
-- Card width is an inline `min(18rem, 62vw)`, not a breakpoint class, so the deck
-  scales continuously instead of jumping at 640px.
-- The card transition lists `transform, opacity, filter` explicitly. Do not switch it
-  back to `transition-all`: that animates `width` on every viewport change, which makes
-  measured widths wrong mid-resize, and animates `filter` on every autoplay step.
-- Autoplay pauses on hover and focus and is disabled under `prefers-reduced-motion`.
-- Searching hides the deck and filters the list only.
+- Home showcases the curated story covers listed in `LandingPage.tsx`, then
+  profile search and the directory. Searching hides the featured stories and
+  filters the directory only.
+- The story URL loads the saved record from the API before showing the player.
 
 ## Style / UX Notes
 - Keep the glassmorphism coffee-shop background direction.

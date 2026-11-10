@@ -232,7 +232,7 @@ describe("database migrations", () => {
       "SELECT COUNT(*)::text AS count FROM schema_migrations"
     );
 
-    expect(result.rows).toEqual([{ count: "8" }]);
+    expect(result.rows).toEqual([{ count: "9" }]);
     expect(await areMigrationsCurrent(pool)).toBe(true);
   });
 

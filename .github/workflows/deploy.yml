@@ -88,7 +88,7 @@ jobs:
           exit 1
 
   deploy:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -96,18 +96,19 @@ jobs:
 
     steps:
       - name: Trigger Coolify deployment
-        id: trigger
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
         run: |
+          if [[ -z "${COOLIFY_TOKEN}" ]]; then
+            echo "::error::Set COOLIFY_TOKEN in the production GitHub environment."
+            exit 1
+          fi
           response="$(curl --fail --silent --show-error \
             --request POST \
             --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
-            "${COOLIFY_WEBHOOK}")"
+            "https://coolify.philippeho.dev/api/v1/deploy?uuid=q11urabk74uu6o0l09i7hrqa")"
           deployment_uuid="$(jq -er 'if type == "array" then .[0].deployment_uuid else (.deployment_uuid // .deployments[0].deployment_uuid) end' <<<"${response}")"
           echo "Triggered Coolify deployment ${deployment_uuid}."
-          echo "deployment_uuid=${deployment_uuid}" >> "${GITHUB_OUTPUT}"
 
       - name: Wait for the requested commit
         env:

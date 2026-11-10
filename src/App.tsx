@@ -40,7 +40,6 @@ import {
 } from "./data/conversationConfig";
 import {
   getSeedStoryRecord,
-  getSeedStoryRecords,
   seedProfiles,
   type PlatformProfile,
   type PlatformSession,
@@ -48,7 +47,7 @@ import {
   type PlatformStoryRecord
 } from "./data/platformSeed";
 import { useScriptedConversation } from "./hooks/useScriptedConversation";
-import { useAppRoute, type AppRoute } from "./navigation/appRoute";
+import { useAppRoute } from "./navigation/appRoute";
 
 const STORY_ENTRANCE_MS = 1500;
 
@@ -56,15 +55,12 @@ function cloneStoryRecord(record: PlatformStoryRecord): PlatformStoryRecord {
   return JSON.parse(JSON.stringify(record)) as PlatformStoryRecord;
 }
 
-function toStoryRecordMap(records: PlatformStoryRecord[]) {
-  return Object.fromEntries(records.map((record) => [record.id, record]));
-}
-
 function toStoryCard(record: PlatformStoryRecord): PlatformStoryCard {
   return {
     coverColor: record.coverColor,
     coverImage: record.coverImage ?? null,
     ownerId: record.ownerId,
+    presentationMode: record.storyboard.presentationMode,
     sceneCount: record.storyboard.scenes.length,
     storyId: record.id,
     title: record.title,
@@ -125,39 +121,7 @@ function removeProfileStory(
   );
 }
 
-function getStoryCard(
-  profiles: PlatformProfile[],
-  storyId: string
-): PlatformStoryCard | null {
-  for (const profile of profiles) {
-    const story = profile.stories.find((card) => card.storyId === storyId);
-
-    if (story) {
-      return story;
-    }
-  }
-
-  return null;
-}
-
-function createPlaceholderRecord(card: PlatformStoryCard): PlatformStoryRecord {
-  const seed = getSeedStoryRecord();
-  const storyboard = normalizeStoryboard({
-    ...seed.storyboard,
-    id: card.storyId,
-    title: card.title
-  });
-
-  return {
-    ...seed,
-    coverColor: card.coverColor,
-    id: card.storyId,
-    ownerId: card.ownerId,
-    storyboard,
-    title: card.title,
-    updatedAt: card.updatedAt
-  };
-}
+const inactiveStory = getSeedStoryRecord();
 
 function getRequestErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -178,8 +142,13 @@ export default function App() {
   const [hasHydratedPlatform, setHasHydratedPlatform] = useState(false);
   const [storyRecordsById, setStoryRecordsById] = useState<
     Record<string, PlatformStoryRecord>
-  >(() => toStoryRecordMap(getSeedStoryRecords()));
-  const [activeStoryId, setActiveStoryId] = useState("story-phil-1");
+  >({});
+  const activeStoryId = route.name === "story" ? route.storyId : "";
+  const [storyLoad, setStoryLoad] = useState<{
+    storyId: string;
+    status: "ready" | "unavailable";
+  } | null>(null);
+  const [storyReload, setStoryReload] = useState(0);
   const [storyPermissions, setStoryPermissions] = useState({
     canDelete: false,
     canEdit: false,
@@ -190,7 +159,7 @@ export default function App() {
   const [isStoryEntranceVisible, setIsStoryEntranceVisible] = useState(false);
   const [isConversationIntroComplete, setIsConversationIntroComplete] =
     useState(false);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editorStoryId, setEditorStoryId] = useState<string | null>(null);
   const [isStorybookOpen, setIsStorybookOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
@@ -214,7 +183,9 @@ export default function App() {
     name: string;
   } | null>(null);
   const activeStoryRecord =
-    storyRecordsById[activeStoryId] ?? getSeedStoryRecord(activeStoryId);
+    storyRecordsById[activeStoryId] ?? inactiveStory;
+  const storyStatus =
+    storyLoad?.storyId === activeStoryId ? storyLoad.status : "loading";
   const story = activeStoryRecord.storyboard;
   const config = getActiveStoryScene(story);
   const activeProfile = profiles.find(
@@ -231,6 +202,7 @@ export default function App() {
     storyPermissions.userId === permissionUserId;
   const canEditActiveStory =
     SHOW_SCRIPT_EDITOR &&
+    storyStatus === "ready" &&
     hasCurrentStoryPermissions &&
     storyPermissions.canEdit;
   const canDeleteActiveStory =
@@ -273,6 +245,38 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    setStoryLoad(null);
+    setUndoStack([]);
+    setEditorStoryId((storyId) => storyId === activeStoryId ? storyId : null);
+    if (!activeStoryId) {
+      return;
+    }
+
+    let cancelled = false;
+    const pendingSave = latestStorySaveRef.current ?? Promise.resolve();
+    void pendingSave
+      .then(() => fetchStory(activeStoryId))
+      .then((record) => {
+        if (!cancelled) {
+          setStoryRecordsById((records) => ({ ...records, [activeStoryId]: record }));
+          setStoryLoad({ storyId: activeStoryId, status: "ready" });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStoryLoad({ storyId: activeStoryId, status: "unavailable" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeStoryId, storyReload]);
+
+  useEffect(() => {
+    if (!activeStoryId) {
+      return;
+    }
     let isCancelled = false;
     const userId = session?.user.id ?? null;
 
@@ -309,7 +313,7 @@ export default function App() {
   }, [activeStoryId, session?.user.id]);
 
   useEffect(() => {
-    if (isStoryListOpen) {
+    if (storyStatus !== "ready") {
       setIsStoryEntranceVisible(false);
       setIsConversationIntroComplete(false);
       return undefined;
@@ -321,15 +325,16 @@ export default function App() {
     const showEntranceTimer = window.setTimeout(() => {
       setIsStoryEntranceVisible(true);
     }, 0);
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const startPlaybackTimer = window.setTimeout(() => {
       setIsConversationIntroComplete(true);
-    }, STORY_ENTRANCE_MS);
+    }, reducedMotion ? 0 : STORY_ENTRANCE_MS);
 
     return () => {
       window.clearTimeout(showEntranceTimer);
       window.clearTimeout(startPlaybackTimer);
     };
-  }, [isStoryListOpen, activeStoryId]);
+  }, [storyStatus, activeStoryId]);
 
   useEffect(() => {
     if (!avatarPreview) {
@@ -449,19 +454,6 @@ export default function App() {
     setIsConversationIntroComplete(false);
   };
 
-  const goToRoute = (
-    nextRoute: AppRoute,
-    options: { history?: "push" | "replace" | "none" } = {}
-  ) => {
-    const { history = "push" } = options;
-
-    if (history === "replace") {
-      replace(nextRoute);
-    } else if (history === "push") {
-      navigate(nextRoute);
-    }
-  };
-
   const selectScene = (sceneId: string) => {
     const updatedStoryboard = normalizeStoryboard({
       ...story,
@@ -479,42 +471,21 @@ export default function App() {
 
   const selectStory = (
     storyId: string,
-    options: { history?: "push" | "replace" | "none" } = {}
+    options: { history?: "push" | "replace" } = {}
   ) => {
-    const knownRecord = storyRecordsById[storyId];
-    const card = getStoryCard(profiles, storyId);
-
-    beginStoryEntrance();
-    setActiveStoryId(storyId);
     setPendingDeleteStoryId(null);
     setIsStorybookOpen(false);
-    setIsEditorOpen(false);
+    setEditorStoryId(null);
     setIsAccountOpen(false);
     setStoryPersistenceError("");
     setStorybookError("");
-    goToRoute({ name: "story", storyId }, options);
-
-    if (!knownRecord) {
-      if (card) {
-        upsertStoryRecord(createPlaceholderRecord(card));
-      }
-    }
-
-    void fetchStory(storyId)
-      .then((record) => {
-        upsertStoryRecord(record);
-        setActiveStoryId(record.id);
-      })
-      .catch(() => {
-        if (!knownRecord && !card) {
-          replace({ name: "home" });
-        }
-      });
+    const go = options.history === "replace" ? replace : navigate;
+    go({ name: "story", storyId });
   };
 
   const editStory = (storyId: string) => {
     selectStory(storyId);
-    setIsEditorOpen(true);
+    setEditorStoryId(storyId);
   };
 
   const deleteStory = (storyId: string) => {
@@ -564,15 +535,7 @@ export default function App() {
     const nextStory = await createRemoteStory();
 
     upsertStoryRecord(nextStory);
-    beginStoryEntrance();
-    setActiveStoryId(nextStory.id);
-    setPendingDeleteStoryId(null);
-    setIsStorybookOpen(false);
-    setIsEditorOpen(false);
-    setIsAccountOpen(false);
-    setStoryPersistenceError("");
-    setStorybookError("");
-    navigate({ name: "story", storyId: nextStory.id });
+    selectStory(nextStory.id);
   };
 
   const addScene = () => {
@@ -619,7 +582,7 @@ export default function App() {
       return;
     }
 
-    setIsEditorOpen(false);
+    setEditorStoryId(null);
   };
 
   const handleLogin = async (input: { identifier: string; password: string }) => {
@@ -627,6 +590,9 @@ export default function App() {
     setCurrentAccount(current);
     setSession(currentAccountSession(current));
     setRegistrationMode(current.registrationMode);
+    if (storyStatus === "unavailable") {
+      setStoryReload((attempt) => attempt + 1);
+    }
     const nextProfiles = await fetchProfiles();
     setProfiles(nextProfiles);
   };
@@ -650,8 +616,12 @@ export default function App() {
     setCurrentAccount(current);
     setSession(currentAccountSession(current));
     setRegistrationMode(current.registrationMode);
-    setIsEditorOpen(false);
+    setEditorStoryId(null);
     setIsStorybookOpen(false);
+    if (activeStoryRecord.visibility === "private") {
+      setStoryLoad(null);
+      setStoryReload((attempt) => attempt + 1);
+    }
     const nextProfiles = await fetchProfiles();
     setProfiles(nextProfiles);
   };
@@ -723,7 +693,7 @@ export default function App() {
     beginStoryEntrance();
     navigate({ name: "home" });
     setIsStorybookOpen(false);
-    setIsEditorOpen(false);
+    setEditorStoryId(null);
     setPendingDeleteStoryId(null);
     setIsAccountOpen(false);
   };
@@ -739,15 +709,9 @@ export default function App() {
     }
 
     setIsStorybookOpen(false);
-    setIsEditorOpen(false);
+    setEditorStoryId(null);
     setPendingDeleteStoryId(null);
   };
-
-  useEffect(() => {
-    if (route.name === "story" && route.storyId !== activeStoryId) {
-      selectStory(route.storyId, { history: "none" });
-    }
-  }, [route, activeStoryId]);
 
   useEffect(() => {
     if (route.name === "profile" && hasHydratedPlatform && !selectedProfile) {
@@ -881,7 +845,7 @@ export default function App() {
           type="button"
           aria-label="Open script editor"
           title="Open script editor"
-          onClick={() => setIsEditorOpen(true)}
+          onClick={() => setEditorStoryId(activeStoryId)}
           className="grid h-11 w-11 place-items-center rounded-lg text-slate-800 transition hover:bg-slate-100"
         >
           <SquarePen className="h-5 w-5" aria-hidden="true" />
@@ -961,6 +925,35 @@ export default function App() {
       searchQuery={searchQuery}
       selectedProfileId={selectedProfileId}
     />
+  ) : storyStatus !== "ready" ? (
+    <section className="app-glass mx-auto mt-10 grid max-w-md gap-3 rounded-xl p-6">
+      {storyStatus === "loading" ? (
+        <p role="status" className="text-[color:var(--muted)]">Loading story…</p>
+      ) : (
+        <>
+          <h1 className="font-round text-2xl font-bold">Story unavailable</h1>
+          <p className="text-sm text-[color:var(--muted)]">
+            Check the link or try loading it again.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setStoryReload((attempt) => attempt + 1)}
+              className="min-h-11 rounded-lg bg-white px-4 text-sm font-bold text-slate-950"
+            >
+              Try again
+            </button>
+            <button
+              type="button"
+              onClick={showHome}
+              className="min-h-11 rounded-lg border border-white/25 px-4 text-sm font-bold"
+            >
+              Browse stories
+            </button>
+          </div>
+        </>
+      )}
+    </section>
   ) : (
     <div
       data-testid="story-stage"
@@ -992,20 +985,20 @@ export default function App() {
         isStoryListOpen={isStoryListOpen}
         toolbarActions={toolbarActions}
         onAccountToggle={toggleAccountPanel}
-        onActiveProfile={showActiveProfile}
+        onActiveProfile={storyStatus === "ready" ? showActiveProfile : undefined}
         onCreateStory={() => void createStoryFromShell()}
         onHome={showHome}
       >
         {mainContent}
       </AppShell>
-      {canEditActiveStory && isEditorOpen ? (
+      {canEditActiveStory && editorStoryId === activeStoryId ? (
         story.presentationMode === "battle" ? (
           <BattleScriptEditor
             canUndo={undoStack.length > 0}
             config={config}
             isSaving={isStorySaving}
             onChange={updateConfig}
-            onClose={() => setIsEditorOpen(false)}
+            onClose={() => void saveEditorAndClose()}
             onSave={() => void saveEditorAndClose()}
             onStoryTitleChange={updateStoryTitle}
             onUndo={undoLastEdit}
@@ -1019,7 +1012,7 @@ export default function App() {
             config={config}
             isSaving={isStorySaving}
             onChange={updateConfig}
-            onClose={() => setIsEditorOpen(false)}
+            onClose={() => void saveEditorAndClose()}
             onSave={() => void saveEditorAndClose()}
             onSceneAdd={addScene}
             onSceneSelect={selectScene}

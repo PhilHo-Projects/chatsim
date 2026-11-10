@@ -13,7 +13,7 @@ type StoryControlsProps = {
 };
 
 const pressFeedbackClass =
-  "transition-all duration-150 ease-out will-change-transform active:scale-95 active:brightness-110 disabled:active:scale-100";
+  "transition-colors duration-150 ease-out motion-safe:active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:active:scale-100";
 
 export function StoryControls({
   hasStarted,
@@ -49,7 +49,7 @@ export function StoryControls({
         aria-label={primaryAccessibleLabel}
         title={primaryAccessibleLabel}
         onClick={onTogglePlayback}
-        className={`flex h-9 min-w-0 items-center justify-center gap-1 rounded-full bg-gradient-to-br from-violet-400/85 via-fuchsia-300/80 to-sky-200/75 px-2 text-[11px] font-bold text-white shadow-sm ring-1 ring-white/55 hover:from-violet-300 ${pressFeedbackClass}`}
+        className={`flex h-9 min-w-0 items-center justify-center gap-1 rounded-full bg-[#362153] px-2 text-xs font-bold text-white ring-1 ring-white/55 hover:bg-[#503171] ${pressFeedbackClass}`}
       >
         {isComplete ? (
           <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />

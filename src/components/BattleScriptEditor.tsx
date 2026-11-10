@@ -1,4 +1,5 @@
 import { Check, Plus, Swords, Trash2, Undo2 } from "lucide-react";
+import { useEditorDialog } from "../hooks/useEditorDialog";
 import {
   addConversationMessage,
   normalizeConversationConfig,
@@ -82,6 +83,7 @@ export function BattleScriptEditor({
   saveError = "",
   storyTitle
 }: BattleScriptEditorProps) {
+  const dialogRef = useEditorDialog();
   const speedLevel = config.contact.typingSpeedLevel;
 
   const setTrainerName = (role: SpeakerId, value: string) => {
@@ -111,11 +113,15 @@ export function BattleScriptEditor({
   };
 
   return (
-    <aside
-      role="dialog"
+    <dialog
+      ref={dialogRef}
       aria-label="Battle editor"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       data-testid="battle-script-editor"
-      className="latte-editor fixed inset-0 z-50 flex flex-col overflow-hidden bg-gradient-to-br from-[var(--latte-bg-from)] via-[var(--latte-bg-via)] to-[var(--latte-bg-to)] text-[var(--latte-ink)] shadow-[0_24px_80px_rgba(58,36,23,0.35)]"
+      className="latte-editor fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none flex-col overflow-hidden bg-gradient-to-br from-[var(--latte-bg-from)] via-[var(--latte-bg-via)] to-[var(--latte-bg-to)] text-[var(--latte-ink)] open:flex"
     >
       {/* Header mirrors the phone editor's warm bar; the Swords badge keeps battle identity. */}
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-[var(--latte-border)] bg-[#fffdf8]/85 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
@@ -124,7 +130,7 @@ export function BattleScriptEditor({
             <Swords className="h-5 w-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 className="latte-display truncate text-3xl font-semibold tracking-normal text-[var(--latte-heading)]">
+            <h2 tabIndex={-1} className="latte-display truncate text-3xl font-semibold tracking-normal text-[var(--latte-heading)] focus:outline-none">
               Battle editor
             </h2>
           </div>
@@ -359,6 +365,6 @@ export function BattleScriptEditor({
             </section>
           </div>
       </div>
-    </aside>
+    </dialog>
   );
 }
