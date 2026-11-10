@@ -1,5 +1,6 @@
 import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useEditorDialog } from "../hooks/useEditorDialog";
 import {
   Check,
   ChevronDown,
@@ -168,6 +169,7 @@ export function ScriptEditor({
   scenes,
   storyTitle
 }: ScriptEditorProps) {
+  const dialogRef = useEditorDialog();
   const [settingsWarning, setSettingsWarning] = useState("");
   const [collapsedMessageIds, setCollapsedMessageIds] = useState<Set<string>>(
     () => new Set()
@@ -1090,14 +1092,24 @@ export function ScriptEditor({
   );
 
   return (
-    <aside
-      role="dialog"
+    <dialog
+      ref={dialogRef}
       aria-label="Script editor"
-      className="latte-editor fixed inset-0 z-50 flex flex-col overflow-x-hidden overflow-y-hidden bg-gradient-to-br from-[var(--latte-bg-from)] via-[var(--latte-bg-via)] to-[var(--latte-bg-to)] text-[var(--latte-ink)] shadow-[0_24px_80px_rgba(58,36,23,0.35)]"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (isPasteOpen) {
+          setIsPasteOpen(false);
+          setPasteText("");
+          setPasteReplace(false);
+        } else {
+          onClose();
+        }
+      }}
+      className="latte-editor fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none flex-col overflow-hidden bg-gradient-to-br from-[var(--latte-bg-from)] via-[var(--latte-bg-via)] to-[var(--latte-bg-to)] text-[var(--latte-ink)] open:flex"
     >
       <div className="relative flex flex-wrap items-start justify-between gap-3 border-b border-[var(--latte-border)] bg-[#fffdf8]/85 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="min-w-0">
-          <h2 className="latte-display truncate text-3xl font-semibold tracking-normal text-[var(--latte-heading)]">
+          <h2 tabIndex={-1} className="latte-display truncate text-3xl font-semibold tracking-normal text-[var(--latte-heading)] focus:outline-none">
             Script editor
           </h2>
         </div>
@@ -1246,6 +1258,6 @@ export function ScriptEditor({
         </div>
       ) : null}
 
-    </aside>
+    </dialog>
   );
 }

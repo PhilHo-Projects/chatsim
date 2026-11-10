@@ -1,12 +1,11 @@
 import philBattlePixelCover from "../assets/story-card-backgrounds/story-covers/phil-battle-pixel.webp";
 import philKetaminePrisonCover from "../assets/story-card-backgrounds/story-covers/phil-ketamine-prison.webp";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
-import { Search } from "lucide-react";
+import { Play, Search } from "lucide-react";
 import { ProfileAvatar } from "../profile-avatars/ProfileAvatar";
 import { getProfileAvatarPresetId } from "../profile-avatars/profileAvatarPresets";
 import { buildProfileArt } from "../utils/profileArt";
-import type { PlatformProfile } from "../data/platformSeed";
+import type { PlatformProfile, PlatformStoryCard } from "../data/platformSeed";
+import { formatAppRoute } from "../navigation/appRoute";
 
 type LandingPageProps = {
   onSearchQueryChange: (value: string) => void;
@@ -16,19 +15,6 @@ type LandingPageProps = {
   searchQuery: string;
   selectedProfileId: string | null;
 };
-
-/** How long a featured card holds the centre before the deck advances. */
-const AUTOPLAY_INTERVAL_MS = 5000;
-
-/** Cards further than this from the centre are not painted at all. */
-const MAX_VISIBLE_OFFSET = 2;
-
-/**
- * The deck is a highlight reel, not the directory. Capping it keeps the dot
- * row readable and stops the stage from mounting a card per profile once the
- * platform has more than a handful.
- */
-const MAX_FEATURED_PROFILES = 7;
 
 const STORY_COVERS: Record<string, { image: string; objectPosition: string }> = {
   "story-phil-1": {
@@ -41,6 +27,13 @@ const STORY_COVERS: Record<string, { image: string; objectPosition: string }> = 
   }
 };
 
+function getStoryCover(story: PlatformStoryCard) {
+  const uploadedCover = story.coverImage?.variants.card;
+  return uploadedCover
+    ? { image: uploadedCover, objectPosition: "50% 50%" }
+    : STORY_COVERS[story.storyId];
+}
+
 function sceneCountLabel(count: number) {
   return `${count} ${count === 1 ? "scene" : "scenes"}`;
 }
@@ -49,14 +42,8 @@ function storyCountLabel(count: number) {
   return `${count} ${count === 1 ? "story" : "stories"}`;
 }
 
-function StoryFallbackArtwork({
-  compact = false,
-  handle
-}: {
-  compact?: boolean;
-  handle: string;
-}) {
-  const art = buildProfileArt(handle, { compact });
+function StoryFallbackArtwork({ handle }: { handle: string }) {
+  const art = buildProfileArt(handle);
 
   return (
     <svg
@@ -75,7 +62,7 @@ function StoryFallbackArtwork({
             opacity={stroke.opacity * 0.18}
             stroke={stroke.color}
             strokeLinecap="round"
-            strokeWidth={stroke.width * (compact ? 1.5 : 2.4)}
+            strokeWidth={stroke.width * 2.4}
           />
         ))}
       </g>
@@ -133,238 +120,6 @@ function filterProfilesForSearch(
  * Shortest signed distance from the active card on a looping deck, so index 0
  * sits one step to the right of the last card instead of rewinding the stack.
  */
-function getDeckOffset(index: number, activeIndex: number, total: number) {
-  const half = Math.floor(total / 2);
-  const forward = (((index - activeIndex) % total) + total) % total;
-
-  return forward > half ? forward - total : forward;
-}
-
-function getDeckCardStyle(offset: number): CSSProperties {
-  const distance = Math.abs(offset);
-
-  if (distance > MAX_VISIBLE_OFFSET) {
-    return {
-      opacity: 0,
-      pointerEvents: "none",
-      transform: "translate(-50%, 0) scale(0.6)",
-      zIndex: 0
-    };
-  }
-
-  const slide = offset * 56;
-  const scale = distance === 0 ? 1 : distance === 1 ? 0.84 : 0.7;
-  const tilt = offset === 0 ? 0 : offset > 0 ? -18 : 18;
-  const fade = distance === 0 ? 1 : distance === 1 ? 0.72 : 0.38;
-
-  return {
-    opacity: fade,
-    transform:
-      `translate(-50%, 0) translateX(${slide}%) ` +
-      `scale(${scale}) rotateY(${tilt}deg)`,
-    zIndex: 10 - distance
-  };
-}
-
-function usePrefersReducedMotion() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setPrefersReducedMotion(query.matches);
-
-    sync();
-    query.addEventListener("change", sync);
-
-    return () => query.removeEventListener("change", sync);
-  }, []);
-
-  return prefersReducedMotion;
-}
-
-type FeaturedDeckProps = {
-  onSelectProfile: (profileId: string) => void;
-  profiles: PlatformProfile[];
-};
-
-function FeaturedDeck({ onSelectProfile, profiles }: FeaturedDeckProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const total = profiles.length;
-  const stageRef = useRef<HTMLDivElement>(null);
-
-  const step = useCallback(
-    (direction: number) => {
-      setActiveIndex((current) => (current + direction + total) % total);
-    },
-    [total]
-  );
-
-  useEffect(() => {
-    if (isPaused || prefersReducedMotion || total < 2) {
-      return;
-    }
-
-    const timer = window.setInterval(
-      () => step(1),
-      AUTOPLAY_INTERVAL_MS
-    );
-
-    return () => window.clearInterval(timer);
-  }, [isPaused, prefersReducedMotion, step, total]);
-
-  // Keep the active card in range when the featured set shrinks.
-  useEffect(() => {
-    setActiveIndex((current) => (current < total ? current : 0));
-  }, [total]);
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      step(-1);
-    }
-
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      step(1);
-    }
-  };
-
-  return (
-    <div
-      aria-label="Featured profiles"
-      aria-roledescription="carousel"
-      role="group"
-      className="relative w-full select-none"
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-          setIsPaused(false);
-        }
-      }}
-      onFocus={() => setIsPaused(true)}
-      onKeyDown={handleKeyDown}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
-      <div
-        ref={stageRef}
-        className="relative h-80 w-full sm:h-96"
-        style={{ perspective: "1200px" }}
-      >
-        {profiles.map((profile, index) => {
-          const offset = getDeckOffset(index, activeIndex, total);
-          const distance = Math.abs(offset);
-          const isActive = offset === 0;
-          const isHidden = distance > MAX_VISIBLE_OFFSET;
-          const label = storyCountLabel(profile.stories.length);
-
-          return (
-            <button
-              key={profile.id}
-              type="button"
-              aria-hidden={isHidden || undefined}
-              aria-label={`Open @${profile.username}, ${label}`}
-              tabIndex={isHidden ? -1 : 0}
-              onClick={() => {
-                if (isActive) {
-                  onSelectProfile(profile.id);
-                  return;
-                }
-
-                setActiveIndex(index);
-              }}
-              className="absolute left-1/2 top-0 h-full overflow-hidden rounded-2xl text-left text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-1 ring-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)]"
-              style={{
-                ...getDeckCardStyle(offset),
-                // Sized here rather than with a breakpoint class so the deck
-                // scales smoothly with the viewport instead of jumping at 640px.
-                width: "min(18rem, 62vw)",
-                // Width is intentionally excluded so viewport changes cannot
-                // animate the measured card size. Transform and opacity remain
-                // compositor-friendly.
-                transition: prefersReducedMotion
-                  ? "none"
-                  : "transform 500ms ease-out, opacity 500ms ease-out"
-              }}
-            >
-              <span
-                aria-hidden="true"
-                data-testid={`profile-card-background-${profile.id}`}
-                className="absolute inset-0"
-              >
-                <ProfileAvatar
-                  presetId={getProfileAvatarPresetId(profile.id)}
-                />
-              </span>
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.10)_0%,rgba(2,6,23,0.04)_42%,rgba(2,6,23,0.62)_100%)]"
-              />
-              <span className="relative z-10 grid h-full content-end gap-1.5 p-5">
-                <span className="block truncate font-round text-2xl font-bold leading-tight text-[color:var(--text)]">
-                  @{profile.username}
-                </span>
-                {profile.bio ? (
-                  <span className="line-clamp-2 text-sm text-[color:var(--muted)]">
-                    {profile.bio}
-                  </span>
-                ) : null}
-                <span className="mt-1 w-fit rounded-full border border-[color:var(--neon-1)] px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.12em] text-[color:var(--neon-1)]">
-                  {label}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {total > 1 ? (
-        <>
-          <button
-            type="button"
-            aria-label="Previous featured profile"
-            onClick={() => step(-1)}
-            className="absolute left-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-slate-800/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)] sm:left-4"
-          >
-            &#8249;
-          </button>
-          <button
-            type="button"
-            aria-label="Next featured profile"
-            onClick={() => step(1)}
-            className="absolute right-1 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-900/85 text-lg font-black text-slate-50 shadow-[0_8px_24px_rgba(15,23,42,0.22)] ring-1 ring-white/15 transition hover:bg-slate-800/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)] sm:right-4"
-          >
-            &#8250;
-          </button>
-
-          <div className="mt-4 flex items-center justify-center gap-2">
-            {profiles.map((profile, index) => (
-              <button
-                key={profile.id}
-                type="button"
-                aria-current={index === activeIndex || undefined}
-                aria-label={`Feature @${profile.username}`}
-                onClick={() => setActiveIndex(index)}
-                className={
-                  "h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)] " +
-                  (index === activeIndex
-                    ? "w-6 bg-slate-100"
-                    : "w-1.5 bg-slate-100/25 hover:bg-slate-100/45")
-                }
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
 export function LandingPage({
   onSearchQueryChange,
   onSelectProfile,
@@ -398,11 +153,7 @@ export function LandingPage({
         >
           {selectedProfile.stories.map((story, index) => {
             const label = sceneCountLabel(story.sceneCount);
-            const uploadedCover = story.coverImage?.variants.card;
-            const curatedCover = STORY_COVERS[story.storyId];
-            const storyCover = uploadedCover
-              ? { image: uploadedCover, objectPosition: "50% 50%" }
-              : curatedCover;
+            const storyCover = getStoryCover(story);
             const heightClass =
               index % 3 === 0 ? "h-80" : index % 3 === 1 ? "h-64" : "h-72";
 
@@ -453,68 +204,124 @@ export function LandingPage({
     );
   }
 
+  const stories = profiles.flatMap((profile) => profile.stories);
+  const featuredStories = Object.keys(STORY_COVERS).flatMap((id) => {
+    const story = stories.find((card) => card.storyId === id);
+    return story ? [story] : [];
+  });
+
   return (
-    <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 pb-24">
+    <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-7 pb-10 md:gap-9">
       <div className="text-center">
-        <h2 className="font-round text-5xl font-semibold tracking-tight text-slate-50 sm:text-6xl">
+        <h1 className="font-round text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl">
           chatsim
-        </h2>
+        </h1>
       </div>
 
-      {!isSearching && visibleProfiles.length > 0 ? (
-        <FeaturedDeck
-          onSelectProfile={onSelectProfile}
-          profiles={visibleProfiles.slice(0, MAX_FEATURED_PROFILES)}
-        />
+      {!isSearching && featuredStories.length > 0 ? (
+        <section aria-labelledby="featured-stories-heading" className="grid gap-3">
+          <h2 id="featured-stories-heading" className="text-sm font-semibold text-[color:var(--text)]">
+            Featured stories
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+            {featuredStories.map((story) => {
+              const cover = getStoryCover(story);
+              const format = story.presentationMode === "battle" ? "Pixel battle" : "Text conversation";
+
+              return (
+                <a
+                  key={story.storyId}
+                  href={formatAppRoute({ name: "story", storyId: story.storyId })}
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                      return;
+                    }
+                    event.preventDefault();
+                    onSelectStory(story.storyId);
+                  }}
+                  className="group grid min-w-0 overflow-hidden rounded-xl border border-white/15 bg-[#131018] transition-colors hover:border-white/45 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--neon-1)]"
+                >
+                  <div className="aspect-[2.6/1] overflow-hidden sm:aspect-video">
+                    <img
+                      alt=""
+                      className="h-full w-full object-cover transition-transform duration-300 motion-safe:group-hover:scale-[1.03]"
+                      decoding="async"
+                      src={cover.image}
+                      style={{ objectPosition: cover.objectPosition }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-white/10 px-4 py-3">
+                    <div className="min-w-0">
+                      <h3 className="font-round text-xl font-semibold leading-tight text-white sm:text-2xl">
+                        {story.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-[color:var(--muted)]">
+                        {format} · {sceneCountLabel(story.sceneCount)}
+                      </p>
+                    </div>
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 text-[color:var(--text)] transition-colors group-hover:bg-white group-hover:text-slate-950">
+                      <Play aria-hidden="true" className="h-4 w-4 fill-current" />
+                    </span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
-      <label className="app-glass mx-auto flex h-12 w-full max-w-md items-center gap-3 rounded-xl px-4 text-[color:var(--muted)] focus-within:ring-2 focus-within:ring-[color:var(--neon-1)]">
-        <span className="sr-only">Search profiles</span>
-        <Search aria-hidden="true" className="h-5 w-5 shrink-0" />
-        <input
-          aria-label="Search profiles"
-          className="h-full min-w-0 flex-1 bg-transparent text-base font-semibold text-[color:var(--text)] outline-none placeholder:text-[color:var(--muted)]"
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-          placeholder="Search profiles"
-          type="search"
-          value={searchQuery}
-        />
-      </label>
+      <section aria-labelledby="profile-directory-heading" className="grid gap-3">
+        <h2 id="profile-directory-heading" className="text-sm font-semibold text-[color:var(--text)]">
+          Profiles
+        </h2>
+        <label className="app-glass flex h-12 w-full items-center gap-3 rounded-xl px-4 text-[color:var(--muted)] focus-within:ring-2 focus-within:ring-[color:var(--neon-1)]">
+          <span className="sr-only">Search profiles</span>
+          <Search aria-hidden="true" className="h-5 w-5 shrink-0" />
+          <input
+            aria-label="Search profiles"
+            className="h-full min-w-0 flex-1 bg-transparent text-base font-semibold text-[color:var(--text)] outline-none placeholder:text-[color:var(--muted)]"
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            placeholder="Search profiles"
+            type="search"
+            value={searchQuery}
+          />
+        </label>
 
-      <div aria-label="All profiles" className="app-glass w-full rounded-2xl px-4">
-        <ul className="grid min-w-0 grid-cols-1 divide-y divide-[color:var(--line)]">
-          {visibleProfiles.map((profile) => (
-            <li key={profile.id}>
-              <button
-                type="button"
-                aria-label={`Open @${profile.username}, ${storyCountLabel(profile.stories.length)}`}
-                onClick={() => onSelectProfile(profile.id)}
-                className="group flex w-full items-center gap-3 py-3 text-left transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)]"
-              >
-                <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[color:var(--line)]">
-                  <ProfileAvatar
-                    compact
-                    presetId={getProfileAvatarPresetId(profile.id)}
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-round text-base font-bold text-[color:var(--text)] group-hover:underline">
-                    @{profile.username}
+        <div aria-label="All profiles" className="app-glass w-full rounded-2xl px-4">
+          <ul className="grid min-w-0 grid-cols-1 divide-y divide-[color:var(--line)]">
+            {visibleProfiles.map((profile) => (
+              <li key={profile.id}>
+                <button
+                  type="button"
+                  aria-label={`Open @${profile.username}, ${storyCountLabel(profile.stories.length)}`}
+                  onClick={() => onSelectProfile(profile.id)}
+                  className="group flex w-full items-center gap-3 py-3 text-left transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon-1)]"
+                >
+                  <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[color:var(--line)]">
+                    <ProfileAvatar
+                      compact
+                      presetId={getProfileAvatarPresetId(profile.id)}
+                    />
                   </span>
-                  {profile.bio ? (
-                    <span className="block truncate text-sm text-[color:var(--muted)]">
-                      {profile.bio}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-round text-base font-bold text-[color:var(--text)] group-hover:underline">
+                      @{profile.username}
                     </span>
-                  ) : null}
-                </span>
-                <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                  {storyCountLabel(profile.stories.length)}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+                    {profile.bio ? (
+                      <span className="block truncate text-sm text-[color:var(--muted)]">
+                        {profile.bio}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                    {storyCountLabel(profile.stories.length)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
     </section>
   );
 }

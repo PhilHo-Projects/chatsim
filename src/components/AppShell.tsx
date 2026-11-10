@@ -16,7 +16,7 @@ type AppShellProps = {
   isStoryListOpen: boolean;
   toolbarActions: ReactNode;
   onAccountToggle: () => void;
-  onActiveProfile: () => void;
+  onActiveProfile?: () => void;
   onCreateStory: () => void;
   onHome: () => void;
 };
@@ -74,7 +74,7 @@ export function AppShell({
       </nav>
 
       <div className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-[color:var(--line)] bg-[color:var(--surface)] px-3 shadow-[0_8px_28px_rgba(0,0,0,0.4)] md:pl-24 md:pr-5">
-        {!isStoryListOpen ? (
+        {onActiveProfile ? (
           <button
             type="button"
             aria-label="Back to profile"

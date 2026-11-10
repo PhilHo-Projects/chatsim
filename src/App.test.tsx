@@ -52,6 +52,7 @@ function toStoryCard(story: PlatformStoryRecord) {
     coverColor: story.coverColor,
     coverImage: story.coverImage ?? null,
     ownerId: story.ownerId,
+    presentationMode: story.storyboard.presentationMode,
     sceneCount: story.storyboard.scenes.length,
     storyId: story.id,
     title: story.title,
@@ -393,7 +394,7 @@ describe("App", () => {
     expect(screen.queryByLabelText("All profiles")).not.toBeInTheDocument();
   });
 
-  it("starts in a persistent browsing shell with a featured deck and profile list", async () => {
+  it("starts in a persistent browsing shell with featured stories and a profile list", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
@@ -453,44 +454,15 @@ describe("App", () => {
     expect(
       within(screen.getByLabelText("All profiles")).getByText("@phil")
     ).toBeInTheDocument();
-    const featuredDeck = screen.getByRole("group", { name: "Featured profiles" });
+    const featured = screen.getByRole("region", { name: "Featured stories" });
     const profileList = screen.getByLabelText("All profiles");
-    const profileRows = profileList.querySelector("ul");
-
-    expect(featuredDeck).toHaveAttribute("aria-roledescription", "carousel");
-    expect(profileRows).toHaveClass("grid-cols-1", "min-w-0");
-    expect(
-      within(featuredDeck).getByRole("button", {
-        name: /Open @phil/
-      })
-    ).toBeInTheDocument();
-    expect(
-      within(
-        within(profileList).getByRole("button", { name: /Open @phil/ })
-      ).getByText("2 stories")
-    ).toBeInTheDocument();
-    expect(screen.queryByLabelText("Story bento grid")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Ketamine prison 5 scenes/ })).not.toBeInTheDocument();
-    expect(screen.queryByText("Open story")).not.toBeInTheDocument();
-    expect(
-      within(featuredDeck).getByRole("button", { name: "Previous featured profile" })
-    ).toBeInTheDocument();
-    expect(
-      within(featuredDeck).getByRole("button", { name: "Next featured profile" })
-    ).toBeInTheDocument();
-    expect(
-      within(profileList).getAllByRole("button")
-    ).toHaveLength(seedProfiles.length);
-    expect(
-      within(featuredDeck)
-        .getByRole("button", { name: /Open @phil/ })
-        .querySelector(".top-0.h-1")
-    ).toBeNull();
-    seedProfiles.forEach((profile) => {
-      expect(
-        screen.getByTestId(`profile-card-background-${profile.id}`)
-      ).toBeInTheDocument();
-    });
+    expect(within(featured).getByRole("link", { name: /Ketamine prison/ }))
+      .toHaveAttribute("href", "/stories/story-phil-1");
+    expect(within(featured).getByRole("link", { name: /Battle/ }))
+      .toHaveAttribute("href", "/stories/story-phil-battle");
+    expect(within(featured).getByText("Text conversation · 5 scenes")).toBeInTheDocument();
+    expect(within(featured).getByText("Pixel battle · 1 scene")).toBeInTheDocument();
+    expect(within(profileList).getAllByRole("button")).toHaveLength(seedProfiles.length);
     expect(screen.queryByTestId("phone-shell")).not.toBeInTheDocument();
 
     openProfileFromList(/Open @phil/);
@@ -741,6 +713,39 @@ describe("App", () => {
     expect(screen.queryByRole("dialog", { name: "Account panel" })).not.toBeInTheDocument();
   });
 
+  it("uses the saved API story on a cold visit to the flagship URL", async () => {
+    mockSession = null;
+    const record = mockStories["story-phil-1"];
+    const config = record.storyboard.scenes[0];
+    config.viewer.name = "Latest server speaker";
+
+    await renderAppAtPath("/stories/story-phil-1");
+
+    expect(screen.getByText("Latest server speaker")).toBeInTheDocument();
+  });
+
+  it("focuses the editor and restores the toolbar focus when it is dismissed", async () => {
+    await renderAppAtPath("/stories/story-phil-1");
+    const trigger = screen.getByRole("button", { name: "Open script editor" });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const editor = screen.getByRole("dialog", { name: "Script editor" });
+    expect(editor.contains(document.activeElement)).toBe(true);
+    fireEvent(editor, new Event("cancel", { cancelable: true }));
+    expect(editor).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+  it("keeps an unavailable story URL and offers a way back to the catalog", async () => {
+    mockSession = null;
+    await renderAppAtPath("/stories/story-missing");
+
+    expect(window.location.pathname).toBe("/stories/story-missing");
+    expect(screen.getByRole("heading", { name: "Story unavailable" })).toBeInTheDocument();
+    expect(screen.queryByTestId("phone-shell")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Browse stories" }));
+    expect(window.location.pathname).toBe("/");
+  });
   it("renders Phil's battle story with the battle presentation instead of the phone", async () => {
     mockSession = null;
 
@@ -830,69 +835,17 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "chatsim" })).toBeInTheDocument();
   });
 
-  it("cycles the featured deck and keeps logged-out browsing open", async () => {
+  it("opens the featured story directly for a signed-out reader", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
 
-    const deck = screen.getByRole("group", { name: "Featured profiles" });
-    const cards = within(deck).getAllByRole("button", { name: /^Open / });
-
-    expect(cards).toHaveLength(seedProfiles.length);
-
-    const expectedPresets = [
-      "sitting",
-      "waving",
-      "leaning",
-      "walking",
-      "floating"
-    ];
-
-    seedProfiles.forEach((profile, index) => {
-      const cardArt = screen.getByTestId(
-        `profile-card-background-${profile.id}`
-      );
-
-      expect(
-        cardArt.querySelector(
-          `[data-avatar-preset="${expectedPresets[index]}"]`
-        )
-      ).not.toBeNull();
-    });
-
-    const directory = screen.getByLabelText("All profiles");
-    const compactAvatars = directory.querySelectorAll(
-      '[data-avatar-variant="compact"]'
-    );
-
-    expect(compactAvatars).toHaveLength(seedProfiles.length);
-
-    // Every card moves with compositor-friendly transform and opacity only.
-    for (const card of cards) {
-      expect(card.style.filter).toBe("");
-      expect(card.style.transition).toBe(
-        "transform 500ms ease-out, opacity 500ms ease-out"
-      );
-    }
-
-    fireEvent.click(
-      within(deck).getByRole("button", { name: "Next featured profile" })
-    );
-
-    for (const card of cards) {
-      expect(card.style.filter).toBe("");
-    }
-
-    // Clicking the centred card opens that profile.
-    fireEvent.click(cards[1]);
+    fireEvent.click(screen.getByRole("link", { name: /Battle/ }));
     await flushPlatformEffects();
 
-    expect(
-      screen.getByRole("heading", { name: `@${seedProfiles[1].username}` })
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Sign in to browse")).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe("/stories/story-phil-battle");
+    expect(screen.getByTestId("battle-stage")).toBeInTheDocument();
   });
-
   it("shows handles and bios with no invented profile title", async () => {
     mockSession = null;
     render(<App />);
@@ -905,13 +858,13 @@ describe("App", () => {
     expect(screen.queryByText("phil's stories")).not.toBeInTheDocument();
   });
 
-  it("puts search between the deck and the list, not in the top bar", async () => {
+  it("puts search between the featured stories and the list, not in the top bar", async () => {
     mockSession = null;
     render(<App />);
     await flushPlatformEffects();
 
     const search = screen.getByLabelText("Search profiles");
-    const deck = screen.getByLabelText("Featured profiles");
+    const deck = screen.getByRole("region", { name: "Featured stories" });
     const list = screen.getByLabelText("All profiles");
 
     expect(
@@ -944,9 +897,9 @@ describe("App", () => {
     expect(philRows[0]).toHaveAccessibleName("Open @phil, 2 stories");
     expect(screen.queryByRole("button", { name: /Open @demo-04/ })).not.toBeInTheDocument();
 
-    // Searching collapses the featured deck so only the list remains.
+    // Searching shows only the profile directory.
     expect(
-      screen.queryByRole("group", { name: "Featured profiles" })
+      screen.queryByRole("region", { name: "Featured stories" })
     ).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search profiles" }), {
@@ -1075,9 +1028,7 @@ describe("App", () => {
     await flushPlatformEffects();
 
     expect(
-      screen
-        .getByTestId("profile-card-background-user-demo-01")
-        .querySelector('img[src*="demo-card"]')
+      screen.getByRole("region", { name: "Featured stories" }).querySelector('img[src*="demo-card"]')
     ).toBeNull();
 
     openProfileFromList(/Open @demo-01/);
@@ -1132,7 +1083,7 @@ describe("App", () => {
     await flushPlatformEffects();
 
     expect(container.querySelector("filter, feGaussianBlur")).toBeNull();
-    expect(container.querySelectorAll("[data-avatar-preset]")).toHaveLength(10);
+    expect(container.querySelectorAll("[data-avatar-preset]")).toHaveLength(seedProfiles.length);
     expect(container.querySelector(".profile-art__depth")).toBeNull();
   });
 
@@ -1199,10 +1150,11 @@ describe("App", () => {
     const storyControlButtons = storyControls.querySelectorAll("button");
     expect(storyControlButtons).toHaveLength(4);
     storyControlButtons.forEach((button) => {
-      expect(button).toHaveClass("active:scale-95", "duration-150");
+      expect(button).toHaveClass("motion-safe:active:scale-95", "focus-visible:outline-2");
     });
     expect(screen.getByRole("button", { name: "Pause conversation" })).toHaveClass(
-      "from-violet-400/85"
+      "bg-[#362153]",
+      "text-white"
     );
     expect(screen.getByRole("button", { name: "Playback speed 1x" })).toHaveClass(
       "from-cyan-300/80"
@@ -1857,7 +1809,7 @@ describe("App", () => {
 
     expect(
       screen.getByRole("dialog", { name: "Script editor" })
-    ).toHaveClass("inset-0", "bg-gradient-to-br", "overflow-x-hidden");
+    ).toHaveClass("inset-0", "bg-gradient-to-br", "overflow-hidden");
   });
 
   it("uses a clean POV composer without phone attachment controls", async () => {

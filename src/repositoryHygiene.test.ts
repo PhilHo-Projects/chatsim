@@ -34,11 +34,8 @@ describe("repository hygiene", () => {
   it("keeps manual deployments behind the full verification job", () => {
     const workflow = readFileSync(".github/workflows/deploy.yml", "utf8");
 
-    expect(workflow).toContain(
-      "github.event_name == 'workflow_dispatch' ||"
-    );
-    expect(workflow).toContain(
-      "(github.event_name == 'push' && github.ref == 'refs/heads/main')"
+    expect(workflow.split(/\r?\n/)).toContain(
+      "    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"
     );
     expect(workflow).toContain("needs: verify");
     expect(workflow).toContain("EXPECTED_COMMIT: ${{ github.sha }}");

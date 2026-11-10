@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { createLocalAccountIssuer } from "better-auth/db";
 import { hashPassword } from "better-auth/crypto";
 import type { Pool } from "pg";
 
@@ -117,12 +116,11 @@ export async function bootstrapBetterAuthAdmin(
     if (!credential.rows[0]) {
       await client.query(
         `INSERT INTO auth_account (
-           id, issuer, "accountId", "providerId", "userId", password,
+           id, "accountId", "providerId", "userId", password,
            "createdAt", "updatedAt"
-         ) VALUES ($1, $2, $3, 'credential', $3, $4, NOW(), NOW())`,
+         ) VALUES ($1, $2, 'credential', $2, $3, NOW(), NOW())`,
         [
           randomUUID(),
-          createLocalAccountIssuer("credential"),
           authUserId,
           passwordHash
         ]

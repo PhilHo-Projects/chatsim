@@ -66,8 +66,8 @@ or delete the legacy `/chatsim` application.
 
 The GitHub deploy key is unique to this repository and read-only. The first key
 created during setup was revoked and replaced; do not restore or reuse it.
-No GitHub webhook is configured, so releases are manual until the approved
-main-branch GitHub Actions flow is enabled.
+Direct Coolify auto-deploy is disabled. The GitHub Actions workflow deploys
+only when manually dispatched from `main`.
 
 The bootstrap administrator secret has been removed from the application
 environment after creating the account. The local credential is stored in
@@ -182,25 +182,13 @@ The Dockerfile builds the Vite client, installs production server dependencies
 in a separate runtime image, runs as the unprivileged `node` user, and exposes
 port 3000. Both the image health check and Coolify use `/api/health`.
 
-Before PR approval:
-
-1. Keep the Coolify app on `codex/backend-data-infra`.
-2. Keep the PR draft and direct auto-deploy disabled.
-3. Require passing tests, production build, Docker build, and new-stack smoke
-   checks.
-4. After repository deployment secrets exist, use `workflow_dispatch` to run
-   the full verify-and-deploy pipeline against the feature branch.
-
-After PR approval:
-
-1. Merge to `main` and point the Coolify application at `main`.
-2. Add repository secrets `COOLIFY_TOKEN` and `COOLIFY_WEBHOOK`. Use a
-   deploy-only Coolify token.
-3. Keep direct Coolify auto-deploy disabled.
-4. Pushes to `main` run tests/build/Docker verification, trigger the Coolify
-   webhook with a deploy-only token, and poll
-   `https://chatsim.philippeho.dev/api/health` until its `sourceCommit` equals
-   the workflow commit.
+1. Keep the Coolify app on `main` with direct auto-deploy disabled.
+2. Set `COOLIFY_TOKEN` in the GitHub `production` environment. Use a
+   deploy-only token scoped to the Chatsim production application.
+3. Merge after tests, build, and Docker smoke checks pass.
+4. Run `gh workflow run deploy.yml --ref main` to release. After verifying the
+   selected commit, the workflow calls the Coolify deploy API and polls
+   `https://chatsim.philippeho.dev/api/health` until its `sourceCommit` matches.
 
 ## Verification completed
 
